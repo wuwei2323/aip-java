@@ -1,6 +1,0 @@
-cn.org.aopa.common.translation.config.TranslationConfig
-cn.org.aopa.common.translation.core.impl.DeptNameTranslationImpl
-cn.org.aopa.common.translation.core.impl.DictTypeTranslationImpl
-cn.org.aopa.common.translation.core.impl.OssUrlTranslationImpl
-cn.org.aopa.common.translation.core.impl.UserNameTranslationImpl
-cn.org.aopa.common.translation.core.impl.NicknameTranslationImpl

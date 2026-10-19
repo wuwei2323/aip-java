@@ -1,0 +1,155 @@
+<!-- scan: 设置为true,代表会在指定的时间内重新加载日志配置文件 -->
+<!-- scanPeriod:当scan=true时，日志配置文件会在指定的单位时间内重新加载，默认是每分钟会重载一次。 scanPeriod的配置说明: 
+	时间单位：milliseconds, seconds, minutes , hours. 当前表示每2分钟重新加载一次logback配置 -->
+<configuration scan="true" scanPeriod="2 minutes">
+	<!-- 直接使用系统属性或环境变量，确保在Spring上下文初始化之前就有有效的路径 -->
+	<property name="LOGGING_FILE_PATH" value="${LOGGING_FILE_PATH:-/data/log}" />
+	<property name="SPRING_APPLICATION_NAME" value="${spring.application.name:-aip-db}" />
+	
+	<!-- 项目名 -->
+	<property name="PROJECT_NAME" value="${SPRING_APPLICATION_NAME}" />
+	<!-- 日志输出目录 -->
+	<property name="LOG_HOME" value="${LOGGING_FILE_PATH}/${PROJECT_NAME}" />
+
+	<appender name="FILE"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<rollingPolicy
+			class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+			<!-- 日志文件命名模式 -->
+			<fileNamePattern>${LOG_HOME}/${PROJECT_NAME}--%d{yyyy-MM-dd}.%i.log
+			</fileNamePattern>
+			<!-- 单个日志文件的最大大小 -->
+			<maxFileSize>100MB</maxFileSize>
+			<!-- maxHistory天之前的日志会被删除或者总的日志大小超过totalSizeCap的限制,那么最旧的日志也会被删除 -->
+			<maxHistory>30</maxHistory>
+			<totalSizeCap>1GB</totalSizeCap>
+		</rollingPolicy>
+		<encoder>
+			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger - %msg%n
+			</pattern>
+		</encoder>
+	</appender>
+
+	<appender name="FILE_ERROR"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<rollingPolicy
+			class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+			<!-- 日志文件命名模式 -->
+			<fileNamePattern>${LOG_HOME}/${PROJECT_NAME}--%d{yyyy-MM-dd}.%i.ERROR.log
+			</fileNamePattern>
+			<!-- 单个日志文件的最大大小 -->
+			<maxFileSize>100MB</maxFileSize>
+			<!-- maxHistory天之前的日志会被删除或者总的日志大小超过totalSizeCap的限制,那么最旧的日志也会被删除 -->
+			<maxHistory>30</maxHistory>
+			<totalSizeCap>1GB</totalSizeCap>
+		</rollingPolicy>
+		<encoder>
+			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger - %msg%n
+			</pattern>
+		</encoder>
+		<filter class="ch.qos.logback.classic.filter.LevelFilter"><!-- 只打印错误日志 -->
+			<level>ERROR</level>
+			<onMatch>ACCEPT</onMatch>
+			<onMismatch>DENY</onMismatch>
+		</filter>
+	</appender>
+
+	<appender name="BIZ_FILE_DEBUG"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<rollingPolicy
+			class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+			<!-- 日志文件命名模式 -->
+			<fileNamePattern>${LOG_HOME}/${PROJECT_NAME}--%d{yyyy-MM-dd}.%i.BIZ.log
+			</fileNamePattern>
+			<!-- 单个日志文件的最大大小 -->
+			<maxFileSize>100MB</maxFileSize>
+			<!-- maxHistory天之前的日志会被删除或者总的日志大小超过totalSizeCap的限制,那么最旧的日志也会被删除 -->
+			<maxHistory>30</maxHistory>
+			<totalSizeCap>1GB</totalSizeCap>
+		</rollingPolicy>
+		<encoder>
+			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger - %msg%n
+			</pattern>
+		</encoder>
+		<filter class="ch.qos.logback.classic.filter.LevelFilter"><!-- 只打印错误日志 -->
+			<level>DEBUG</level>
+			<onMatch>ACCEPT</onMatch>
+			<onMismatch>DENY</onMismatch>
+		</filter>
+	</appender>
+
+	<appender name="STDOUT"
+		class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger - %msg%n
+			</pattern>
+		</encoder>
+	</appender>
+	<logger name="org.springframework.scheduling" level="INFO"></logger>
+	<logger name="org.hibernate.hql" level="INFO"></logger>
+	<logger name="org.hibernate.loader.Loader" additivity="false"
+		level="INFO"></logger>
+	<logger name="druid.sql.ResultSet" additivity="false"
+		level="INFO"></logger>
+	<logger name="druid.sql" additivity="false" level="INFO"></logger>
+	<logger name="org.hibernate.internal.util.EntityPrinter"
+		additivity="false" level="INFO"></logger>
+	<logger name="org.hibernate.engine.internal.TwoPhaseLoad"
+		additivity="false" level="INFO"></logger>
+	<logger
+		name="org.hibernate.event.internal.AbstractFlushingEventListener"
+		additivity="false" level="INFO"></logger>
+	<logger name="springfox.documentation" additivity="false"
+		level="ERROR"></logger>
+	<logger
+		name="org.springframework.boot.autoconfigure.logging.ConditionEvaluationReportLoggingListener"
+		additivity="false" level="ERROR"></logger>
+	<logger name="org.springframework.beans.factory.support"
+		additivity="false" level="ERROR"></logger>
+	<logger name="org.springframework.security.web.util.matcher"
+		additivity="false" level="ERROR"></logger>
+	<logger name="org.hibernate.resource.jdbc.internal"
+		additivity="false" level="ERROR"></logger>
+	<logger name="org.springframework.aop.framework"
+		additivity="false" level="ERROR"></logger>
+	<logger
+		name="org.springframework.web.servlet.handler.BeanNameUrlHandlerMapping"
+		additivity="false" level="ERROR"></logger>
+	<logger name="org.springframework.context.annotation"
+		additivity="false" level="ERROR"></logger>
+	<logger name="org.springframework.scheduling.quartz"
+		additivity="false" level="ERROR"></logger>
+	<logger name="org.quartz" additivity="false" level="ERROR"></logger>
+	<logger name="cn.org.aip.module.job" additivity="false"
+		level="ERROR"></logger>
+	<logger name="okhttp3" additivity="false" level="DEBUG"></logger>
+
+	<springProfile name="local,dev,qa">
+		<logger name="cn.org.aip" additivity="false" level="DEBUG">
+			<appender-ref ref="STDOUT" />
+			<appender-ref ref="FILE" />
+			<appender-ref ref="FILE_ERROR"/> <appender-ref ref="BIZ_FILE_DEBUG" 
+				/>
+		</logger>
+		<root level="DEBUG">
+			<appender-ref ref="STDOUT" />
+			<appender-ref ref="FILE" />
+			<appender-ref ref="FILE_ERROR" />
+		</root>
+	</springProfile>
+
+	<springProfile name="prod">
+		<logger name="cn.org.aip" additivity="false" level="INFO">
+			<appender-ref ref="STDOUT" />
+			<appender-ref ref="FILE" />
+			<appender-ref ref="FILE_ERROR" />
+			<appender-ref ref="BIZ_FILE_DEBUG" />
+		</logger>
+		<root level="ERROR">
+			<appender-ref ref="STDOUT" />
+			<appender-ref ref="FILE" />
+			<appender-ref ref="FILE_ERROR" />
+		</root>
+	</springProfile>
+
+</configuration>

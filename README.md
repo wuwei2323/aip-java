@@ -1,8 +1,8 @@
-# AOPA 应用集成系统
+# AIP 应用集成平台（Application Integration Platform）
 
 ## 1. 基本介绍
 
-AOPA 应用集成系统是基于 [RuoYi-Vue-Plus 5.5.2](https://gitee.com/dromara/RuoYi-Vue-Plus.git) 框架开发的现代化企业级应用集成解决方案。系统采用前后端分离架构，支持多租户、多端访问，为企业提供完整的应用集成等功能。
+AIP 应用集成平台（Application Integration Platform）是基于 [RuoYi-Vue-Plus 5.5.2](https://gitee.com/dromara/RuoYi-Vue-Plus.git) 架构开发的现代化企业级系统与数据集成中台。系统采用微服务/模块化前后端分离架构，支持多租户、多端访问与高并发处理，提供异构系统互通、服务编排、消息路由适配、工作流流转与统一管控等完整的应用集成能力。
 
 ### 1.1 技术栈
 
@@ -86,13 +86,13 @@ Flyway是数据库版本管理工具，用于跟踪、管理和应用数据库�
 
 ### 3.2 Flyway配置
 
-配置文件位置: `aopa-db/src/main/resources/common.yml`
+配置文件位置: `aip-db/src/main/resources/common.yml`
 
 ```yaml
 spring:
   flyway:
     # 迁移脚本位置，支持多个路径
-    locations: classpath:db/migration, classpath:cn/org/aopa/migrations
+    locations: classpath:db/migration, classpath:cn/org/aip/migrations
     # 首次运行时是否创建基线
     baseline-on-migrate: true
     # 忽略缺失的迁移脚本
@@ -107,7 +107,7 @@ spring:
 
 ### 3.3 迁移脚本命名规范
 
-Flyway迁移脚本存放在 `aopa-db/src/main/resources/db/migration` 目录下，命名格式如下：
+Flyway迁移脚本存放在 `aip-db/src/main/resources/db/migration` 目录下，命名格式如下：
 
 ```
 V{版本号}__{描述}.sql
@@ -181,23 +181,23 @@ mvn clean package -Plocal -Dmaven.test.skip=true
 
 ### 4.4 打包产物
 
-打包完成后，在 `aopa-admin/target` 目录下生成可执行JAR文件：
+打包完成后，在 `aip-admin/target` 目录下生成可执行JAR文件：
 
 ```
-aopa-admin/target/aopa-admin.jar
+aip-admin/target/aip-admin.jar
 ```
 
 ### 4.5 启动应用
 
 ```bash
 # 使用默认配置启动（dev环境）
-java -jar aopa-admin/target/aopa-admin.jar
+java -jar aip-admin/target/aip-admin.jar
 
 # 指定配置文件启动
-java -jar aopa-admin/target/aopa-admin.jar --spring.profiles.active=prod
+java -jar aip-admin/target/aip-admin.jar --spring.profiles.active=prod
 
 # 指定端口启动
-java -jar aopa-admin/target/aopa-admin.jar --server.port=8080
+java -jar aip-admin/target/aip-admin.jar --server.port=8080
 ```
 
 ### 4.6 Docker部署
@@ -252,31 +252,33 @@ docker-compose down
 
 #### Scope范围
 
-- **system**: 系统模块
-- **meeting**: 会议模块
-- **workflow**: 工作流模块
-- **common**: 公共模块
-- **db**: 数据库相关
-- **admin**: 管理后台
+- **system**: 系统基础模块
+- **integration**: 集成核心服务
+- **adapter**: 协议与系统适配器
+- **message**: 消息路由与转换
+- **workflow**: 工作流编排模块
+- **common**: 通用核心组件
+- **db**: 数据库与迁移脚本
+- **admin**: 管理调度门户
 - **other**: 其他
 
 #### 示例
 
 ```bash
 # 新增功能
-git commit -m "feat(meeting): 添加会议预定功能"
+git commit -m "feat(integration): 添加第三方系统适配器对接能力"
 
 # 修复bug
 git commit -m "fix(system): 修复用户登录时token过期判断错误"
 
 # 文档更新
-git commit -m "docs(readme): 更新部署文档"
+git commit -m "docs(readme): 更新应用集成平台部署文档"
 
 # 代码重构
-git commit -m "refactor(common): 优化缓存工具类性能"
+git commit -m "refactor(message): 优化消息转换与路由处理性能"
 
 # 性能优化
-git commit -m "perf(meeting): 优化会议列表查询性能"
+git commit -m "perf(integration): 优化集成流程与数据管道吞吐性能"
 ```
 
 ### 5.3 代码规范
@@ -286,9 +288,9 @@ git commit -m "perf(meeting): 优化会议列表查询性能"
 遵循《阿里巴巴Java开发手册》：
 
 1. **命名规范**
-   - 类名使用大驼峰命名法：`MeetingService`
-   - 方法名和变量名使用小驼峰命名法：`getMeetingById`
-   - 常量使用全大写下划线分隔：`MAX_MEETING_COUNT`
+   - 类名使用大驼峰命名法：`IntegrationService`
+   - 方法名和变量名使用小驼峰命名法：`getIntegrationById`
+   - 常量使用全大写下划线分隔：`MAX_INTEGRATION_COUNT`
 
 2. **注释规范**
    - 类注释包含功能描述、作者、日期
@@ -302,7 +304,7 @@ git commit -m "perf(meeting): 优化会议列表查询性能"
 
 #### 5.3.2 SQL规范
 
-遵循 `aopa-db/README.md` 中的数据库命名规约：
+遵循 `aip-db/README.md` 中的数据库命名规约：
 
 1. **表命名**: 使用下划线命名的小写英文，采用单数形式
 2. **字段命名**: 使用下划线命名的小写英文

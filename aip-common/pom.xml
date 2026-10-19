@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>aip-vue-plus</artifactId>
+        <groupId>cn.org.aip</groupId>
+        <version>${revision}</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <modules>
+        <module>aip-common-bom</module>
+        <module>aip-common-social</module>
+        <module>aip-common-core</module>
+        <module>aip-common-doc</module>
+        <module>aip-common-excel</module>
+        <module>aip-common-idempotent</module>
+        <module>aip-common-job</module>
+        <module>aip-common-log</module>
+        <module>aip-common-mail</module>
+        <module>aip-common-mybatis</module>
+        <module>aip-common-oss</module>
+        <module>aip-common-ratelimiter</module>
+        <module>aip-common-redis</module>
+        <module>aip-common-satoken</module>
+        <module>aip-common-security</module>
+        <module>aip-common-sms</module>
+        <module>aip-common-web</module>
+        <module>aip-common-translation</module>
+        <module>aip-common-sensitive</module>
+        <module>aip-common-json</module>
+        <module>aip-common-encrypt</module>
+        <module>aip-common-tenant</module>
+        <module>aip-common-websocket</module>
+        <module>aip-common-sse</module>
+        <module>aip-common-ajcaptcha</module>
+    </modules>
+
+    <artifactId>aip-common</artifactId>
+    <packaging>pom</packaging>
+
+    <description>
+        common 通用模块
+    </description>
+
+</project>

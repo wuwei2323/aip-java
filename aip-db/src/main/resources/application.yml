@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: aip-db
+  # 引入common配置
+  config:
+    import: common.yml
+  profiles:
+    active: local
+logging:
+  file:
+    path: ${LOGGING_FILE_PATH:/data/log}

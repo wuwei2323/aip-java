@@ -4,11 +4,11 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>cn.org.aopa</groupId>
-    <artifactId>aopa-vue-plus</artifactId>
+    <groupId>cn.org.aip</groupId>
+    <artifactId>aip-vue-plus</artifactId>
     <version>${revision}</version>
 
-    <name>RuoYi-Vue-Plus</name>
+    <name>aip-vue-plus</name>
     <url>https://gitee.com/dromara/RuoYi-Vue-Plus</url>
     <description>应用集成平台</description>
 
@@ -120,8 +120,8 @@
 
             <!-- common 的依赖配置-->
             <dependency>
-                <groupId>cn.org.aopa</groupId>
-                <artifactId>aopa-common-bom</artifactId>
+                <groupId>cn.org.aip</groupId>
+                <artifactId>aip-common-bom</artifactId>
                 <version>${revision}</version>
                 <type>pom</type>
                 <scope>import</scope>
@@ -327,33 +327,33 @@
             </dependency>
 
             <dependency>
-                <groupId>cn.org.aopa</groupId>
-                <artifactId>aopa-system</artifactId>
+                <groupId>cn.org.aip</groupId>
+                <artifactId>aip-system</artifactId>
                 <version>${revision}</version>
             </dependency>
 
             <dependency>
-                <groupId>cn.org.aopa</groupId>
-                <artifactId>aopa-job</artifactId>
+                <groupId>cn.org.aip</groupId>
+                <artifactId>aip-job</artifactId>
                 <version>${revision}</version>
             </dependency>
 
             <dependency>
-                <groupId>cn.org.aopa</groupId>
-                <artifactId>aopa-generator</artifactId>
+                <groupId>cn.org.aip</groupId>
+                <artifactId>aip-generator</artifactId>
                 <version>${revision}</version>
             </dependency>
 
             <dependency>
-                <groupId>cn.org.aopa</groupId>
-                <artifactId>aopa-demo</artifactId>
+                <groupId>cn.org.aip</groupId>
+                <artifactId>aip-demo</artifactId>
                 <version>${revision}</version>
             </dependency>
 
             <!--  工作流模块  -->
             <dependency>
-                <groupId>cn.org.aopa</groupId>
-                <artifactId>aopa-workflow</artifactId>
+                <groupId>cn.org.aip</groupId>
+                <artifactId>aip-workflow</artifactId>
                 <version>${revision}</version>
             </dependency>
 
@@ -361,11 +361,11 @@
     </dependencyManagement>
 
     <modules>
-        <module>aopa-db</module>
-        <module>aopa-admin</module>
-        <module>aopa-common</module>
-        <module>aopa-extend</module>
-        <module>aopa-modules</module>
+        <module>aip-db</module>
+        <module>aip-admin</module>
+        <module>aip-common</module>
+        <module>aip-extend</module>
+        <module>aip-modules</module>
     </modules>
     <packaging>pom</packaging>
 

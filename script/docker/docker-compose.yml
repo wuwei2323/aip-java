@@ -100,7 +100,7 @@ services:
 
   ruoyi-server1:
     image: ruoyi/ruoyi-server:5.5.2
-    container_name: aopa-server1
+    container_name: aip-server1
     environment:
       # 时区上海
       TZ: Asia/Shanghai
@@ -108,15 +108,15 @@ services:
       SNAIL_PORT: 28080
     volumes:
       # 配置文件
-      - /docker/server1/logs/:/aopa/server/logs/
+      - /docker/server1/logs/:/aip/server/logs/
       # skywalking 探针
-#      - /docker/skywalking/agent/:/aopa/skywalking/agent
+#      - /docker/skywalking/agent/:/aip/skywalking/agent
     privileged: true
     network_mode: "host"
 
   ruoyi-server2:
     image: ruoyi/ruoyi-server:5.5.2
-    container_name: aopa-server2
+    container_name: aip-server2
     environment:
       # 时区上海
       TZ: Asia/Shanghai
@@ -124,27 +124,27 @@ services:
       SNAIL_PORT: 28081
     volumes:
       # 配置文件
-      - /docker/server2/logs/:/aopa/server/logs/
+      - /docker/server2/logs/:/aip/server/logs/
       # skywalking 探针
-#      - /docker/skywalking/agent/:/aopa/skywalking/agent
+#      - /docker/skywalking/agent/:/aip/skywalking/agent
     privileged: true
     network_mode: "host"
 
   ruoyi-monitor-admin:
     image: ruoyi/ruoyi-monitor-admin:5.5.2
-    container_name: aopa-monitor-admin
+    container_name: aip-monitor-admin
     environment:
       # 时区上海
       TZ: Asia/Shanghai
     volumes:
       # 配置文件
-      - /docker/monitor/logs/:/aopa/monitor/logs
+      - /docker/monitor/logs/:/aip/monitor/logs
     privileged: true
     network_mode: "host"
 
   ruoyi-snailjob-server:
     image: ruoyi/ruoyi-snailjob-server:5.5.2
-    container_name: aopa-snailjob-server
+    container_name: aip-snailjob-server
     environment:
       # 时区上海
       TZ: Asia/Shanghai
@@ -152,6 +152,6 @@ services:
       - "8800:8800"
       - "17888:17888"
     volumes:
-      - /docker/snailjob/logs/:/aopa/snailjob/logs
+      - /docker/snailjob/logs/:/aip/snailjob/logs
     privileged: true
     network_mode: "host"
