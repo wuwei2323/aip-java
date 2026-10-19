@@ -8,7 +8,7 @@ import java.io.Serial;
 import cn.org.aip.common.mybatis.core.domain.BaseEntity;
 
 /**
- * 租户套餐对象 sys_tenant_package
+ * 应用套餐对象 sys_tenant_package
  *
  * @author Michelle.Chung
  */
@@ -21,7 +21,7 @@ public class SysTenantPackage extends BaseEntity {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 租户套餐id
+     * 应用套餐id
      */
     @TableId(value = "package_id")
     private Long packageId;

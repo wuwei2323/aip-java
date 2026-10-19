@@ -104,9 +104,9 @@ public class SysMenuController extends BaseController {
     }
 
     /**
-     * 加载对应租户套餐菜单列表树
+     * 加载对应应用套餐菜单列表树
      *
-     * @param packageId 租户套餐ID
+     * @param packageId 应用套餐ID
      */
     @SaCheckRole(TenantConstants.SUPER_ADMIN_ROLE_KEY)
     @SaCheckPermission("system:menu:query")
@@ -114,7 +114,7 @@ public class SysMenuController extends BaseController {
     public R<MenuTreeSelectVo> tenantPackageMenuTreeselect(@PathVariable("packageId") Long packageId) {
         List<SysMenuVo> menus = menuService.selectMenuList(LoginHelper.getUserId());
         List<Tree<Long>> list = menuService.buildMenuTreeSelect(menus);
-        // 删除租户管理菜单
+        // 删除应用管理菜单
         list.removeIf(menu -> menu.getId() == 6L);
         List<Long> ids = new ArrayList<>();
         if (packageId > 0L) {

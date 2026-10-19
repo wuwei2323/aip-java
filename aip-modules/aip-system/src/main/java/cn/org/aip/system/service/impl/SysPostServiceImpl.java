@@ -14,6 +14,7 @@ import cn.org.aip.common.core.utils.StreamUtils;
 import cn.org.aip.common.core.utils.StringUtils;
 import cn.org.aip.common.mybatis.core.page.PageQuery;
 import cn.org.aip.common.mybatis.core.page.TableDataInfo;
+import cn.org.aip.common.tenant.helper.TenantHelper;
 import cn.org.aip.system.domain.SysPost;
 import cn.org.aip.system.domain.SysUserPost;
 import cn.org.aip.system.domain.bo.SysPostBo;
@@ -160,11 +161,13 @@ public class SysPostServiceImpl implements ISysPostService, PostService {
      */
     @Override
     public boolean checkPostNameUnique(SysPostBo post) {
-        boolean exist = baseMapper.exists(new LambdaQueryWrapper<SysPost>()
-            .eq(SysPost::getPostName, post.getPostName())
-            .eq(SysPost::getDeptId, post.getDeptId())
-            .ne(ObjectUtil.isNotNull(post.getPostId()), SysPost::getPostId, post.getPostId()));
-        return !exist;
+        return TenantHelper.ignore(() -> {
+            boolean exist = baseMapper.exists(new LambdaQueryWrapper<SysPost>()
+                .eq(SysPost::getPostName, post.getPostName())
+                .eq(SysPost::getDeptId, post.getDeptId())
+                .ne(ObjectUtil.isNotNull(post.getPostId()), SysPost::getPostId, post.getPostId()));
+            return !exist;
+        });
     }
 
     /**
@@ -175,10 +178,12 @@ public class SysPostServiceImpl implements ISysPostService, PostService {
      */
     @Override
     public boolean checkPostCodeUnique(SysPostBo post) {
-        boolean exist = baseMapper.exists(new LambdaQueryWrapper<SysPost>()
-            .eq(SysPost::getPostCode, post.getPostCode())
-            .ne(ObjectUtil.isNotNull(post.getPostId()), SysPost::getPostId, post.getPostId()));
-        return !exist;
+        return TenantHelper.ignore(() -> {
+            boolean exist = baseMapper.exists(new LambdaQueryWrapper<SysPost>()
+                .eq(SysPost::getPostCode, post.getPostCode())
+                .ne(ObjectUtil.isNotNull(post.getPostId()), SysPost::getPostId, post.getPostId()));
+            return !exist;
+        });
     }
 
     /**

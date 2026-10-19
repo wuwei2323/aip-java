@@ -12,7 +12,7 @@ import jakarta.validation.constraints.*;
 import cn.org.aip.common.mybatis.core.domain.BaseEntity;
 
 /**
- * 租户套餐业务对象 sys_tenant_package
+ * 应用套餐业务对象 sys_tenant_package
  *
  * @author Michelle.Chung
  */
@@ -23,9 +23,9 @@ import cn.org.aip.common.mybatis.core.domain.BaseEntity;
 public class SysTenantPackageBo extends BaseEntity {
 
     /**
-     * 租户套餐id
+     * 应用套餐id
      */
-    @NotNull(message = "租户套餐id不能为空", groups = { EditGroup.class })
+    @NotNull(message = "应用套餐id不能为空", groups = { EditGroup.class })
     private Long packageId;
 
     /**

@@ -106,7 +106,7 @@ public class LoginHelper {
     }
 
     /**
-     * 获取租户ID
+     * 获取应用ID
      */
     public static String getTenantId() {
         return Convert.toStr(getExtra(TENANT_KEY));
@@ -175,7 +175,7 @@ public class LoginHelper {
     }
 
     /**
-     * 是否为租户管理员
+     * 是否为应用管理员
      *
      * @param rolePermission 角色权限标识组
      * @return 结果
@@ -188,7 +188,7 @@ public class LoginHelper {
     }
 
     /**
-     * 是否为租户管理员
+     * 是否为应用管理员
      *
      * @return 结果
      */

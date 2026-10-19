@@ -21,6 +21,7 @@ import cn.org.aip.common.mybatis.core.page.TableDataInfo;
 import cn.org.aip.common.mybatis.helper.DataBaseHelper;
 import cn.org.aip.common.redis.utils.CacheUtils;
 import cn.org.aip.common.satoken.utils.LoginHelper;
+import cn.org.aip.common.tenant.helper.TenantHelper;
 import cn.org.aip.system.domain.SysDept;
 import cn.org.aip.system.domain.SysRole;
 import cn.org.aip.system.domain.SysUser;
@@ -265,11 +266,13 @@ public class SysDeptServiceImpl implements ISysDeptService, DeptService {
      */
     @Override
     public boolean checkDeptNameUnique(SysDeptBo dept) {
-        boolean exist = baseMapper.exists(new LambdaQueryWrapper<SysDept>()
-            .eq(SysDept::getDeptName, dept.getDeptName())
-            .eq(SysDept::getParentId, dept.getParentId())
-            .ne(ObjectUtil.isNotNull(dept.getDeptId()), SysDept::getDeptId, dept.getDeptId()));
-        return !exist;
+        return TenantHelper.ignore(() -> {
+            boolean exist = baseMapper.exists(new LambdaQueryWrapper<SysDept>()
+                .eq(SysDept::getDeptName, dept.getDeptName())
+                .eq(SysDept::getParentId, dept.getParentId())
+                .ne(ObjectUtil.isNotNull(dept.getDeptId()), SysDept::getDeptId, dept.getDeptId()));
+            return !exist;
+        });
     }
 
     /**

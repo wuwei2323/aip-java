@@ -85,7 +85,7 @@ public class SysConfigServiceImpl implements ISysConfigService, ConfigService {
     /**
      * 获取注册开关
      *
-     * @param tenantId 租户id
+     * @param tenantId 应用id
      * @return true开启，false关闭
      */
     @Override

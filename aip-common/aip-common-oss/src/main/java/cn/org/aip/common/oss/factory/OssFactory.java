@@ -47,7 +47,7 @@ public class OssFactory {
             throw new OssException("系统异常, '" + configKey + "'配置信息不存在!");
         }
         OssProperties properties = JsonUtils.parseObject(json, OssProperties.class);
-        // 使用租户标识避免多个租户相同key实例覆盖
+        // 使用应用标识避免多个应用相同key实例覆盖
         String key = configKey;
         if (StringUtils.isNotBlank(properties.getTenantId())) {
             key = properties.getTenantId() + ":" + configKey;

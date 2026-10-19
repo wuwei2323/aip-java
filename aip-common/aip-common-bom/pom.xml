@@ -158,7 +158,7 @@
                 <version>${revision}</version>
             </dependency>
 
-            <!-- 租户模块 -->
+            <!-- 应用模块 -->
             <dependency>
                 <groupId>cn.org.aip</groupId>
                 <artifactId>aip-common-tenant</artifactId>

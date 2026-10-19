@@ -35,7 +35,7 @@ public class FlowProcessEventHandler {
      */
     public void processHandler(String flowCode, Instance instance, String status, Map<String, Object> params, boolean submit) {
         String tenantId = TenantHelper.getTenantId();
-        log.info("【流程事件发布】租户ID: {}, 流程编码: {}, 业务ID: {}, 流程状态: {}, 节点类型: {}, 节点编码: {}, 节点名称: {}, 是否申请人节点: {}, 参数: {}",
+        log.info("【流程事件发布】应用ID: {}, 流程编码: {}, 业务ID: {}, 流程状态: {}, 节点类型: {}, 节点编码: {}, 节点名称: {}, 是否申请人节点: {}, 参数: {}",
             tenantId, flowCode, instance.getBusinessId(), status, instance.getNodeType(), instance.getNodeCode(), instance.getNodeName(), submit, params);
         ProcessEvent processEvent = new ProcessEvent();
         processEvent.setTenantId(tenantId);
@@ -61,7 +61,7 @@ public class FlowProcessEventHandler {
      */
     public void processTaskHandler(String flowCode, Instance instance, Task nextTask, Map<String, Object> params) {
         String tenantId = TenantHelper.getTenantId();
-        log.info("【流程任务事件发布】租户ID: {}, 流程编码: {}, 业务ID: {}, 节点类型: {}, 节点编码: {}, 节点名称: {}, 任务ID: {}",
+        log.info("【流程任务事件发布】应用ID: {}, 流程编码: {}, 业务ID: {}, 节点类型: {}, 节点编码: {}, 节点名称: {}, 任务ID: {}",
             tenantId, flowCode, instance.getBusinessId(), nextTask.getNodeType(), nextTask.getNodeCode(), nextTask.getNodeName(), nextTask.getId());
         ProcessTaskEvent processTaskEvent = new ProcessTaskEvent();
         processTaskEvent.setTenantId(tenantId);
@@ -85,7 +85,7 @@ public class FlowProcessEventHandler {
      */
     public void processDeleteHandler(String flowCode, String businessId) {
         String tenantId = TenantHelper.getTenantId();
-        log.info("【流程删除事件发布】租户ID: {}, 流程编码: {}, 业务ID: {}", tenantId, flowCode, businessId);
+        log.info("【流程删除事件发布】应用ID: {}, 流程编码: {}, 业务ID: {}", tenantId, flowCode, businessId);
         ProcessDeleteEvent processDeleteEvent = new ProcessDeleteEvent();
         processDeleteEvent.setTenantId(tenantId);
         processDeleteEvent.setFlowCode(flowCode);

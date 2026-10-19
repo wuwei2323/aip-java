@@ -5,7 +5,7 @@ import cn.org.aip.system.domain.SysTenantPackage;
 import cn.org.aip.system.domain.vo.SysTenantPackageVo;
 
 /**
- * 租户套餐Mapper接口
+ * 应用套餐Mapper接口
  *
  * @author Michelle.Chung
  */

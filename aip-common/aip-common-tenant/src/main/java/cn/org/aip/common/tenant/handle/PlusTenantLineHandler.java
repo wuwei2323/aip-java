@@ -14,7 +14,7 @@ import cn.org.aip.common.tenant.properties.TenantProperties;
 import java.util.List;
 
 /**
- * 自定义租户处理器
+ * 自定义应用处理器
  *
  * @author Lion Li
  */
@@ -28,19 +28,19 @@ public class PlusTenantLineHandler implements TenantLineHandler {
     public Expression getTenantId() {
         String tenantId = TenantHelper.getTenantId();
         if (StringUtils.isBlank(tenantId)) {
-            log.error("无法获取有效的租户id -> Null");
+            log.error("无法获取有效的应用id -> Null");
             return new NullValue();
         }
-        // 返回固定租户
+        // 返回固定应用
         return new StringValue(tenantId);
     }
 
     @Override
     public boolean ignoreTable(String tableName) {
         String tenantId = TenantHelper.getTenantId();
-        // 判断是否有租户
+        // 判断是否有应用
         if (StringUtils.isNotBlank(tenantId)) {
-            // 不需要过滤租户的表
+            // 不需要过滤应用的表
             List<String> excludes = tenantProperties.getExcludes();
             // 非业务表
             List<String> tables = ListUtil.toList(

@@ -21,7 +21,7 @@ import java.util.Stack;
 import java.util.function.Supplier;
 
 /**
- * 租户助手
+ * 应用助手
  *
  * @author Lion Li
  */
@@ -36,7 +36,7 @@ public class TenantHelper {
     private static final ThreadLocal<Stack<Integer>> REENTRANT_IGNORE = ThreadLocal.withInitial(Stack::new);
 
     /**
-     * 租户功能是否启用
+     * 应用功能是否启用
      */
     public static boolean isEnable() {
         return Convert.toBool(SpringUtils.getProperty("tenant.enable"), false);
@@ -53,7 +53,7 @@ public class TenantHelper {
     }
 
     /**
-     * 开启忽略租户(开启后需手动调用 {@link #disableIgnore()} 关闭)
+     * 开启忽略应用(开启后需手动调用 {@link #disableIgnore()} 关闭)
      */
     private static void enableIgnore() {
         IgnoreStrategy ignoreStrategy = getIgnoreStrategy();
@@ -67,7 +67,7 @@ public class TenantHelper {
     }
 
     /**
-     * 关闭忽略租户
+     * 关闭忽略应用
      */
     private static void disableIgnore() {
         IgnoreStrategy ignoreStrategy = getIgnoreStrategy();
@@ -88,7 +88,7 @@ public class TenantHelper {
     }
 
     /**
-     * 在忽略租户中执行
+     * 在忽略应用中执行
      *
      * @param handle 处理执行方法
      */
@@ -102,7 +102,7 @@ public class TenantHelper {
     }
 
     /**
-     * 在忽略租户中执行
+     * 在忽略应用中执行
      *
      * @param handle 处理执行方法
      */
@@ -120,11 +120,11 @@ public class TenantHelper {
     }
 
     /**
-     * 设置动态租户(一直有效 需要手动清理)
+     * 设置动态应用(一直有效 需要手动清理)
      * <p>
      * 如果为未登录状态下 那么只在当前线程内生效
      *
-     * @param tenantId 租户id
+     * @param tenantId 应用id
      * @param global   是否全局生效
      */
     public static void setDynamic(String tenantId, boolean global) {
@@ -141,7 +141,7 @@ public class TenantHelper {
     }
 
     /**
-     * 获取动态租户(一直有效 需要手动清理)
+     * 获取动态应用(一直有效 需要手动清理)
      * <p>
      * 如果为未登录状态下 那么只在当前线程内生效
      */
@@ -170,7 +170,7 @@ public class TenantHelper {
     }
 
     /**
-     * 清除动态租户
+     * 清除动态应用
      */
     public static void clearDynamic() {
         if (!isEnable()) {
@@ -187,7 +187,7 @@ public class TenantHelper {
     }
 
     /**
-     * 在动态租户中执行
+     * 在动态应用中执行
      *
      * @param handle 处理执行方法
      */
@@ -201,7 +201,7 @@ public class TenantHelper {
     }
 
     /**
-     * 在动态租户中执行
+     * 在动态应用中执行
      *
      * @param handle 处理执行方法
      */
@@ -215,7 +215,7 @@ public class TenantHelper {
     }
 
     /**
-     * 获取当前租户id(动态租户优先)
+     * 获取当前应用id(动态应用优先)
      */
     public static String getTenantId() {
         if (!isEnable()) {

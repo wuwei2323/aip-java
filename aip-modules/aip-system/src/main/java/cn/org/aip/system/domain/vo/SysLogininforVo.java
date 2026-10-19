@@ -35,7 +35,7 @@ public class SysLogininforVo implements Serializable {
     private Long infoId;
 
     /**
-     * 租户编号
+     * 应用编号
      */
     private String tenantId;
 

@@ -70,9 +70,9 @@ public interface IFlwDefinitionService {
     boolean removeDef(List<Long> ids);
 
     /**
-     * 新增租户流程定义
+     * 新增应用流程定义
      *
-     * @param tenantId 租户id
+     * @param tenantId 应用id
      */
     void syncDef(String tenantId);
 }

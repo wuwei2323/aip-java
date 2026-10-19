@@ -62,9 +62,9 @@ public interface WorkflowService {
     Long getInstanceIdByBusinessId(String businessId);
 
     /**
-     * 新增租户流程定义
+     * 新增应用流程定义
      *
-     * @param tenantId 租户id
+     * @param tenantId 应用id
      */
     void syncDef(String tenantId);
 

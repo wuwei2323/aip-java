@@ -11,7 +11,7 @@ import java.io.Serial;
 import java.util.Date;
 
 /**
- * 租户对象 sys_tenant
+ * 应用对象 sys_tenant
  *
  * @author Michelle.Chung
  */
@@ -30,7 +30,7 @@ public class SysTenant extends BaseEntity {
     private Long id;
 
     /**
-     * 租户编号
+     * 应用编号
      */
     private String tenantId;
 
@@ -75,7 +75,7 @@ public class SysTenant extends BaseEntity {
     private String remark;
 
     /**
-     * 租户套餐编号
+     * 应用套餐编号
      */
     private Long packageId;
 
@@ -90,7 +90,7 @@ public class SysTenant extends BaseEntity {
     private Long accountCount;
 
     /**
-     * 租户状态（0正常 1停用）
+     * 应用状态（0正常 1停用）
      */
     private String status;
 

@@ -12,7 +12,7 @@
     <artifactId>aip-common-tenant</artifactId>
 
     <description>
-        ruoyi-common-tenant 租户模块
+        ruoyi-common-tenant 应用模块
     </description>
 
     <dependencies>

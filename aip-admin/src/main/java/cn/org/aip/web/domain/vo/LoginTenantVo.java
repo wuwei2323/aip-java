@@ -5,7 +5,7 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * 登录租户对象
+ * 登录应用对象
  *
  * @author Michelle.Chung
  */
@@ -13,12 +13,12 @@ import java.util.List;
 public class LoginTenantVo {
 
     /**
-     * 租户开关
+     * 应用开关
      */
     private Boolean tenantEnabled;
 
     /**
-     * 租户对象列表
+     * 应用对象列表
      */
     private List<TenantListVo> voList;
 

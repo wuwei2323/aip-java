@@ -5,7 +5,7 @@ create table sys_social
 (
     id                 bigint           not null        comment '主键',
     user_id            bigint           not null        comment '用户ID',
-    tenant_id          varchar(20)      default '000000' comment '租户id',
+    tenant_id          varchar(20)      default '000000' comment '应用id',
     auth_id            varchar(255)     not null        comment '平台+平台唯一id',
     source             varchar(255)     not null        comment '用户来源',
     open_id            varchar(255)     default null    comment '平台编号唯一id',
@@ -37,12 +37,12 @@ create table sys_social
 
 
 -- ----------------------------
--- 租户表
+-- 应用表
 -- ----------------------------
 create table sys_tenant
 (
     id                bigint(20)    not null        comment 'id',
-    tenant_id         varchar(20)   not null        comment '租户编号',
+    tenant_id         varchar(20)   not null        comment '应用编号',
     contact_user_name varchar(20)                   comment '联系人',
     contact_phone     varchar(20)                   comment '联系电话',
     company_name      varchar(30)                   comment '企业名称',
@@ -51,10 +51,10 @@ create table sys_tenant
     intro             varchar(200)                  comment '企业简介',
     domain            varchar(200)                  comment '域名',
     remark            varchar(200)                  comment '备注',
-    package_id        bigint(20)                    comment '租户套餐编号',
+    package_id        bigint(20)                    comment '应用套餐编号',
     expire_time       datetime                      comment '过期时间',
     account_count     int           default -1      comment '用户数量（-1不限制）',
-    status            char(1)       default '0'     comment '租户状态（0正常 1停用）',
+    status            char(1)       default '0'     comment '应用状态（0正常 1停用）',
     del_flag          char(1)       default '0'     comment '删除标志（0代表存在 1代表删除）',
     create_dept       bigint(20)                    comment '创建部门',
     create_by         bigint(20)                    comment '创建者',
@@ -62,21 +62,21 @@ create table sys_tenant
     update_by         bigint(20)                    comment '更新者',
     update_time       datetime                      comment '更新时间',
     primary key (id)
-) engine=innodb comment = '租户表';
+) engine=innodb comment = '应用表';
 
 
 -- ----------------------------
--- 初始化-租户表数据
+-- 初始化-应用表数据
 -- ----------------------------
 
-insert into sys_tenant values(1, '000000', '管理组', '15888888888', 'XXX有限公司', null, null, '多租户通用后台管理管理系统', null, null, null, null, -1, '0', '0', 103, 1, sysdate(), null, null);
+insert into sys_tenant values(1, '000000', '管理组', '15888888888', 'XXX有限公司', null, null, '多应用通用后台管理管理系统', null, null, null, null, -1, '0', '0', 103, 1, sysdate(), null, null);
 
 
 -- ----------------------------
--- 租户套餐表
+-- 应用套餐表
 -- ----------------------------
 create table sys_tenant_package (
-    package_id              bigint(20)     not null    comment '租户套餐id',
+    package_id              bigint(20)     not null    comment '应用套餐id',
     package_name            varchar(20)                comment '套餐名称',
     menu_ids                varchar(3000)              comment '关联菜单id',
     remark                  varchar(200)               comment '备注',
@@ -89,7 +89,7 @@ create table sys_tenant_package (
     update_by               bigint(20)                 comment '更新者',
     update_time             datetime                   comment '更新时间',
     primary key (package_id)
-) engine=innodb comment = '租户套餐表';
+) engine=innodb comment = '应用套餐表';
 
 
 -- ----------------------------
@@ -97,7 +97,7 @@ create table sys_tenant_package (
 -- ----------------------------
 create table sys_dept (
     dept_id           bigint(20)      not null                   comment '部门id',
-    tenant_id         varchar(20)     default '000000'           comment '租户编号',
+    tenant_id         varchar(20)     default '000000'           comment '应用编号',
     parent_id         bigint(20)      default 0                  comment '父部门id',
     ancestors         varchar(500)    default ''                 comment '祖级列表',
     dept_name         varchar(30)     default ''                 comment '部门名称',
@@ -138,7 +138,7 @@ insert into sys_dept values(109, '000000', 102, '0,100,102',  '财务部门',   
 -- ----------------------------
 create table sys_user (
     user_id           bigint(20)      not null                   comment '用户ID',
-    tenant_id         varchar(20)     default '000000'           comment '租户编号',
+    tenant_id         varchar(20)     default '000000'           comment '应用编号',
     dept_id           bigint(20)      default null               comment '部门ID',
     user_name         varchar(30)     not null                   comment '用户账号',
     nick_name         varchar(30)     not null                   comment '用户昵称',
@@ -174,7 +174,7 @@ insert into sys_user values(4, '000000', 102, 'test1', '仅本人 密码666666',
 create table sys_post
 (
     post_id       bigint(20)      not null                   comment '岗位ID',
-    tenant_id     varchar(20)     default '000000'           comment '租户编号',
+    tenant_id     varchar(20)     default '000000'           comment '应用编号',
     dept_id       bigint(20)      not null                   comment '部门id',
     post_code     varchar(64)     not null                   comment '岗位编码',
     post_category varchar(100)    default null               comment '岗位类别编码',
@@ -204,7 +204,7 @@ insert into sys_post values(4, '000000', 100, 'user', null, '普通员工',  4, 
 -- ----------------------------
 create table sys_role (
     role_id              bigint(20)      not null                   comment '角色ID',
-    tenant_id            varchar(20)     default '000000'           comment '租户编号',
+    tenant_id            varchar(20)     default '000000'           comment '应用编号',
     role_name            varchar(30)     not null                   comment '角色名称',
     role_key             varchar(100)    not null                   comment '角色权限字符串',
     role_sort            int(4)          not null                   comment '显示顺序',
@@ -261,7 +261,7 @@ create table sys_menu (
 -- ----------------------------
 -- 一级菜单
 insert into sys_menu values('1', '系统管理', '0', '1', 'system',           null, '', 1, 0, 'M', '0', '0', '', 'system',   103, 1, sysdate(), null, null, '系统管理目录');
-insert into sys_menu values('6', '租户管理', '0', '2', 'tenant',           null, '', 1, 0, 'M', '0', '0', '', 'chart',    103, 1, sysdate(), null, null, '租户管理目录');
+insert into sys_menu values('6', '应用管理', '0', '2', 'tenant',           null, '', 1, 0, 'M', '0', '0', '', 'chart',    103, 1, sysdate(), null, null, '应用管理目录');
 insert into sys_menu values('2', '系统监控', '0', '3', 'monitor',          null, '', 1, 0, 'M', '0', '0', '', 'monitor',  103, 1, sysdate(), null, null, '系统监控目录');
 insert into sys_menu values('3', '系统工具', '0', '4', 'tool',             null, '', 1, 0, 'M', '0', '0', '', 'tool',     103, 1, sysdate(), null, null, '系统工具目录');
 insert into sys_menu values('4', 'PLUS官网', '0', '5', 'https://gitee.com/dromara/RuoYi-Vue-Plus', null, '', 0, 0, 'M', '0', '0', '', 'guide',    103, 1, sysdate(), null, null, 'RuoYi-Vue-Plus官网地址');
@@ -279,8 +279,8 @@ insert into sys_menu values('108',  '日志管理',     '1',   '9', 'log',      
 insert into sys_menu values('109',  '在线用户',     '2',   '1', 'online',           'monitor/online/index',         '', 1, 0, 'C', '0', '0', 'monitor:online:list',         'online',        103, 1, sysdate(), null, null, '在线用户菜单');
 insert into sys_menu values('113',  '缓存监控',     '2',   '5', 'cache',            'monitor/cache/index',          '', 1, 0, 'C', '0', '0', 'monitor:cache:list',          'redis',         103, 1, sysdate(), null, null, '缓存监控菜单');
 insert into sys_menu values('115',  '代码生成',     '3',   '2', 'gen',              'tool/gen/index',               '', 1, 0, 'C', '0', '0', 'tool:gen:list',               'code',          103, 1, sysdate(), null, null, '代码生成菜单');
-insert into sys_menu values('121',  '租户管理',     '6',   '1', 'tenant',           'system/tenant/index',          '', 1, 0, 'C', '0', '0', 'system:tenant:list',          'list',          103, 1, sysdate(), null, null, '租户管理菜单');
-insert into sys_menu values('122',  '租户套餐管理',  '6',   '2', 'tenantPackage',    'system/tenantPackage/index',   '', 1, 0, 'C', '0', '0', 'system:tenantPackage:list',   'form',          103, 1, sysdate(), null, null, '租户套餐管理菜单');
+insert into sys_menu values('121',  '应用管理',     '6',   '1', 'tenant',           'system/tenant/index',          '', 1, 0, 'C', '0', '0', 'system:tenant:list',          'list',          103, 1, sysdate(), null, null, '应用管理菜单');
+insert into sys_menu values('122',  '应用套餐管理',  '6',   '2', 'tenantPackage',    'system/tenantPackage/index',   '', 1, 0, 'C', '0', '0', 'system:tenantPackage:list',   'form',          103, 1, sysdate(), null, null, '应用套餐管理菜单');
 insert into sys_menu values('123',  '客户端管理',   '1',   '11', 'client',           'system/client/index',          '', 1, 0, 'C', '0', '0', 'system:client:list',          'international', 103, 1, sysdate(), null, null, '客户端管理菜单');
 insert into sys_menu values('116', '修改生成配置',  '3',   '2', 'gen-edit/index/:tableId', 'tool/gen/editTable', '', 1, 1, 'C', '1', '0', 'tool:gen:edit',           '#',               103, 1, sysdate(), null, null, '/tool/gen');
 insert into sys_menu values('130', '分配用户',     '1',   '2', 'role-auth/user/:roleId', 'system/role/authUser', '', 1, 1, 'C', '1', '0', 'system:role:edit',      '#',               103, 1, sysdate(), null, null, '/system/role');
@@ -375,18 +375,18 @@ insert into sys_menu values('1621', '配置添加', '118', '6', '#', '', '', 1, 
 insert into sys_menu values('1622', '配置编辑', '118', '6', '#', '', '', 1, 0, 'F', '0', '0', 'system:ossConfig:edit',        '#', 103, 1, sysdate(), null, null, '');
 insert into sys_menu values('1623', '配置删除', '118', '6', '#', '', '', 1, 0, 'F', '0', '0', 'system:ossConfig:remove',      '#', 103, 1, sysdate(), null, null, '');
 
--- 租户管理相关按钮
-insert into sys_menu values ('1606', '租户查询', '121', '1', '#', '', '', 1, 0, 'F', '0', '0', 'system:tenant:query',   '#', 103, 1, sysdate(), null, null, '');
-insert into sys_menu values ('1607', '租户新增', '121', '2', '#', '', '', 1, 0, 'F', '0', '0', 'system:tenant:add',     '#', 103, 1, sysdate(), null, null, '');
-insert into sys_menu values ('1608', '租户修改', '121', '3', '#', '', '', 1, 0, 'F', '0', '0', 'system:tenant:edit',    '#', 103, 1, sysdate(), null, null, '');
-insert into sys_menu values ('1609', '租户删除', '121', '4', '#', '', '', 1, 0, 'F', '0', '0', 'system:tenant:remove',  '#', 103, 1, sysdate(), null, null, '');
-insert into sys_menu values ('1610', '租户导出', '121', '5', '#', '', '', 1, 0, 'F', '0', '0', 'system:tenant:export',  '#', 103, 1, sysdate(), null, null, '');
--- 租户套餐管理相关按钮
-insert into sys_menu values ('1611', '租户套餐查询', '122', '1', '#', '', '', 1, 0, 'F', '0', '0', 'system:tenantPackage:query',   '#', 103, 1, sysdate(), null, null, '');
-insert into sys_menu values ('1612', '租户套餐新增', '122', '2', '#', '', '', 1, 0, 'F', '0', '0', 'system:tenantPackage:add',     '#', 103, 1, sysdate(), null, null, '');
-insert into sys_menu values ('1613', '租户套餐修改', '122', '3', '#', '', '', 1, 0, 'F', '0', '0', 'system:tenantPackage:edit',    '#', 103, 1, sysdate(), null, null, '');
-insert into sys_menu values ('1614', '租户套餐删除', '122', '4', '#', '', '', 1, 0, 'F', '0', '0', 'system:tenantPackage:remove',  '#', 103, 1, sysdate(), null, null, '');
-insert into sys_menu values ('1615', '租户套餐导出', '122', '5', '#', '', '', 1, 0, 'F', '0', '0', 'system:tenantPackage:export',  '#', 103, 1, sysdate(), null, null, '');
+-- 应用管理相关按钮
+insert into sys_menu values ('1606', '应用查询', '121', '1', '#', '', '', 1, 0, 'F', '0', '0', 'system:tenant:query',   '#', 103, 1, sysdate(), null, null, '');
+insert into sys_menu values ('1607', '应用新增', '121', '2', '#', '', '', 1, 0, 'F', '0', '0', 'system:tenant:add',     '#', 103, 1, sysdate(), null, null, '');
+insert into sys_menu values ('1608', '应用修改', '121', '3', '#', '', '', 1, 0, 'F', '0', '0', 'system:tenant:edit',    '#', 103, 1, sysdate(), null, null, '');
+insert into sys_menu values ('1609', '应用删除', '121', '4', '#', '', '', 1, 0, 'F', '0', '0', 'system:tenant:remove',  '#', 103, 1, sysdate(), null, null, '');
+insert into sys_menu values ('1610', '应用导出', '121', '5', '#', '', '', 1, 0, 'F', '0', '0', 'system:tenant:export',  '#', 103, 1, sysdate(), null, null, '');
+-- 应用套餐管理相关按钮
+insert into sys_menu values ('1611', '应用套餐查询', '122', '1', '#', '', '', 1, 0, 'F', '0', '0', 'system:tenantPackage:query',   '#', 103, 1, sysdate(), null, null, '');
+insert into sys_menu values ('1612', '应用套餐新增', '122', '2', '#', '', '', 1, 0, 'F', '0', '0', 'system:tenantPackage:add',     '#', 103, 1, sysdate(), null, null, '');
+insert into sys_menu values ('1613', '应用套餐修改', '122', '3', '#', '', '', 1, 0, 'F', '0', '0', 'system:tenantPackage:edit',    '#', 103, 1, sysdate(), null, null, '');
+insert into sys_menu values ('1614', '应用套餐删除', '122', '4', '#', '', '', 1, 0, 'F', '0', '0', 'system:tenantPackage:remove',  '#', 103, 1, sysdate(), null, null, '');
+insert into sys_menu values ('1615', '应用套餐导出', '122', '5', '#', '', '', 1, 0, 'F', '0', '0', 'system:tenantPackage:export',  '#', 103, 1, sysdate(), null, null, '');
 -- 客户端管理按钮
 insert into sys_menu values('1061', '客户端管理查询', '123', '1',  '#', '', '', 1, 0, 'F', '0', '0', 'system:client:query',        '#', 103, 1, sysdate(), null, null, '');
 insert into sys_menu values('1062', '客户端管理新增', '123', '2',  '#', '', '', 1, 0, 'F', '0', '0', 'system:client:add',          '#', 103, 1, sysdate(), null, null, '');
@@ -583,7 +583,7 @@ insert into sys_user_post values ('1', '1');
 -- ----------------------------
 create table sys_oper_log (
     oper_id           bigint(20)      not null                   comment '日志主键',
-    tenant_id         varchar(20)     default '000000'           comment '租户编号',
+    tenant_id         varchar(20)     default '000000'           comment '应用编号',
     title             varchar(50)     default ''                 comment '模块标题',
     business_type     int(2)          default 0                  comment '业务类型（0其它 1新增 2修改 3删除）',
     method            varchar(100)    default ''                 comment '方法名称',
@@ -613,7 +613,7 @@ create table sys_oper_log (
 create table sys_dict_type
 (
     dict_id          bigint(20)      not null                   comment '字典主键',
-    tenant_id        varchar(20)     default '000000'           comment '租户编号',
+    tenant_id        varchar(20)     default '000000'           comment '应用编号',
     dict_name        varchar(100)    default ''                 comment '字典名称',
     dict_type        varchar(100)    default ''                 comment '字典类型',
     create_dept      bigint(20)      default null               comment '创建部门',
@@ -644,7 +644,7 @@ insert into sys_dict_type values(12, '000000', '设备类型', 'sys_device_type'
 create table sys_dict_data
 (
     dict_code        bigint(20)      not null                   comment '字典编码',
-    tenant_id        varchar(20)     default '000000'           comment '租户编号',
+    tenant_id        varchar(20)     default '000000'           comment '应用编号',
     dict_sort        int(4)          default 0                  comment '字典排序',
     dict_label       varchar(100)    default ''                 comment '字典标签',
     dict_value       varchar(100)    default ''                 comment '字典键值',
@@ -702,7 +702,7 @@ insert into sys_dict_data values(38, '000000', 0,  '小程序', 'xcx',       'sy
 -- ----------------------------
 create table sys_config (
     config_id         bigint(20)      not null                   comment '参数主键',
-    tenant_id         varchar(20)     default '000000'           comment '租户编号',
+    tenant_id         varchar(20)     default '000000'           comment '应用编号',
     config_name       varchar(100)    default ''                 comment '参数名称',
     config_key        varchar(100)    default ''                 comment '参数键名',
     config_value      varchar(500)    default ''                 comment '参数键值',
@@ -728,7 +728,7 @@ insert into sys_config values(11, '000000', 'OSS预览列表资源开关',      
 -- ----------------------------
 create table sys_logininfor (
     info_id        bigint(20)     not null                  comment '访问ID',
-    tenant_id      varchar(20)    default '000000'          comment '租户编号',
+    tenant_id      varchar(20)    default '000000'          comment '应用编号',
     user_name      varchar(50)    default ''                comment '用户账号',
     client_key     varchar(32)    default ''                comment '客户端',
     device_type    varchar(32)    default ''                comment '设备类型',
@@ -750,7 +750,7 @@ create table sys_logininfor (
 -- ----------------------------
 create table sys_notice (
     notice_id         bigint(20)      not null                   comment '公告ID',
-    tenant_id         varchar(20)     default '000000'           comment '租户编号',
+    tenant_id         varchar(20)     default '000000'           comment '应用编号',
     notice_title      varchar(50)     not null                   comment '公告标题',
     notice_type       char(1)         not null                   comment '公告类型（1通知 2公告）',
     notice_content    longblob        default null               comment '公告内容',
@@ -836,7 +836,7 @@ create table gen_table_column (
 -- ----------------------------
 create table sys_oss (
     oss_id          bigint(20)   not null                   comment '对象存储主键',
-    tenant_id       varchar(20)           default '000000'  comment '租户编号',
+    tenant_id       varchar(20)           default '000000'  comment '应用编号',
     file_name       varchar(255) not null default ''        comment '文件名',
     original_name   varchar(255) not null default ''        comment '原名',
     file_suffix     varchar(10)  not null default ''        comment '文件后缀名',
@@ -856,7 +856,7 @@ create table sys_oss (
 -- ----------------------------
 create table sys_oss_config (
     oss_config_id   bigint(20)    not null                  comment '主键',
-    tenant_id       varchar(20)             default '000000'comment '租户编号',
+    tenant_id       varchar(20)             default '000000'comment '应用编号',
     config_key      varchar(20)   not null  default ''      comment '配置key',
     access_key      varchar(255)            default ''      comment 'accessKey',
     secret_key      varchar(255)            default ''      comment '秘钥',
@@ -913,7 +913,7 @@ insert into sys_client values (2, '428a8310cd442757ae699df5d894f051', 'app', 'ap
 CREATE TABLE test_demo
 (
     id          bigint(0)    NOT NULL COMMENT '主键',
-    tenant_id   varchar(20)  NULL DEFAULT '000000' COMMENT '租户编号',
+    tenant_id   varchar(20)  NULL DEFAULT '000000' COMMENT '应用编号',
     dept_id     bigint(0)    NULL DEFAULT NULL COMMENT '部门id',
     user_id     bigint(0)    NULL DEFAULT NULL COMMENT '用户id',
     order_num   int(0)       NULL DEFAULT 0 COMMENT '排序号',
@@ -932,7 +932,7 @@ CREATE TABLE test_demo
 CREATE TABLE test_tree
 (
     id          bigint(0)    NOT NULL COMMENT '主键',
-    tenant_id   varchar(20)  NULL DEFAULT '000000' COMMENT '租户编号',
+    tenant_id   varchar(20)  NULL DEFAULT '000000' COMMENT '应用编号',
     parent_id   bigint(0)    NULL DEFAULT 0 COMMENT '父id',
     dept_id     bigint(0)    NULL DEFAULT NULL COMMENT '部门id',
     user_id     bigint(0)    NULL DEFAULT NULL COMMENT '用户id',

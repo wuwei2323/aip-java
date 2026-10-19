@@ -23,6 +23,7 @@ import cn.org.aip.common.core.utils.StringUtils;
 import cn.org.aip.common.mybatis.core.page.PageQuery;
 import cn.org.aip.common.mybatis.core.page.TableDataInfo;
 import cn.org.aip.common.satoken.utils.LoginHelper;
+import cn.org.aip.common.tenant.helper.TenantHelper;
 import cn.org.aip.system.domain.SysRole;
 import cn.org.aip.system.domain.SysRoleDept;
 import cn.org.aip.system.domain.SysRoleMenu;
@@ -194,10 +195,12 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
      */
     @Override
     public boolean checkRoleNameUnique(SysRoleBo role) {
-        boolean exist = baseMapper.exists(new LambdaQueryWrapper<SysRole>()
-            .eq(SysRole::getRoleName, role.getRoleName())
-            .ne(ObjectUtil.isNotNull(role.getRoleId()), SysRole::getRoleId, role.getRoleId()));
-        return !exist;
+        return TenantHelper.ignore(() -> {
+            boolean exist = baseMapper.exists(new LambdaQueryWrapper<SysRole>()
+                .eq(SysRole::getRoleName, role.getRoleName())
+                .ne(ObjectUtil.isNotNull(role.getRoleId()), SysRole::getRoleId, role.getRoleId()));
+            return !exist;
+        });
     }
 
     /**
@@ -208,10 +211,12 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
      */
     @Override
     public boolean checkRoleKeyUnique(SysRoleBo role) {
-        boolean exist = baseMapper.exists(new LambdaQueryWrapper<SysRole>()
-            .eq(SysRole::getRoleKey, role.getRoleKey())
-            .ne(ObjectUtil.isNotNull(role.getRoleId()), SysRole::getRoleId, role.getRoleId()));
-        return !exist;
+        return TenantHelper.ignore(() -> {
+            boolean exist = baseMapper.exists(new LambdaQueryWrapper<SysRole>()
+                .eq(SysRole::getRoleKey, role.getRoleKey())
+                .ne(ObjectUtil.isNotNull(role.getRoleId()), SysRole::getRoleId, role.getRoleId()));
+            return !exist;
+        });
     }
 
     /**

@@ -31,7 +31,7 @@ public class LoginBody implements Serializable {
     private String grantType;
 
     /**
-     * 租户ID
+     * 应用ID
      */
     private String tenantId;
 

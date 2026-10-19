@@ -40,7 +40,7 @@ create table sys_social
 comment on table   sys_social                   is '社会化关系表';
 comment on column  sys_social.id                is '主键';
 comment on column  sys_social.user_id           is '用户ID';
-comment on column  sys_social.tenant_id         is '租户id';
+comment on column  sys_social.tenant_id         is '应用id';
 comment on column  sys_social.auth_id           is '平台+平台唯一id';
 comment on column  sys_social.source            is '用户来源';
 comment on column  sys_social.open_id           is '平台编号唯一id';
@@ -69,7 +69,7 @@ comment on column  sys_social.update_time       is '更新时间';
 comment on column  sys_social.del_flag          is '删除标志（0代表存在 1代表删除）';
 
 -- ----------------------------
--- 租户表
+-- 应用表
 -- ----------------------------
 create table if not exists sys_tenant
 (
@@ -97,8 +97,8 @@ create table if not exists sys_tenant
 );
 
 
-comment on table   sys_tenant                    is '租户表';
-comment on column  sys_tenant.tenant_id          is '租户编号';
+comment on table   sys_tenant                    is '应用表';
+comment on column  sys_tenant.tenant_id          is '应用编号';
 comment on column  sys_tenant.contact_phone      is '联系电话';
 comment on column  sys_tenant.company_name       is '企业名称';
 comment on column  sys_tenant.company_name       is '联系人';
@@ -107,10 +107,10 @@ comment on column  sys_tenant.address            is '地址';
 comment on column  sys_tenant.intro              is '企业简介';
 comment on column  sys_tenant.domain             is '域名';
 comment on column  sys_tenant.remark             is '备注';
-comment on column  sys_tenant.package_id         is '租户套餐编号';
+comment on column  sys_tenant.package_id         is '应用套餐编号';
 comment on column  sys_tenant.expire_time        is '过期时间';
 comment on column  sys_tenant.account_count      is '用户数量（-1不限制）';
-comment on column  sys_tenant.status             is '租户状态（0正常 1停用）';
+comment on column  sys_tenant.status             is '应用状态（0正常 1停用）';
 comment on column  sys_tenant.del_flag           is '删除标志（0代表存在 1代表删除）';
 comment on column  sys_tenant.create_dept        is '创建部门';
 comment on column  sys_tenant.create_by          is '创建者';
@@ -120,14 +120,14 @@ comment on column  sys_tenant.update_time        is '更新时间';
 
 
 -- ----------------------------
--- 初始化-租户表数据
+-- 初始化-应用表数据
 -- ----------------------------
 
-insert into sys_tenant values(1, '000000', '管理组', '15888888888', 'XXX有限公司', null, null, '多租户通用后台管理管理系统', null, null, null, null, -1, '0', '0', 103, 1, now(), null, null);
+insert into sys_tenant values(1, '000000', '管理组', '15888888888', 'XXX有限公司', null, null, '多应用通用后台管理管理系统', null, null, null, null, -1, '0', '0', 103, 1, now(), null, null);
 
 
 -- ----------------------------
--- 租户套餐表
+-- 应用套餐表
 -- ----------------------------
 create table if not exists sys_tenant_package
 (
@@ -147,8 +147,8 @@ create table if not exists sys_tenant_package
 );
 
 
-comment on table   sys_tenant_package                    is '租户套餐表';
-comment on column  sys_tenant_package.package_id         is '租户套餐id';
+comment on table   sys_tenant_package                    is '应用套餐表';
+comment on column  sys_tenant_package.package_id         is '应用套餐id';
 comment on column  sys_tenant_package.package_name       is '套餐名称';
 comment on column  sys_tenant_package.menu_ids           is '关联菜单id';
 comment on column  sys_tenant_package.remark             is '备注';
@@ -188,7 +188,7 @@ create table if not exists sys_dept
 
 comment on table sys_dept               is '部门表';
 comment on column sys_dept.dept_id      is '部门ID';
-comment on column sys_dept.tenant_id    is '租户编号';
+comment on column sys_dept.tenant_id    is '应用编号';
 comment on column sys_dept.parent_id    is '父部门ID';
 comment on column sys_dept.ancestors    is '祖级列表';
 comment on column sys_dept.dept_name    is '部门名称';
@@ -250,7 +250,7 @@ create table if not exists sys_user
 
 comment on table sys_user               is '用户信息表';
 comment on column sys_user.user_id      is '用户ID';
-comment on column sys_user.tenant_id    is '租户编号';
+comment on column sys_user.tenant_id    is '应用编号';
 comment on column sys_user.dept_id      is '部门ID';
 comment on column sys_user.user_name    is '用户账号';
 comment on column sys_user.nick_name    is '用户昵称';
@@ -303,7 +303,7 @@ create table if not exists sys_post
 
 comment on table sys_post               is '岗位信息表';
 comment on column sys_post.post_id      is '岗位ID';
-comment on column sys_post.tenant_id    is '租户编号';
+comment on column sys_post.tenant_id    is '应用编号';
 comment on column sys_post.dept_id      is '部门id';
 comment on column sys_post.post_code    is '岗位编码';
 comment on column sys_post.post_category is '岗位类别编码';
@@ -351,7 +351,7 @@ create table if not exists sys_role
 
 comment on table sys_role                       is '角色信息表';
 comment on column sys_role.role_id              is '角色ID';
-comment on column sys_role.tenant_id            is '租户编号';
+comment on column sys_role.tenant_id            is '应用编号';
 comment on column sys_role.role_name            is '角色名称';
 comment on column sys_role.role_key             is '角色权限字符串';
 comment on column sys_role.role_sort            is '显示顺序';
@@ -429,7 +429,7 @@ comment on column sys_menu.remark       is '备注';
 -- ----------------------------
 -- 一级菜单
 insert into sys_menu values('1', '系统管理', '0', '1', 'system',           null, '', '1', '0', 'M', '0', '0', '', 'system',   103, 1, now(), null, null, '系统管理目录');
-insert into sys_menu values('6', '租户管理', '0', '2', 'tenant',           null, '', '1', '0', 'M', '0', '0', '', 'chart',    103, 1, now(), null, null, '租户管理目录');
+insert into sys_menu values('6', '应用管理', '0', '2', 'tenant',           null, '', '1', '0', 'M', '0', '0', '', 'chart',    103, 1, now(), null, null, '应用管理目录');
 insert into sys_menu values('2', '系统监控', '0', '3', 'monitor',          null, '', '1', '0', 'M', '0', '0', '', 'monitor',  103, 1, now(), null, null, '系统监控目录');
 insert into sys_menu values('3', '系统工具', '0', '4', 'tool',             null, '', '1', '0', 'M', '0', '0', '', 'tool',     103, 1, now(), null, null, '系统工具目录');
 insert into sys_menu values('4', 'PLUS官网', '0', '5', 'https://gitee.com/dromara/RuoYi-Vue-Plus', null, '', '0', '0', 'M', '0', '0', '', 'guide',    103, 1, now(), null, null, 'RuoYi-Vue-Plus官网地址');
@@ -447,8 +447,8 @@ insert into sys_menu values('108',  '日志管理',     '1',   '9', 'log',      
 insert into sys_menu values('109',  '在线用户',     '2',   '1', 'online',           'monitor/online/index',         '', '1', '0', 'C', '0', '0', 'monitor:online:list',         'online',        103, 1, now(), null, null, '在线用户菜单');
 insert into sys_menu values('113',  '缓存监控',     '2',   '5', 'cache',            'monitor/cache/index',          '', '1', '0', 'C', '0', '0', 'monitor:cache:list',          'redis',         103, 1, now(), null, null, '缓存监控菜单');
 insert into sys_menu values('115',  '代码生成',     '3',   '2', 'gen',              'tool/gen/index',               '', '1', '0', 'C', '0', '0', 'tool:gen:list',               'code',          103, 1, now(), null, null, '代码生成菜单');
-insert into sys_menu values('121',  '租户管理',     '6',   '1', 'tenant',           'system/tenant/index',          '', '1', '0', 'C', '0', '0', 'system:tenant:list',          'list',          103, 1, now(), null, null, '租户管理菜单');
-insert into sys_menu values('122',  '租户套餐管理', '6',   '2', 'tenantPackage',    'system/tenantPackage/index',   '', '1', '0', 'C', '0', '0', 'system:tenantPackage:list',   'form',          103, 1, now(), null, null, '租户套餐管理菜单');
+insert into sys_menu values('121',  '应用管理',     '6',   '1', 'tenant',           'system/tenant/index',          '', '1', '0', 'C', '0', '0', 'system:tenant:list',          'list',          103, 1, now(), null, null, '应用管理菜单');
+insert into sys_menu values('122',  '应用套餐管理', '6',   '2', 'tenantPackage',    'system/tenantPackage/index',   '', '1', '0', 'C', '0', '0', 'system:tenantPackage:list',   'form',          103, 1, now(), null, null, '应用套餐管理菜单');
 insert into sys_menu values('123',  '客户端管理',   '1',   '11', 'client',           'system/client/index',          '', '1', '0', 'C', '0', '0', 'system:client:list',          'international', 103, 1, now(), null, null, '客户端管理菜单');
 insert into sys_menu values('116', '修改生成配置',  '3',   '2', 'gen-edit/index/:tableId', 'tool/gen/editTable', '', '1', '1', 'C', '1', '0', 'tool:gen:edit',           '#',               103, 1, now(), null, null, '/tool/gen');
 insert into sys_menu values('130', '分配用户',     '1',   '2', 'role-auth/user/:roleId', 'system/role/authUser', '', '1', '1', 'C', '1', '0', 'system:role:edit',      '#',               103, 1, now(), null, null, '/system/role');
@@ -542,18 +542,18 @@ insert into sys_menu values('1620', '配置列表', '118', '5', '#', '', '', '1'
 insert into sys_menu values('1621', '配置添加', '118', '6', '#', '', '', '1', '0', 'F', '0', '0', 'system:ossConfig:add',    '#', 103, 1, now(), null, null, '');
 insert into sys_menu values('1622', '配置编辑', '118', '6', '#', '', '', '1', '0', 'F', '0', '0', 'system:ossConfig:edit',   '#', 103, 1, now(), null, null, '');
 insert into sys_menu values('1623', '配置删除', '118', '6', '#', '', '', '1', '0', 'F', '0', '0', 'system:ossConfig:remove', '#', 103, 1, now(), null, null, '');
--- 租户管理相关按钮
-insert into sys_menu values('1606', '租户查询', '121', '1', '#', '', '', '1', '0', 'F', '0', '0', 'system:tenant:query',   '#', 103, 1, now(), null, null, '');
-insert into sys_menu values('1607', '租户新增', '121', '2', '#', '', '', '1', '0', 'F', '0', '0', 'system:tenant:add',     '#', 103, 1, now(), null, null, '');
-insert into sys_menu values('1608', '租户修改', '121', '3', '#', '', '', '1', '0', 'F', '0', '0', 'system:tenant:edit',    '#', 103, 1, now(), null, null, '');
-insert into sys_menu values('1609', '租户删除', '121', '4', '#', '', '', '1', '0', 'F', '0', '0', 'system:tenant:remove',  '#', 103, 1, now(), null, null, '');
-insert into sys_menu values('1610', '租户导出', '121', '5', '#', '', '', '1', '0', 'F', '0', '0', 'system:tenant:export',  '#', 103, 1, now(), null, null, '');
--- 租户套餐管理相关按钮
-insert into sys_menu values('1611', '租户套餐查询', '122', '1', '#', '', '', '1', '0', 'F', '0', '0', 'system:tenantPackage:query',   '#', 103, 1, now(), null, null, '');
-insert into sys_menu values('1612', '租户套餐新增', '122', '2', '#', '', '', '1', '0', 'F', '0', '0', 'system:tenantPackage:add',     '#', 103, 1, now(), null, null, '');
-insert into sys_menu values('1613', '租户套餐修改', '122', '3', '#', '', '', '1', '0', 'F', '0', '0', 'system:tenantPackage:edit',    '#', 103, 1, now(), null, null, '');
-insert into sys_menu values('1614', '租户套餐删除', '122', '4', '#', '', '', '1', '0', 'F', '0', '0', 'system:tenantPackage:remove',  '#', 103, 1, now(), null, null, '');
-insert into sys_menu values('1615', '租户套餐导出', '122', '5', '#', '', '', '1', '0', 'F', '0', '0', 'system:tenantPackage:export',  '#', 103, 1, now(), null, null, '');
+-- 应用管理相关按钮
+insert into sys_menu values('1606', '应用查询', '121', '1', '#', '', '', '1', '0', 'F', '0', '0', 'system:tenant:query',   '#', 103, 1, now(), null, null, '');
+insert into sys_menu values('1607', '应用新增', '121', '2', '#', '', '', '1', '0', 'F', '0', '0', 'system:tenant:add',     '#', 103, 1, now(), null, null, '');
+insert into sys_menu values('1608', '应用修改', '121', '3', '#', '', '', '1', '0', 'F', '0', '0', 'system:tenant:edit',    '#', 103, 1, now(), null, null, '');
+insert into sys_menu values('1609', '应用删除', '121', '4', '#', '', '', '1', '0', 'F', '0', '0', 'system:tenant:remove',  '#', 103, 1, now(), null, null, '');
+insert into sys_menu values('1610', '应用导出', '121', '5', '#', '', '', '1', '0', 'F', '0', '0', 'system:tenant:export',  '#', 103, 1, now(), null, null, '');
+-- 应用套餐管理相关按钮
+insert into sys_menu values('1611', '应用套餐查询', '122', '1', '#', '', '', '1', '0', 'F', '0', '0', 'system:tenantPackage:query',   '#', 103, 1, now(), null, null, '');
+insert into sys_menu values('1612', '应用套餐新增', '122', '2', '#', '', '', '1', '0', 'F', '0', '0', 'system:tenantPackage:add',     '#', 103, 1, now(), null, null, '');
+insert into sys_menu values('1613', '应用套餐修改', '122', '3', '#', '', '', '1', '0', 'F', '0', '0', 'system:tenantPackage:edit',    '#', 103, 1, now(), null, null, '');
+insert into sys_menu values('1614', '应用套餐删除', '122', '4', '#', '', '', '1', '0', 'F', '0', '0', 'system:tenantPackage:remove',  '#', 103, 1, now(), null, null, '');
+insert into sys_menu values('1615', '应用套餐导出', '122', '5', '#', '', '', '1', '0', 'F', '0', '0', 'system:tenantPackage:export',  '#', 103, 1, now(), null, null, '');
 -- 客户端管理按钮
 insert into sys_menu values('1061', '客户端管理查询', '123', '1',  '#', '', '', '1', '0', 'F', '0', '0', 'system:client:query',        '#', 103, 1, now(), null, null, '');
 insert into sys_menu values('1062', '客户端管理新增', '123', '2',  '#', '', '', '1', '0', 'F', '0', '0', 'system:client:add',          '#', 103, 1, now(), null, null, '');
@@ -798,7 +798,7 @@ create index idx_sys_oper_log_ot ON sys_oper_log (oper_time);
 
 comment on table sys_oper_log                   is '操作日志记录';
 comment on column sys_oper_log.oper_id          is '日志主键';
-comment on column sys_oper_log.tenant_id        is '租户编号';
+comment on column sys_oper_log.tenant_id        is '应用编号';
 comment on column sys_oper_log.title            is '模块标题';
 comment on column sys_oper_log.business_type    is '业务类型（0其它 1新增 2修改 3删除）';
 comment on column sys_oper_log.method           is '方法名称';
@@ -838,7 +838,7 @@ create unique index sys_dict_type_index1 ON sys_dict_type (tenant_id, dict_type)
 
 comment on table sys_dict_type                  is '字典类型表';
 comment on column sys_dict_type.dict_id         is '字典主键';
-comment on column sys_dict_type.tenant_id       is '租户编号';
+comment on column sys_dict_type.tenant_id       is '应用编号';
 comment on column sys_dict_type.dict_name       is '字典名称';
 comment on column sys_dict_type.dict_type       is '字典类型';
 comment on column sys_dict_type.create_dept     is '创建部门';
@@ -884,7 +884,7 @@ create table if not exists sys_dict_data
 
 comment on table sys_dict_data                  is '字典数据表';
 comment on column sys_dict_data.dict_code       is '字典编码';
-comment on column sys_dict_type.tenant_id       is '租户编号';
+comment on column sys_dict_type.tenant_id       is '应用编号';
 comment on column sys_dict_data.dict_sort       is '字典排序';
 comment on column sys_dict_data.dict_label      is '字典标签';
 comment on column sys_dict_data.dict_value      is '字典键值';
@@ -957,7 +957,7 @@ create table if not exists sys_config
 
 comment on table sys_config                 is '参数配置表';
 comment on column sys_config.config_id      is '参数主键';
-comment on column sys_config.tenant_id      is '租户编号';
+comment on column sys_config.tenant_id      is '应用编号';
 comment on column sys_config.config_name    is '参数名称';
 comment on column sys_config.config_key     is '参数键名';
 comment on column sys_config.config_value   is '参数键值';
@@ -1001,7 +1001,7 @@ create index idx_sys_logininfor_lt ON sys_logininfor (login_time);
 
 comment on table sys_logininfor                 is '系统访问记录';
 comment on column sys_logininfor.info_id        is '访问ID';
-comment on column sys_logininfor.tenant_id      is '租户编号';
+comment on column sys_logininfor.tenant_id      is '应用编号';
 comment on column sys_logininfor.user_name      is '用户账号';
 comment on column sys_logininfor.client_key     is '客户端';
 comment on column sys_logininfor.device_type    is '设备类型';
@@ -1035,7 +1035,7 @@ create table if not exists sys_notice
 
 comment on table sys_notice                 is '通知公告表';
 comment on column sys_notice.notice_id      is '公告ID';
-comment on column sys_notice.tenant_id      is '租户编号';
+comment on column sys_notice.tenant_id      is '应用编号';
 comment on column sys_notice.notice_title   is '公告标题';
 comment on column sys_notice.notice_type    is '公告类型（1通知 2公告）';
 comment on column sys_notice.notice_content is '公告内容';
@@ -1187,7 +1187,7 @@ create table if not exists sys_oss
 
 comment on table sys_oss                    is 'OSS对象存储表';
 comment on column sys_oss.oss_id            is '对象存储主键';
-comment on column sys_oss.tenant_id         is '租户编码';
+comment on column sys_oss.tenant_id         is '应用编码';
 comment on column sys_oss.file_name         is '文件名';
 comment on column sys_oss.original_name     is '原名';
 comment on column sys_oss.file_suffix       is '文件后缀名';
@@ -1230,7 +1230,7 @@ create table if not exists sys_oss_config
 
 comment on table sys_oss_config                 is '对象存储配置表';
 comment on column sys_oss_config.oss_config_id  is '主键';
-comment on column sys_oss_config.tenant_id      is '租户编码';
+comment on column sys_oss_config.tenant_id      is '应用编码';
 comment on column sys_oss_config.config_key     is '配置key';
 comment on column sys_oss_config.access_key     is 'accessKey';
 comment on column sys_oss_config.secret_key     is '秘钥';
@@ -1318,7 +1318,7 @@ create table if not exists test_demo
 
 comment on table test_demo is '测试单表';
 comment on column test_demo.id is '主键';
-comment on column test_demo.tenant_id is '租户编号';
+comment on column test_demo.tenant_id is '应用编号';
 comment on column test_demo.dept_id is '部门id';
 comment on column test_demo.user_id is '用户id';
 comment on column test_demo.order_num is '排序号';
@@ -1351,7 +1351,7 @@ create table if not exists test_tree
 
 comment on table test_tree is '测试树表';
 comment on column test_tree.id is '主键';
-comment on column test_tree.tenant_id is '租户编号';
+comment on column test_tree.tenant_id is '应用编号';
 comment on column test_tree.parent_id is '父id';
 comment on column test_tree.dept_id is '部门id';
 comment on column test_tree.user_id is '用户id';
@@ -2318,7 +2318,7 @@ COMMENT ON COLUMN flow_definition.create_by IS '创建人';
 COMMENT ON COLUMN flow_definition.update_time IS '更新时间';
 COMMENT ON COLUMN flow_definition.update_by IS '更新人';
 COMMENT ON COLUMN flow_definition.del_flag IS '删除标志';
-COMMENT ON COLUMN flow_definition.tenant_id IS '租户id';
+COMMENT ON COLUMN flow_definition.tenant_id IS '应用id';
 
 CREATE TABLE flow_node
 (
@@ -2367,7 +2367,7 @@ COMMENT ON COLUMN flow_node.update_time IS '更新时间';
 COMMENT ON COLUMN flow_node.update_by IS '更新人';
 COMMENT ON COLUMN flow_node.ext IS '节点扩展属性';
 COMMENT ON COLUMN flow_node.del_flag IS '删除标志';
-COMMENT ON COLUMN flow_node.tenant_id IS '租户id';
+COMMENT ON COLUMN flow_node.tenant_id IS '应用id';
 
 
 CREATE TABLE flow_skip
@@ -2407,7 +2407,7 @@ COMMENT ON COLUMN flow_skip.create_by IS '创建人';
 COMMENT ON COLUMN flow_skip.update_time IS '更新时间';
 COMMENT ON COLUMN flow_skip.update_by IS '更新人';
 COMMENT ON COLUMN flow_skip.del_flag IS '删除标志';
-COMMENT ON COLUMN flow_skip.tenant_id IS '租户id';
+COMMENT ON COLUMN flow_skip.tenant_id IS '应用id';
 
 CREATE TABLE flow_instance
 (
@@ -2448,7 +2448,7 @@ COMMENT ON COLUMN flow_instance.update_time IS '更新时间';
 COMMENT ON COLUMN flow_instance.update_by IS '更新人';
 COMMENT ON COLUMN flow_instance.ext IS '扩展字段，预留给业务系统使用';
 COMMENT ON COLUMN flow_instance.del_flag IS '删除标志';
-COMMENT ON COLUMN flow_instance.tenant_id IS '租户id';
+COMMENT ON COLUMN flow_instance.tenant_id IS '应用id';
 
 CREATE TABLE flow_task
 (
@@ -2485,7 +2485,7 @@ COMMENT ON COLUMN flow_task.create_by IS '创建人';
 COMMENT ON COLUMN flow_task.update_time IS '更新时间';
 COMMENT ON COLUMN flow_task.update_by IS '更新人';
 COMMENT ON COLUMN flow_task.del_flag IS '删除标志';
-COMMENT ON COLUMN flow_task.tenant_id IS '租户id';
+COMMENT ON COLUMN flow_task.tenant_id IS '应用id';
 
 CREATE TABLE flow_his_task
 (
@@ -2538,7 +2538,7 @@ COMMENT ON COLUMN flow_his_task.ext IS '扩展字段，预留给业务系统使�
 COMMENT ON COLUMN flow_his_task.create_time IS '任务开始时间';
 COMMENT ON COLUMN flow_his_task.update_time IS '审批完成时间';
 COMMENT ON COLUMN flow_his_task.del_flag IS '删除标志';
-COMMENT ON COLUMN flow_his_task.tenant_id IS '租户id';
+COMMENT ON COLUMN flow_his_task.tenant_id IS '应用id';
 
 CREATE TABLE flow_user
 (
@@ -2567,7 +2567,7 @@ COMMENT ON COLUMN flow_user.create_by IS '创建人';
 COMMENT ON COLUMN flow_user.update_time IS '更新时间';
 COMMENT ON COLUMN flow_user.update_by IS '更新人';
 COMMENT ON COLUMN flow_user.del_flag IS '删除标志';
-COMMENT ON COLUMN flow_user.tenant_id IS '租户id';
+COMMENT ON COLUMN flow_user.tenant_id IS '应用id';
 
 -- ----------------------------
 -- 流程分类表
@@ -2591,7 +2591,7 @@ CREATE TABLE flow_category
 
 COMMENT ON TABLE flow_category IS '流程分类';
 COMMENT ON COLUMN flow_category.category_id IS '流程分类ID';
-COMMENT ON COLUMN flow_category.tenant_id IS '租户编号';
+COMMENT ON COLUMN flow_category.tenant_id IS '应用编号';
 COMMENT ON COLUMN flow_category.parent_id IS '父流程分类id';
 COMMENT ON COLUMN flow_category.ancestors IS '祖级列表';
 COMMENT ON COLUMN flow_category.category_name IS '流程分类名称';
@@ -2673,7 +2673,7 @@ CREATE TABLE flow_instance_biz_ext (
 
 COMMENT ON TABLE flow_instance_biz_ext IS '流程实例业务扩展表';
 COMMENT ON COLUMN flow_instance_biz_ext.id  IS '主键id';
-COMMENT ON COLUMN flow_instance_biz_ext.tenant_id  IS '租户编号';
+COMMENT ON COLUMN flow_instance_biz_ext.tenant_id  IS '应用编号';
 COMMENT ON COLUMN flow_instance_biz_ext.create_dept  IS '创建部门';
 COMMENT ON COLUMN flow_instance_biz_ext.create_by  IS '创建者';
 COMMENT ON COLUMN flow_instance_biz_ext.create_time  IS '创建时间';
@@ -2709,7 +2709,7 @@ CREATE TABLE test_leave
 
 COMMENT ON TABLE test_leave IS '请假申请表';
 COMMENT ON COLUMN test_leave.id IS 'id';
-COMMENT ON COLUMN test_leave.tenant_id IS '租户编号';
+COMMENT ON COLUMN test_leave.tenant_id IS '应用编号';
 COMMENT ON COLUMN test_leave.apply_code IS '申请编号';
 COMMENT ON COLUMN test_leave.leave_type IS '请假类型';
 COMMENT ON COLUMN test_leave.start_date IS '开始时间';

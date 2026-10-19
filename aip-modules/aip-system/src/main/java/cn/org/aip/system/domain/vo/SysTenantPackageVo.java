@@ -13,7 +13,7 @@ import java.io.Serializable;
 
 
 /**
- * 租户套餐视图对象 sys_tenant_package
+ * 应用套餐视图对象 sys_tenant_package
  *
  * @author Michelle.Chung
  */
@@ -26,9 +26,9 @@ public class SysTenantPackageVo implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 租户套餐id
+     * 应用套餐id
      */
-    @ExcelProperty(value = "租户套餐id")
+    @ExcelProperty(value = "应用套餐id")
     private Long packageId;
 
     /**

@@ -168,7 +168,7 @@ sms:
   # 以下配置来自于 cn.org.aip.sms4j.provider.config.BaseConfig类中
   blends:
     # 唯一ID 用于发送短信寻找具体配置 随便定义别用中文即可
-    # 可以同时存在两个相同厂商 例如: ali1 ali2 两个不同的阿里短信账号 也可用于区分租户
+    # 可以同时存在两个相同厂商 例如: ali1 ali2 两个不同的阿里短信账号 也可用于区分应用
     config1:
       # 框架定义的厂商名称标识，标定此配置是哪个厂商，详细请看厂商标识介绍部分
       supplier: ${SMS_CONFIG1_SUPPLIER:alibaba}

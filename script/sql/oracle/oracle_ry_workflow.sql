@@ -46,7 +46,7 @@ comment on column FLOW_DEFINITION.CREATE_BY is '创建人';
 comment on column FLOW_DEFINITION.UPDATE_TIME is '更新时间';
 comment on column FLOW_DEFINITION.UPDATE_BY is '更新人';
 comment on column FLOW_DEFINITION.DEL_FLAG is '删除标志';
-comment on column FLOW_DEFINITION.TENANT_ID is '租户id';
+comment on column FLOW_DEFINITION.TENANT_ID is '应用id';
 
 create table FLOW_NODE
 (
@@ -96,7 +96,7 @@ comment on column FLOW_NODE.UPDATE_TIME is '更新时间';
 comment on column FLOW_NODE.UPDATE_BY is '更新人';
 comment on column FLOW_NODE.EXT is '节点扩展属性';
 comment on column FLOW_NODE.DEL_FLAG is '删除标志';
-comment on column FLOW_NODE.TENANT_ID is '租户id';
+comment on column FLOW_NODE.TENANT_ID is '应用id';
 comment on column FLOW_NODE.PERMISSION_FLAG is '权限标识（权限类型:权限标识，可以多个，用@@隔开)';
 
 create table FLOW_SKIP
@@ -138,7 +138,7 @@ comment on column FLOW_SKIP.CREATE_BY is '创建人';
 comment on column FLOW_SKIP.UPDATE_TIME is '更新时间';
 comment on column FLOW_SKIP.UPDATE_BY is '更新人';
 comment on column FLOW_SKIP.DEL_FLAG is '删除标志';
-comment on column FLOW_SKIP.TENANT_ID is '租户id';
+comment on column FLOW_SKIP.TENANT_ID is '应用id';
 
 create table FLOW_INSTANCE
 (
@@ -181,7 +181,7 @@ comment on column FLOW_INSTANCE.UPDATE_TIME is '更新时间';
 comment on column FLOW_INSTANCE.UPDATE_BY is '更新人';
 comment on column FLOW_INSTANCE.EXT is '扩展字段，预留给业务系统使用';
 comment on column FLOW_INSTANCE.DEL_FLAG is '删除标志';
-comment on column FLOW_INSTANCE.TENANT_ID is '租户id';
+comment on column FLOW_INSTANCE.TENANT_ID is '应用id';
 
 create table FLOW_TASK
 (
@@ -220,7 +220,7 @@ comment on column FLOW_TASK.CREATE_BY is '创建人';
 comment on column FLOW_TASK.UPDATE_TIME is '更新时间';
 comment on column FLOW_TASK.UPDATE_BY is '更新人';
 comment on column FLOW_TASK.DEL_FLAG is '删除标志';
-comment on column FLOW_TASK.TENANT_ID is '租户id';
+comment on column FLOW_TASK.TENANT_ID is '应用id';
 
 create table FLOW_HIS_TASK
 (
@@ -273,7 +273,7 @@ comment on column FLOW_HIS_TASK.EXT is '扩展字段，预留给业务系统使�
 comment on column FLOW_HIS_TASK.CREATE_TIME is '任务开始时间';
 comment on column FLOW_HIS_TASK.UPDATE_TIME is '审批完成时间';
 comment on column FLOW_HIS_TASK.DEL_FLAG is '删除标志';
-comment on column FLOW_HIS_TASK.TENANT_ID is '租户id';
+comment on column FLOW_HIS_TASK.TENANT_ID is '应用id';
 comment on column FLOW_HIS_TASK.APPROVER is '审批者';
 comment on column FLOW_HIS_TASK.COOPERATE_TYPE is '协作方式(1审批 2转办 3委派 4会签 5票签 6加签 7减签)';
 comment on column FLOW_HIS_TASK.COLLABORATOR is '协作人';
@@ -305,7 +305,7 @@ comment on column FLOW_USER.CREATE_BY is '创建人';
 comment on column FLOW_USER.UPDATE_TIME is '更新时间';
 comment on column FLOW_USER.UPDATE_BY is '更新人';
 comment on column FLOW_USER.DEL_FLAG is '删除标志';
-comment on column FLOW_USER.TENANT_ID is '租户id';
+comment on column FLOW_USER.TENANT_ID is '应用id';
 
 create index USER_PROCESSED_TYPE on FLOW_USER (PROCESSED_BY, TYPE);
 create index USER_ASSOCIATED_IDX on FLOW_USER (ASSOCIATED);
@@ -333,7 +333,7 @@ alter table flow_category add constraint pk_flow_category primary key (category_
 
 COMMENT ON TABLE flow_category IS '流程分类';
 COMMENT ON COLUMN flow_category.category_id IS '流程分类ID';
-COMMENT ON COLUMN flow_category.tenant_id IS '租户编号';
+COMMENT ON COLUMN flow_category.tenant_id IS '应用编号';
 COMMENT ON COLUMN flow_category.parent_id IS '父流程分类id';
 COMMENT ON COLUMN flow_category.ancestors IS '祖级列表';
 COMMENT ON COLUMN flow_category.category_name IS '流程分类名称';
@@ -417,7 +417,7 @@ alter table flow_instance_biz_ext add constraint pk_fi_biz_ext primary key (id);
 
 COMMENT ON TABLE flow_instance_biz_ext IS '流程实例业务扩展表';
 COMMENT ON COLUMN flow_instance_biz_ext.id  IS '主键id';
-COMMENT ON COLUMN flow_instance_biz_ext.tenant_id  IS '租户编号';
+COMMENT ON COLUMN flow_instance_biz_ext.tenant_id  IS '应用编号';
 COMMENT ON COLUMN flow_instance_biz_ext.create_dept  IS '创建部门';
 COMMENT ON COLUMN flow_instance_biz_ext.create_by  IS '创建者';
 COMMENT ON COLUMN flow_instance_biz_ext.create_time  IS '创建时间';
@@ -454,7 +454,7 @@ alter table test_leave add constraint pk_test_leave primary key (id);
 
 COMMENT ON TABLE test_leave IS '请假申请表';
 COMMENT ON COLUMN test_leave.id IS 'ID';
-COMMENT ON COLUMN test_leave.tenant_id IS '租户编号';
+COMMENT ON COLUMN test_leave.tenant_id IS '应用编号';
 COMMENT ON COLUMN test_leave.apply_code IS '申请编号';
 COMMENT ON COLUMN test_leave.leave_type IS '请假类型';
 COMMENT ON COLUMN test_leave.start_date IS '开始时间';

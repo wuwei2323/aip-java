@@ -8,7 +8,7 @@ import cn.org.aip.common.redis.handler.KeyPrefixHandler;
 import cn.org.aip.common.tenant.helper.TenantHelper;
 
 /**
- * 多租户redis缓存key前缀处理
+ * 多应用redis缓存key前缀处理
  *
  * @author Lion Li
  */
@@ -39,7 +39,7 @@ public class TenantKeyPrefixHandler extends KeyPrefixHandler {
         }
         String tenantId = TenantHelper.getTenantId();
         if (StringUtils.isBlank(tenantId)) {
-            log.debug("无法获取有效的租户id -> Null");
+            log.debug("无法获取有效的应用id -> Null");
             return super.map(name);
         }
         if (StringUtils.startsWith(name, tenantId + "")) {
@@ -70,7 +70,7 @@ public class TenantKeyPrefixHandler extends KeyPrefixHandler {
         }
         String tenantId = TenantHelper.getTenantId();
         if (StringUtils.isBlank(tenantId)) {
-            log.debug("无法获取有效的租户id -> Null");
+            log.debug("无法获取有效的应用id -> Null");
             return unmap;
         }
         if (StringUtils.startsWith(unmap, tenantId + "")) {

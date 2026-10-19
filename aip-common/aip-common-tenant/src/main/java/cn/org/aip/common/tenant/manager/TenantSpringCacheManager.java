@@ -9,7 +9,7 @@ import cn.org.aip.common.tenant.helper.TenantHelper;
 import org.springframework.cache.Cache;
 
 /**
- * 重写 cacheName 处理方法 支持多租户
+ * 重写 cacheName 处理方法 支持多应用
  *
  * @author Lion Li
  */
@@ -29,7 +29,7 @@ public class TenantSpringCacheManager extends PlusSpringCacheManager {
         }
         String tenantId = TenantHelper.getTenantId();
         if (StringUtils.isBlank(tenantId)) {
-            log.error("无法获取有效的租户id -> Null");
+            log.error("无法获取有效的应用id -> Null");
         }
         if (StringUtils.startsWith(name, tenantId)) {
             // 如果存在则直接返回

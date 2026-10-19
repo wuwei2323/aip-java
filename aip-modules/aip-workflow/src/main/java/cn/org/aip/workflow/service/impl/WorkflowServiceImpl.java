@@ -105,9 +105,9 @@ public class WorkflowServiceImpl implements WorkflowService {
     }
 
     /**
-     * 新增租户流程定义
+     * 新增应用流程定义
      *
-     * @param tenantId 租户id
+     * @param tenantId 应用id
      */
     @Override
     public void syncDef(String tenantId) {

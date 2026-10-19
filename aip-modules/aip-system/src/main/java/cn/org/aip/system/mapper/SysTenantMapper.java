@@ -5,7 +5,7 @@ import cn.org.aip.system.domain.vo.SysTenantVo;
 import cn.org.aip.common.mybatis.core.mapper.BaseMapperPlus;
 
 /**
- * 租户Mapper接口
+ * 应用Mapper接口
  *
  * @author Michelle.Chung
  */

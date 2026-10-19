@@ -22,6 +22,7 @@ import cn.org.aip.common.core.utils.*;
 import cn.org.aip.common.mybatis.core.page.PageQuery;
 import cn.org.aip.common.mybatis.core.page.TableDataInfo;
 import cn.org.aip.common.satoken.utils.LoginHelper;
+import cn.org.aip.common.tenant.helper.TenantHelper;
 import cn.org.aip.system.domain.SysUser;
 import cn.org.aip.system.domain.SysUserPost;
 import cn.org.aip.system.domain.SysUserRole;
@@ -239,10 +240,12 @@ public class SysUserServiceImpl implements ISysUserService, UserService {
      */
     @Override
     public boolean checkUserNameUnique(SysUserBo user) {
-        boolean exist = baseMapper.exists(new LambdaQueryWrapper<SysUser>()
-            .eq(SysUser::getUserName, user.getUserName())
-            .ne(ObjectUtil.isNotNull(user.getUserId()), SysUser::getUserId, user.getUserId()));
-        return !exist;
+        return TenantHelper.ignore(() -> {
+            boolean exist = baseMapper.exists(new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getUserName, user.getUserName())
+                .ne(ObjectUtil.isNotNull(user.getUserId()), SysUser::getUserId, user.getUserId()));
+            return !exist;
+        });
     }
 
     /**
@@ -252,10 +255,12 @@ public class SysUserServiceImpl implements ISysUserService, UserService {
      */
     @Override
     public boolean checkPhoneUnique(SysUserBo user) {
-        boolean exist = baseMapper.exists(new LambdaQueryWrapper<SysUser>()
-            .eq(SysUser::getPhonenumber, user.getPhonenumber())
-            .ne(ObjectUtil.isNotNull(user.getUserId()), SysUser::getUserId, user.getUserId()));
-        return !exist;
+        return TenantHelper.ignore(() -> {
+            boolean exist = baseMapper.exists(new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getPhonenumber, user.getPhonenumber())
+                .ne(ObjectUtil.isNotNull(user.getUserId()), SysUser::getUserId, user.getUserId()));
+            return !exist;
+        });
     }
 
     /**
@@ -265,10 +270,12 @@ public class SysUserServiceImpl implements ISysUserService, UserService {
      */
     @Override
     public boolean checkEmailUnique(SysUserBo user) {
-        boolean exist = baseMapper.exists(new LambdaQueryWrapper<SysUser>()
-            .eq(SysUser::getEmail, user.getEmail())
-            .ne(ObjectUtil.isNotNull(user.getUserId()), SysUser::getUserId, user.getUserId()));
-        return !exist;
+        return TenantHelper.ignore(() -> {
+            boolean exist = baseMapper.exists(new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getEmail, user.getEmail())
+                .ne(ObjectUtil.isNotNull(user.getUserId()), SysUser::getUserId, user.getUserId()));
+            return !exist;
+        });
     }
 
     /**
@@ -332,7 +339,6 @@ public class SysUserServiceImpl implements ISysUserService, UserService {
         user.setCreateBy(0L);
         user.setUpdateBy(0L);
         SysUser sysUser = MapstructUtils.convert(user, SysUser.class);
-        sysUser.setTenantId(tenantId);
         return baseMapper.insert(sysUser) > 0;
     }
 

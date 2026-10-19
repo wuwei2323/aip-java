@@ -27,7 +27,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * 租户套餐Service业务层处理
+ * 应用套餐Service业务层处理
  *
  * @author Michelle.Chung
  */
@@ -39,7 +39,7 @@ public class SysTenantPackageServiceImpl implements ISysTenantPackageService {
     private final SysTenantMapper tenantMapper;
 
     /**
-     * 查询租户套餐
+     * 查询应用套餐
      */
     @Override
     public SysTenantPackageVo queryById(Long packageId){
@@ -47,7 +47,7 @@ public class SysTenantPackageServiceImpl implements ISysTenantPackageService {
     }
 
     /**
-     * 查询租户套餐列表
+     * 查询应用套餐列表
      */
     @Override
     public TableDataInfo<SysTenantPackageVo> queryPageList(SysTenantPackageBo bo, PageQuery pageQuery) {
@@ -63,7 +63,7 @@ public class SysTenantPackageServiceImpl implements ISysTenantPackageService {
     }
 
     /**
-     * 查询租户套餐列表
+     * 查询应用套餐列表
      */
     @Override
     public List<SysTenantPackageVo> queryList(SysTenantPackageBo bo) {
@@ -80,7 +80,7 @@ public class SysTenantPackageServiceImpl implements ISysTenantPackageService {
     }
 
     /**
-     * 新增租户套餐
+     * 新增应用套餐
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -97,7 +97,7 @@ public class SysTenantPackageServiceImpl implements ISysTenantPackageService {
     }
 
     /**
-     * 修改租户套餐
+     * 修改应用套餐
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -133,7 +133,7 @@ public class SysTenantPackageServiceImpl implements ISysTenantPackageService {
     }
 
     /**
-     * 批量删除租户套餐
+     * 批量删除应用套餐
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -141,7 +141,7 @@ public class SysTenantPackageServiceImpl implements ISysTenantPackageService {
         if(isValid){
             boolean exists = tenantMapper.exists(new LambdaQueryWrapper<SysTenant>().in(SysTenant::getPackageId, ids));
             if (exists) {
-                throw new ServiceException("租户套餐已被使用");
+                throw new ServiceException("应用套餐已被使用");
             }
         }
         return baseMapper.deleteByIds(ids) > 0;

@@ -23,7 +23,7 @@ public class LoginUser implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 租户ID
+     * 应用ID
      */
     private String tenantId;
 

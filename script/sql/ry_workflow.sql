@@ -21,7 +21,7 @@ CREATE TABLE `flow_definition`
     `update_time`     datetime                 DEFAULT NULL COMMENT '更新时间',
     `update_by`       varchar(64)          DEFAULT '' COMMENT '更新人',
     `del_flag`        char(1)                  DEFAULT '0' COMMENT '删除标志',
-    `tenant_id`       varchar(40)              DEFAULT NULL COMMENT '租户id',
+    `tenant_id`       varchar(40)              DEFAULT NULL COMMENT '应用id',
     PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB COMMENT ='流程定义表';
 
@@ -47,7 +47,7 @@ CREATE TABLE `flow_node`
     `update_by`       varchar(64)          DEFAULT '' COMMENT '更新人',
     `ext`             text          COMMENT '节点扩展属性',
     `del_flag`        char(1)       DEFAULT '0' COMMENT '删除标志',
-    `tenant_id`       varchar(40)   DEFAULT NULL COMMENT '租户id',
+    `tenant_id`       varchar(40)   DEFAULT NULL COMMENT '应用id',
     PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB COMMENT ='流程节点表';
 
@@ -68,7 +68,7 @@ CREATE TABLE `flow_skip`
     `update_time`    datetime     DEFAULT NULL COMMENT '更新时间',
     `update_by`       varchar(64)          DEFAULT '' COMMENT '更新人',
     `del_flag`       char(1)      DEFAULT '0' COMMENT '删除标志',
-    `tenant_id`      varchar(40)  DEFAULT NULL COMMENT '租户id',
+    `tenant_id`      varchar(40)  DEFAULT NULL COMMENT '应用id',
     PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB COMMENT ='节点跳转关联表';
 
@@ -90,7 +90,7 @@ CREATE TABLE `flow_instance`
     `update_by`       varchar(64)          DEFAULT '' COMMENT '更新人',
     `ext`             varchar(500)         DEFAULT NULL COMMENT '扩展字段，预留给业务系统使用',
     `del_flag`        char(1)              DEFAULT '0' COMMENT '删除标志',
-    `tenant_id`       varchar(40)          DEFAULT NULL COMMENT '租户id',
+    `tenant_id`       varchar(40)          DEFAULT NULL COMMENT '应用id',
     PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB COMMENT ='流程实例表';
 
@@ -110,7 +110,7 @@ CREATE TABLE `flow_task`
     `update_time`   datetime     DEFAULT NULL COMMENT '更新时间',
     `update_by`       varchar(64)          DEFAULT '' COMMENT '更新人',
     `del_flag`      char(1)      DEFAULT '0' COMMENT '删除标志',
-    `tenant_id`     varchar(40)  DEFAULT NULL COMMENT '租户id',
+    `tenant_id`     varchar(40)  DEFAULT NULL COMMENT '应用id',
     PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB COMMENT ='待办任务表';
 
@@ -138,7 +138,7 @@ CREATE TABLE `flow_his_task`
     `create_time`      datetime                     DEFAULT NULL COMMENT '任务开始时间',
     `update_time`      datetime                     DEFAULT NULL COMMENT '审批完成时间',
     `del_flag`         char(1)                      DEFAULT '0' COMMENT '删除标志',
-    `tenant_id`        varchar(40)                  DEFAULT NULL COMMENT '租户id',
+    `tenant_id`        varchar(40)                  DEFAULT NULL COMMENT '应用id',
     PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB COMMENT ='历史任务记录表';
 
@@ -154,7 +154,7 @@ CREATE TABLE `flow_user`
     `update_time`  datetime    DEFAULT NULL COMMENT '更新时间',
     `update_by`       varchar(64)          DEFAULT '' COMMENT '创建人',
     `del_flag`     char(1)     DEFAULT '0' COMMENT '删除标志',
-    `tenant_id`    varchar(40) DEFAULT NULL COMMENT '租户id',
+    `tenant_id`    varchar(40) DEFAULT NULL COMMENT '应用id',
     PRIMARY KEY (`id`) USING BTREE,
     KEY `user_processed_type` (`processed_by`, `type`),
     KEY `user_associated` (`associated`) USING BTREE
@@ -166,7 +166,7 @@ CREATE TABLE `flow_user`
 create table flow_category
 (
     category_id   bigint(20)  not null comment '流程分类ID',
-    tenant_id     varchar(20)  default '000000' comment '租户编号',
+    tenant_id     varchar(20)  default '000000' comment '应用编号',
     parent_id     bigint(20)   default 0 comment '父流程分类id',
     ancestors     varchar(500) default '' comment '祖级列表',
     category_name varchar(30) not null comment '流程分类名称',
@@ -221,7 +221,7 @@ INSERT INTO flow_spel VALUES (2, NULL, NULL, 'initiator', '${initiator}', '流�
 
 create table flow_instance_biz_ext (
     id             bigint                       not null comment '主键id',
-    tenant_id      varchar(20) default '000000' null comment '租户编号',
+    tenant_id      varchar(20) default '000000' null comment '应用编号',
     create_dept    bigint                       null comment '创建部门',
     create_by      bigint                       null comment '创建者',
     create_time    datetime                     null comment '创建时间',
@@ -242,7 +242,7 @@ create table flow_instance_biz_ext (
 create table test_leave
 (
     id          bigint(20)   not null comment 'id',
-    tenant_id   varchar(20)  default '000000' comment '租户编号',
+    tenant_id   varchar(20)  default '000000' comment '应用编号',
     apply_code  varchar(50)  not null comment '申请编号',
     leave_type  varchar(255) not null comment '请假类型',
     start_date  datetime     not null comment '开始时间',

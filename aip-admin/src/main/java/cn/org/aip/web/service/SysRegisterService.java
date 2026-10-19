@@ -58,7 +58,7 @@ public class SysRegisterService {
         sysUser.setPassword(BCrypt.hashpw(password));
         sysUser.setUserType(userType);
 
-        boolean exist = TenantHelper.dynamic(tenantId, () -> {
+        boolean exist = TenantHelper.ignore(() -> {
             return userMapper.exists(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getUserName, sysUser.getUserName()));
         });
@@ -96,7 +96,7 @@ public class SysRegisterService {
     /**
      * 记录登录信息
      *
-     * @param tenantId 租户ID
+     * @param tenantId 应用ID
      * @param username 用户名
      * @param status   状态
      * @param message  消息内容

@@ -155,7 +155,7 @@ EXEC sp_addextendedproperty
 GO
 
 EXEC sp_addextendedproperty
-'MS_Description', N'租户id',
+'MS_Description', N'应用id',
 'SCHEMA', N'dbo',
 'TABLE', N'flow_definition',
 'COLUMN', N'tenant_id'
@@ -338,7 +338,7 @@ EXEC sp_addextendedproperty
 GO
 
 EXEC sp_addextendedproperty
-'MS_Description', N'租户id',
+'MS_Description', N'应用id',
 'SCHEMA', N'dbo',
 'TABLE', N'flow_node',
 'COLUMN', N'tenant_id'
@@ -480,7 +480,7 @@ EXEC sp_addextendedproperty
 GO
 
 EXEC sp_addextendedproperty
-'MS_Description', N'租户id',
+'MS_Description', N'应用id',
 'SCHEMA', N'dbo',
 'TABLE', N'flow_skip',
 'COLUMN', N'tenant_id'
@@ -631,7 +631,7 @@ EXEC sp_addextendedproperty
 GO
 
 EXEC sp_addextendedproperty
-'MS_Description', N'租户id',
+'MS_Description', N'应用id',
 'SCHEMA', N'dbo',
 'TABLE', N'flow_instance',
 'COLUMN', N'tenant_id'
@@ -765,7 +765,7 @@ EXEC sp_addextendedproperty
 GO
 
 EXEC sp_addextendedproperty
-'MS_Description', N'租户id',
+'MS_Description', N'应用id',
 'SCHEMA', N'dbo',
 'TABLE', N'flow_task',
 'COLUMN', N'tenant_id'
@@ -963,7 +963,7 @@ EXEC sp_addextendedproperty
 GO
 
 EXEC sp_addextendedproperty
-'MS_Description', N'租户id',
+'MS_Description', N'应用id',
 'SCHEMA', N'dbo',
 'TABLE', N'flow_his_task',
 'COLUMN', N'tenant_id'
@@ -1062,7 +1062,7 @@ EXEC sp_addextendedproperty
 GO
 
 EXEC sp_addextendedproperty
-'MS_Description', N'租户id',
+'MS_Description', N'应用id',
 'SCHEMA', N'dbo',
 'TABLE', N'flow_user',
 'COLUMN', N'tenant_id'
@@ -1102,7 +1102,7 @@ EXEC sp_addextendedproperty
 GO
 
 EXEC sp_addextendedproperty
-'MS_Description', N'租户编号',
+'MS_Description', N'应用编号',
 'SCHEMA', N'dbo',
 'TABLE', N'flow_category',
 'COLUMN', N'tenant_id'
@@ -1359,7 +1359,7 @@ EXEC sp_addextendedproperty
 GO
 
 EXEC sp_addextendedproperty
-    'MS_Description', N'租户编号',
+    'MS_Description', N'应用编号',
     'SCHEMA', N'dbo',
     'TABLE', N'flow_instance_biz_ext',
     'COLUMN', N'tenant_id'
@@ -1465,7 +1465,7 @@ EXEC sp_addextendedproperty
 GO
 
 EXEC sp_addextendedproperty
-'MS_Description', N'租户编号',
+'MS_Description', N'应用编号',
 'SCHEMA', N'dbo',
 'TABLE', N'test_leave',
 'COLUMN', N'tenant_id'

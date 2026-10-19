@@ -74,7 +74,7 @@ public class SocialAuthStrategy implements IAuthStrategy {
         if (TenantHelper.isEnable()) {
             Optional<SysSocialVo> opt = StreamUtils.findAny(list, x -> x.getTenantId().equals(loginBody.getTenantId()));
             if (opt.isEmpty()) {
-                throw new ServiceException("对不起，你没有权限登录当前租户！");
+                throw new ServiceException("对不起，你没有权限登录当前应用！");
             }
             social = opt.get();
         } else {

@@ -41,7 +41,7 @@ COMMENT ON COLUMN flow_definition.create_by IS '创建人';
 COMMENT ON COLUMN flow_definition.update_time IS '更新时间';
 COMMENT ON COLUMN flow_definition.update_by IS '更新人';
 COMMENT ON COLUMN flow_definition.del_flag IS '删除标志';
-COMMENT ON COLUMN flow_definition.tenant_id IS '租户id';
+COMMENT ON COLUMN flow_definition.tenant_id IS '应用id';
 
 CREATE TABLE flow_node
 (
@@ -90,7 +90,7 @@ COMMENT ON COLUMN flow_node.update_time IS '更新时间';
 COMMENT ON COLUMN flow_node.update_by IS '更新人';
 COMMENT ON COLUMN flow_node.ext IS '节点扩展属性';
 COMMENT ON COLUMN flow_node.del_flag IS '删除标志';
-COMMENT ON COLUMN flow_node.tenant_id IS '租户id';
+COMMENT ON COLUMN flow_node.tenant_id IS '应用id';
 
 
 CREATE TABLE flow_skip
@@ -130,7 +130,7 @@ COMMENT ON COLUMN flow_skip.create_by IS '创建人';
 COMMENT ON COLUMN flow_skip.update_time IS '更新时间';
 COMMENT ON COLUMN flow_skip.update_by IS '更新人';
 COMMENT ON COLUMN flow_skip.del_flag IS '删除标志';
-COMMENT ON COLUMN flow_skip.tenant_id IS '租户id';
+COMMENT ON COLUMN flow_skip.tenant_id IS '应用id';
 
 CREATE TABLE flow_instance
 (
@@ -171,7 +171,7 @@ COMMENT ON COLUMN flow_instance.update_time IS '更新时间';
 COMMENT ON COLUMN flow_instance.update_by IS '更新人';
 COMMENT ON COLUMN flow_instance.ext IS '扩展字段，预留给业务系统使用';
 COMMENT ON COLUMN flow_instance.del_flag IS '删除标志';
-COMMENT ON COLUMN flow_instance.tenant_id IS '租户id';
+COMMENT ON COLUMN flow_instance.tenant_id IS '应用id';
 
 CREATE TABLE flow_task
 (
@@ -208,7 +208,7 @@ COMMENT ON COLUMN flow_task.create_by IS '创建人';
 COMMENT ON COLUMN flow_task.update_time IS '更新时间';
 COMMENT ON COLUMN flow_task.update_by IS '更新人';
 COMMENT ON COLUMN flow_task.del_flag IS '删除标志';
-COMMENT ON COLUMN flow_task.tenant_id IS '租户id';
+COMMENT ON COLUMN flow_task.tenant_id IS '应用id';
 
 CREATE TABLE flow_his_task
 (
@@ -261,7 +261,7 @@ COMMENT ON COLUMN flow_his_task.ext IS '扩展字段，预留给业务系统使�
 COMMENT ON COLUMN flow_his_task.create_time IS '任务开始时间';
 COMMENT ON COLUMN flow_his_task.update_time IS '审批完成时间';
 COMMENT ON COLUMN flow_his_task.del_flag IS '删除标志';
-COMMENT ON COLUMN flow_his_task.tenant_id IS '租户id';
+COMMENT ON COLUMN flow_his_task.tenant_id IS '应用id';
 
 CREATE TABLE flow_user
 (
@@ -290,7 +290,7 @@ COMMENT ON COLUMN flow_user.create_by IS '创建人';
 COMMENT ON COLUMN flow_user.update_time IS '更新时间';
 COMMENT ON COLUMN flow_user.update_by IS '更新人';
 COMMENT ON COLUMN flow_user.del_flag IS '删除标志';
-COMMENT ON COLUMN flow_user.tenant_id IS '租户id';
+COMMENT ON COLUMN flow_user.tenant_id IS '应用id';
 
 -- ----------------------------
 -- 流程分类表
@@ -314,7 +314,7 @@ CREATE TABLE flow_category
 
 COMMENT ON TABLE flow_category IS '流程分类';
 COMMENT ON COLUMN flow_category.category_id IS '流程分类ID';
-COMMENT ON COLUMN flow_category.tenant_id IS '租户编号';
+COMMENT ON COLUMN flow_category.tenant_id IS '应用编号';
 COMMENT ON COLUMN flow_category.parent_id IS '父流程分类id';
 COMMENT ON COLUMN flow_category.ancestors IS '祖级列表';
 COMMENT ON COLUMN flow_category.category_name IS '流程分类名称';
@@ -396,7 +396,7 @@ CREATE TABLE flow_instance_biz_ext (
 
 COMMENT ON TABLE flow_instance_biz_ext IS '流程实例业务扩展表';
 COMMENT ON COLUMN flow_instance_biz_ext.id  IS '主键id';
-COMMENT ON COLUMN flow_instance_biz_ext.tenant_id  IS '租户编号';
+COMMENT ON COLUMN flow_instance_biz_ext.tenant_id  IS '应用编号';
 COMMENT ON COLUMN flow_instance_biz_ext.create_dept  IS '创建部门';
 COMMENT ON COLUMN flow_instance_biz_ext.create_by  IS '创建者';
 COMMENT ON COLUMN flow_instance_biz_ext.create_time  IS '创建时间';
@@ -432,7 +432,7 @@ CREATE TABLE test_leave
 
 COMMENT ON TABLE test_leave IS '请假申请表';
 COMMENT ON COLUMN test_leave.id IS 'id';
-COMMENT ON COLUMN test_leave.tenant_id IS '租户编号';
+COMMENT ON COLUMN test_leave.tenant_id IS '应用编号';
 COMMENT ON COLUMN test_leave.apply_code IS '申请编号';
 COMMENT ON COLUMN test_leave.leave_type IS '请假类型';
 COMMENT ON COLUMN test_leave.start_date IS '开始时间';

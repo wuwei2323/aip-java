@@ -38,7 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 
 /**
- * 租户Service业务层处理
+ * 应用Service业务层处理
  *
  * @author Michelle.Chung
  */
@@ -59,7 +59,7 @@ public class SysTenantServiceImpl implements ISysTenantService {
     private final SysConfigMapper configMapper;
 
     /**
-     * 查询租户
+     * 查询应用
      */
     @Override
     public SysTenantVo queryById(Long id) {
@@ -67,7 +67,7 @@ public class SysTenantServiceImpl implements ISysTenantService {
     }
 
     /**
-     * 基于租户ID查询租户
+     * 基于应用ID查询应用
      */
     @Cacheable(cacheNames = CacheNames.SYS_TENANT, key = "#tenantId")
     @Override
@@ -76,7 +76,7 @@ public class SysTenantServiceImpl implements ISysTenantService {
     }
 
     /**
-     * 查询租户列表
+     * 查询应用列表
      */
     @Override
     public TableDataInfo<SysTenantVo> queryPageList(SysTenantBo bo, PageQuery pageQuery) {
@@ -86,7 +86,7 @@ public class SysTenantServiceImpl implements ISysTenantService {
     }
 
     /**
-     * 查询租户列表
+     * 查询应用列表
      */
     @Override
     public List<SysTenantVo> queryList(SysTenantBo bo) {
@@ -113,14 +113,14 @@ public class SysTenantServiceImpl implements ISysTenantService {
     }
 
     /**
-     * 新增租户
+     * 新增应用
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean insertByBo(SysTenantBo bo) {
         SysTenant add = MapstructUtils.convert(bo, SysTenant.class);
 
-        // 获取所有租户编号
+        // 获取所有应用编号
         List<String> tenantIds = baseMapper.selectObjs(
             new LambdaQueryWrapper<SysTenant>().select(SysTenant::getTenantId), x -> {
                 return Convert.toStr(x);
@@ -129,7 +129,7 @@ public class SysTenantServiceImpl implements ISysTenantService {
         add.setTenantId(tenantId);
         boolean flag = baseMapper.insert(add) > 0;
         if (!flag) {
-            throw new ServiceException("创建租户失败");
+            throw new ServiceException("创建应用失败");
         }
         bo.setId(add.getId());
 
@@ -138,7 +138,6 @@ public class SysTenantServiceImpl implements ISysTenantService {
 
         // 创建部门: 公司名是部门名称
         SysDept dept = new SysDept();
-        dept.setTenantId(tenantId);
         dept.setDeptName(bo.getCompanyName());
         dept.setParentId(Constants.TOP_PARENT_ID);
         dept.setAncestors(Constants.TOP_PARENT_ID.toString());
@@ -153,7 +152,6 @@ public class SysTenantServiceImpl implements ISysTenantService {
 
         // 创建系统用户
         SysUser user = new SysUser();
-        user.setTenantId(tenantId);
         user.setUserName(bo.getUsername());
         user.setNickName(bo.getUsername());
         user.setPassword(BCrypt.hashpw(bo.getPassword()));
@@ -213,17 +211,17 @@ public class SysTenantServiceImpl implements ISysTenantService {
         // 未开启工作流不执行下方操作
         if (SpringUtils.getProperty("warm-flow.enabled", Boolean.class, false)) {
             WorkflowService workflowService = SpringUtils.getBean(WorkflowService.class);
-            // 新增租户流程定义
+            // 新增应用流程定义
             workflowService.syncDef(tenantId);
         }
         return true;
     }
 
     /**
-     * 生成租户id
+     * 生成应用id
      *
-     * @param tenantIds 已有租户id列表
-     * @return 租户id
+     * @param tenantIds 已有应用id列表
+     * @return 应用id
      */
     private String generateTenantId(List<String> tenantIds) {
         // 随机生成6位
@@ -236,14 +234,14 @@ public class SysTenantServiceImpl implements ISysTenantService {
     }
 
     /**
-     * 根据租户菜单创建租户角色
+     * 根据应用菜单创建应用角色
      *
-     * @param tenantId  租户编号
-     * @param packageId 租户套餐id
+     * @param tenantId  应用编号
+     * @param packageId 应用套餐id
      * @return 角色id
      */
     private Long createTenantRole(String tenantId, Long packageId) {
-        // 获取租户套餐
+        // 获取应用套餐
         SysTenantPackage tenantPackage = tenantPackageMapper.selectById(packageId);
         if (ObjectUtil.isNull(tenantPackage)) {
             throw new ServiceException("套餐不存在");
@@ -253,7 +251,6 @@ public class SysTenantServiceImpl implements ISysTenantService {
 
         // 创建角色
         SysRole role = new SysRole();
-        role.setTenantId(tenantId);
         role.setRoleName(TenantConstants.TENANT_ADMIN_ROLE_NAME);
         role.setRoleKey(TenantConstants.TENANT_ADMIN_ROLE_KEY);
         role.setRoleSort(1);
@@ -275,7 +272,7 @@ public class SysTenantServiceImpl implements ISysTenantService {
     }
 
     /**
-     * 修改租户
+     * 修改应用
      */
     @CacheEvict(cacheNames = CacheNames.SYS_TENANT, key = "#bo.tenantId")
     @Override
@@ -287,9 +284,9 @@ public class SysTenantServiceImpl implements ISysTenantService {
     }
 
     /**
-     * 修改租户状态
+     * 修改应用状态
      *
-     * @param bo 租户信息
+     * @param bo 应用信息
      * @return 结果
      */
     @CacheEvict(cacheNames = CacheNames.SYS_TENANT, key = "#bo.tenantId")
@@ -302,19 +299,19 @@ public class SysTenantServiceImpl implements ISysTenantService {
     }
 
     /**
-     * 校验租户是否允许操作
+     * 校验应用是否允许操作
      *
-     * @param tenantId 租户ID
+     * @param tenantId 应用ID
      */
     @Override
     public void checkTenantAllowed(String tenantId) {
         if (ObjectUtil.isNotNull(tenantId) && TenantConstants.DEFAULT_TENANT_ID.equals(tenantId)) {
-            throw new ServiceException("不允许操作管理租户");
+            throw new ServiceException("不允许操作管理应用");
         }
     }
 
     /**
-     * 批量删除租户
+     * 批量删除应用
      */
     @CacheEvict(cacheNames = CacheNames.SYS_TENANT, allEntries = true)
     @Override
@@ -322,7 +319,7 @@ public class SysTenantServiceImpl implements ISysTenantService {
         if (isValid) {
             // 做一些业务上的校验,判断是否需要校验
             if (ids.contains(TenantConstants.SUPER_ADMIN_ID)) {
-                throw new ServiceException("超管租户不能删除");
+                throw new ServiceException("超管应用不能删除");
             }
         }
         return baseMapper.deleteByIds(ids) > 0;
@@ -369,14 +366,14 @@ public class SysTenantServiceImpl implements ISysTenantService {
     }
 
     /**
-     * 同步租户套餐
+     * 同步应用套餐
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean syncTenantPackage(String tenantId, Long packageId) {
         SysTenantPackage tenantPackage = tenantPackageMapper.selectById(packageId);
         List<SysRole> roles = roleMapper.selectList(
-            new LambdaQueryWrapper<SysRole>().eq(SysRole::getTenantId, tenantId));
+            new LambdaQueryWrapper<SysRole>().eq(SysRole::getRoleKey, TenantConstants.TENANT_ADMIN_ROLE_KEY));
         List<Long> roleIds = new ArrayList<>(roles.size() - 1);
         List<Long> menuIds = StringUtils.splitTo(tenantPackage.getMenuIds(), Convert::toLong);
         roles.forEach(item -> {
@@ -402,7 +399,7 @@ public class SysTenantServiceImpl implements ISysTenantService {
     }
 
     /**
-     * 同步租户字典
+     * 同步应用字典
      */
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -414,17 +411,17 @@ public class SysTenantServiceImpl implements ISysTenantService {
             dictTypeList.addAll(dictTypeMapper.selectList());
             dictDataList.addAll(dictDataMapper.selectList());
         });
-        // 所有租户字典类型
+        // 所有应用字典类型
         Map<String, List<SysDictType>> dictTypeMap = StreamUtils.groupByKey(dictTypeList, TenantEntity::getTenantId);
-        // 所有租户字典数据
+        // 所有应用字典数据
         Map<String, Map<String, List<SysDictData>>> dictDataMap = StreamUtils.groupBy2Key(dictDataList, TenantEntity::getTenantId, SysDictData::getDictType);
 
-        // 默认租户字典类型列表
+        // 默认应用字典类型列表
         List<SysDictType> defaultDictTypeList = dictTypeMap.get(TenantConstants.DEFAULT_TENANT_ID);
-        // 默认租户字典数据
+        // 默认应用字典数据
         Map<String, List<SysDictData>> defaultDictDataMap = dictDataMap.get(TenantConstants.DEFAULT_TENANT_ID);
 
-        // 获取所有租户编号
+        // 获取所有应用编号
         List<String> tenantIds = baseMapper.selectObjs(
             new LambdaQueryWrapper<SysTenant>().select(SysTenant::getTenantId)
                 .eq(SysTenant::getStatus, SystemConstants.NORMAL), x -> {
@@ -433,27 +430,27 @@ public class SysTenantServiceImpl implements ISysTenantService {
         // 待入库的字典类型和字典数据
         List<SysDictType> saveTypeList = new ArrayList<>();
         List<SysDictData> saveDataList = new ArrayList<>();
-        // 待同步的租户编号（用于清除对于租户的字典缓存）
+        // 待同步的应用编号（用于清除对于应用的字典缓存）
         Set<String> syncTenantIds = new HashSet<>();
-        // 循环所有租户，处理需要同步的数据
+        // 循环所有应用，处理需要同步的数据
         for (String tenantId : tenantIds) {
-            // 排除默认租户
+            // 排除默认应用
             if (TenantConstants.DEFAULT_TENANT_ID.equals(tenantId)) {
                 continue;
             }
-            // 根据默认租户的字典类型进行数据同步
+            // 根据默认应用的字典类型进行数据同步
             for (SysDictType dictType : defaultDictTypeList) {
-                // 获取当前租户的字典类型列表
+                // 获取当前应用的字典类型列表
                 List<String> typeList = StreamUtils.toList(dictTypeMap.get(tenantId), SysDictType::getDictType);
-                // 根据字典类型获取默认租户的字典数据
+                // 根据字典类型获取默认应用的字典数据
                 List<SysDictData> defaultDictDataList = defaultDictDataMap.get(dictType.getDictType());
                 // 排除不需要同步的字典数据
                 Set<String> excludeDictDataSet = CollUtil.newHashSet();
                 // 处理 存在type不存在data 的情况
                 if (typeList.contains(dictType.getDictType())) {
-                    // 获取租户字典数据
+                    // 获取应用字典数据
                     Optional.ofNullable(dictDataMap.get(tenantId))
-                        // 获取租户当前字典类型的字典数据
+                        // 获取应用当前字典类型的字典数据
                         .map(tenantDictDataMap -> tenantDictDataMap.get(dictType.getDictType()))
                         // 保存字典数据项的字典键值，用于判断数据是否需要同步
                         .map(data -> StreamUtils.toSet(data, SysDictData::getDictValue))
@@ -470,7 +467,7 @@ public class SysTenantServiceImpl implements ISysTenantService {
                     saveTypeList.add(type);
                 }
 
-                // 默认租户字典数据不为空再去处理
+                // 默认应用字典数据不为空再去处理
                 if (CollUtil.isNotEmpty(defaultDictDataList)) {
                     // 提前优化排除判断if条件语句，对于 && 并联条件，该优化可以避免不必要的 excludeDictDataSet.contains() 函数调用
                     boolean isExclude = CollUtil.isNotEmpty(excludeDictDataSet);
@@ -509,7 +506,7 @@ public class SysTenantServiceImpl implements ISysTenantService {
     }
 
     /**
-     * 同步租户参数配置
+     * 同步应用参数配置
      */
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -517,13 +514,13 @@ public class SysTenantServiceImpl implements ISysTenantService {
         // 查询超管 所有参数配置
         List<SysConfig> configList = TenantHelper.ignore(() -> configMapper.selectList());
 
-        // 所有租户参数配置
+        // 所有应用参数配置
         Map<String, List<SysConfig>> configMap = StreamUtils.groupByKey(configList, TenantEntity::getTenantId);
 
-        // 默认租户字典类型列表
+        // 默认应用字典类型列表
         List<SysConfig> defaultConfigList = configMap.get(TenantConstants.DEFAULT_TENANT_ID);
 
-        // 获取所有租户编号
+        // 获取所有应用编号
         List<String> tenantIds = baseMapper.selectObjs(
             new LambdaQueryWrapper<SysTenant>().select(SysTenant::getTenantId)
                 .eq(SysTenant::getStatus, SystemConstants.NORMAL), x -> {
@@ -531,17 +528,17 @@ public class SysTenantServiceImpl implements ISysTenantService {
             });
         // 待入库的字典类型和字典数据
         List<SysConfig> saveConfigList = new ArrayList<>();
-        // 待同步的租户编号（用于清除对于租户的字典缓存）
+        // 待同步的应用编号（用于清除对于应用的字典缓存）
         Set<String> syncTenantIds = new HashSet<>();
-        // 循环所有租户，处理需要同步的数据
+        // 循环所有应用，处理需要同步的数据
         for (String tenantId : tenantIds) {
-            // 排除默认租户
+            // 排除默认应用
             if (TenantConstants.DEFAULT_TENANT_ID.equals(tenantId)) {
                 continue;
             }
-            // 根据默认租户的字典类型进行数据同步
+            // 根据默认应用的字典类型进行数据同步
             for (SysConfig config : defaultConfigList) {
-                // 获取当前租户的字典类型列表
+                // 获取当前应用的字典类型列表
                 List<String> typeList = StreamUtils.toList(configMap.get(tenantId), SysConfig::getConfigKey);
                 if (!typeList.contains(config.getConfigKey())) {
                     SysConfig type = BeanUtil.toBean(config, SysConfig.class);

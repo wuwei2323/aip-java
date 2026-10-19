@@ -14,7 +14,7 @@ import java.io.Serializable;
 
 
 /**
- * 租户视图对象 sys_tenant
+ * 应用视图对象 sys_tenant
  *
  * @author Michelle.Chung
  */
@@ -33,9 +33,9 @@ public class SysTenantVo implements Serializable {
     private Long id;
 
     /**
-     * 租户编号
+     * 应用编号
      */
-    @ExcelProperty(value = "租户编号")
+    @ExcelProperty(value = "应用编号")
     private String tenantId;
 
     /**
@@ -87,9 +87,9 @@ public class SysTenantVo implements Serializable {
     private String remark;
 
     /**
-     * 租户套餐编号
+     * 应用套餐编号
      */
-    @ExcelProperty(value = "租户套餐编号")
+    @ExcelProperty(value = "应用套餐编号")
     private Long packageId;
 
     /**
@@ -105,9 +105,9 @@ public class SysTenantVo implements Serializable {
     private Long accountCount;
 
     /**
-     * 租户状态（0正常 1停用）
+     * 应用状态（0正常 1停用）
      */
-    @ExcelProperty(value = "租户状态", converter = ExcelDictConvert.class)
+    @ExcelProperty(value = "应用状态", converter = ExcelDictConvert.class)
     @ExcelDictFormat(readConverterExp = "0=正常,1=停用")
     private String status;
 

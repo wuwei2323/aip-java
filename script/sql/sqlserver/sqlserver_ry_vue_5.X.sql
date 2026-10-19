@@ -49,7 +49,7 @@ EXEC sys.sp_addextendedproperty
     'COLUMN', N'user_id'
 GO
 EXEC sys.sp_addextendedproperty
-    'MS_Description', N'租户id' ,
+    'MS_Description', N'应用id' ,
     'SCHEMA', N'dbo',
     'TABLE', N'sys_social',
     'COLUMN', N'tenant_id'
@@ -252,7 +252,7 @@ EXEC sys.sp_addextendedproperty
     'COLUMN', N'id'
 GO
 EXEC sys.sp_addextendedproperty
-    'MS_Description', N'租户编号' ,
+    'MS_Description', N'应用编号' ,
     'SCHEMA', N'dbo',
     'TABLE', N'sys_tenant',
     'COLUMN', N'tenant_id'
@@ -306,7 +306,7 @@ EXEC sys.sp_addextendedproperty
     'COLUMN', N'remark'
 GO
 EXEC sys.sp_addextendedproperty
-    'MS_Description', N'租户套餐编号' ,
+    'MS_Description', N'应用套餐编号' ,
     'SCHEMA', N'dbo',
     'TABLE', N'sys_tenant',
     'COLUMN', N'package_id'
@@ -324,7 +324,7 @@ EXEC sys.sp_addextendedproperty
     'COLUMN', N'account_count'
 GO
 EXEC sys.sp_addextendedproperty
-    'MS_Description', N'租户状态（0正常 1停用）' ,
+    'MS_Description', N'应用状态（0正常 1停用）' ,
     'SCHEMA', N'dbo',
     'TABLE', N'sys_tenant',
     'COLUMN', N'status'
@@ -366,12 +366,12 @@ EXEC sys.sp_addextendedproperty
     'COLUMN', N'update_time'
 GO
 EXEC sys.sp_addextendedproperty
-    'MS_Description', N'租户表' ,
+    'MS_Description', N'应用表' ,
     'SCHEMA', N'dbo',
     'TABLE', N'sys_tenant'
 GO
 
-INSERT sys_tenant VALUES (1, N'000000', N'管理组', N'15888888888', N'XXX有限公司', NULL, NULL, N'多租户通用后台管理管理系统', NULL, NULL, NULL, NULL, -1, N'0', N'0', 103, 1, getdate(), NULL, NULL)
+INSERT sys_tenant VALUES (1, N'000000', N'管理组', N'15888888888', N'XXX有限公司', NULL, NULL, N'多应用通用后台管理管理系统', NULL, NULL, NULL, NULL, -1, N'0', N'0', 103, 1, getdate(), NULL, NULL)
 GO
 
 
@@ -397,7 +397,7 @@ ON [PRIMARY]
 GO
 
 EXEC sys.sp_addextendedproperty
-    'MS_Description', N'租户套餐id' ,
+    'MS_Description', N'应用套餐id' ,
     'SCHEMA', N'dbo',
     'TABLE', N'sys_tenant_package',
     'COLUMN', N'package_id'
@@ -421,7 +421,7 @@ EXEC sys.sp_addextendedproperty
     'COLUMN', N'remark'
 GO
 EXEC sys.sp_addextendedproperty
-    'MS_Description', N'租户状态（0正常 1停用）' ,
+    'MS_Description', N'应用状态（0正常 1停用）' ,
     'SCHEMA', N'dbo',
     'TABLE', N'sys_tenant_package',
     'COLUMN', N'status'
@@ -463,7 +463,7 @@ EXEC sys.sp_addextendedproperty
     'COLUMN', N'update_time'
 GO
 EXEC sys.sp_addextendedproperty
-    'MS_Description', N'租户套餐表' ,
+    'MS_Description', N'应用套餐表' ,
     'SCHEMA', N'dbo',
     'TABLE', N'sys_tenant_package'
 GO
@@ -842,7 +842,7 @@ EXEC sys.sp_addextendedproperty
     'COLUMN', N'config_id'
 GO
 EXEC sys.sp_addextendedproperty
-     'MS_Description', N'租户编号' ,
+     'MS_Description', N'应用编号' ,
      'SCHEMA', N'dbo',
      'TABLE', N'sys_config',
      'COLUMN', N'tenant_id'
@@ -957,7 +957,7 @@ EXEC sys.sp_addextendedproperty
     'COLUMN', N'dept_id'
 GO
 EXEC sys.sp_addextendedproperty
-    'MS_Description', N'租户编号' ,
+    'MS_Description', N'应用编号' ,
     'SCHEMA', N'dbo',
     'TABLE', N'sys_dept',
     'COLUMN', N'tenant_id'
@@ -1422,7 +1422,7 @@ EXEC sys.sp_addextendedproperty
     'COLUMN', N'info_id'
 GO
 EXEC sys.sp_addextendedproperty
-    'MS_Description', N'租户编号' ,
+    'MS_Description', N'应用编号' ,
     'SCHEMA', N'dbo',
     'TABLE', N'sys_logininfor',
     'COLUMN', N'tenant_id'
@@ -1650,7 +1650,7 @@ GO
 
 INSERT sys_menu VALUES (1, N'系统管理', 0, 1, N'system', NULL, N'', 1, 0, N'M', N'0', N'0', N'', N'system', 103, 1, getdate(), NULL, NULL, N'系统管理目录')
 GO
-INSERT sys_menu VALUES (6, N'租户管理', 0, 2, N'tenant', NULL, N'', 1, 0, N'M', N'0', N'0', N'', N'chart', 103, 1, getdate(), NULL, NULL, N'租户管理目录')
+INSERT sys_menu VALUES (6, N'应用管理', 0, 2, N'tenant', NULL, N'', 1, 0, N'M', N'0', N'0', N'', N'chart', 103, 1, getdate(), NULL, NULL, N'应用管理目录')
 GO
 INSERT sys_menu VALUES (2, N'系统监控', 0, 3, N'monitor', NULL, N'', 1, 0, N'M', N'0', N'0', N'', N'monitor', 103, 1, getdate(), NULL, NULL, N'系统监控目录')
 GO
@@ -1684,9 +1684,9 @@ INSERT sys_menu VALUES (113, N'缓存监控', 2, 5, N'cache', N'monitor/cache/in
 GO
 INSERT sys_menu VALUES (115, N'代码生成', 3, 2, N'gen', N'tool/gen/index', N'', 1, 0, N'C', N'0', N'0', N'tool:gen:list', N'code', 103, 1, getdate(), NULL, NULL, N'代码生成菜单')
 GO
-INSERT sys_menu VALUES (121, N'租户管理', 6, 1, N'tenant', N'system/tenant/index', N'', 1, 0, N'C', N'0', N'0', N'system:tenant:list', N'code', 103, 1, getdate(), NULL, NULL, N'租户管理菜单')
+INSERT sys_menu VALUES (121, N'应用管理', 6, 1, N'tenant', N'system/tenant/index', N'', 1, 0, N'C', N'0', N'0', N'system:tenant:list', N'code', 103, 1, getdate(), NULL, NULL, N'应用管理菜单')
 GO
-INSERT sys_menu VALUES (122, N'租户套餐管理', 6, 2, N'tenantPackage', N'system/tenantPackage/index', N'', 1, 0, N'C', N'0', N'0', N'system:tenantPackage:list', N'code', 103, 1, getdate(), NULL, NULL, N'租户套餐管理菜单')
+INSERT sys_menu VALUES (122, N'应用套餐管理', 6, 2, N'tenantPackage', N'system/tenantPackage/index', N'', 1, 0, N'C', N'0', N'0', N'system:tenantPackage:list', N'code', 103, 1, getdate(), NULL, NULL, N'应用套餐管理菜单')
 GO
 INSERT sys_menu VALUES (123, N'客户端管理', 1, 11, N'client', N'system/client/index', N'', 1, 0, N'C', N'0', N'0', N'system:client:list', N'international', 103, 1, getdate(), NULL, NULL, N'客户端管理菜单')
 GO
@@ -1838,27 +1838,27 @@ INSERT sys_menu VALUES (1622, N'配置编辑', 118, 6, N'#', N'', N'', 1, 0, N'F
 GO
 INSERT sys_menu VALUES (1623, N'配置删除', 118, 6, N'#', N'', N'', 1, 0, N'F', N'0', N'0', N'system:ossConfig:remove', N'#', 103, 1, getdate(), NULL, NULL, N'');
 GO
--- 租户管理相关按钮
-INSERT sys_menu VALUES (1606, N'租户查询', 121, 1, N'#', N'', N'', 1, 0, N'F', N'0', N'0', N'system:tenant:query', N'#', 103, 1, getdate(), NULL, NULL, N'');
+-- 应用管理相关按钮
+INSERT sys_menu VALUES (1606, N'应用查询', 121, 1, N'#', N'', N'', 1, 0, N'F', N'0', N'0', N'system:tenant:query', N'#', 103, 1, getdate(), NULL, NULL, N'');
 GO
-INSERT sys_menu VALUES (1607, N'租户新增', 121, 2, N'#', N'', N'', 1, 0, N'F', N'0', N'0', N'system:tenant:add', N'#', 103, 1, getdate(), NULL, NULL, N'');
+INSERT sys_menu VALUES (1607, N'应用新增', 121, 2, N'#', N'', N'', 1, 0, N'F', N'0', N'0', N'system:tenant:add', N'#', 103, 1, getdate(), NULL, NULL, N'');
 GO
-INSERT sys_menu VALUES (1608, N'租户修改', 121, 3, N'#', N'', N'', 1, 0, N'F', N'0', N'0', N'system:tenant:edit', N'#', 103, 1, getdate(), NULL, NULL, N'');
+INSERT sys_menu VALUES (1608, N'应用修改', 121, 3, N'#', N'', N'', 1, 0, N'F', N'0', N'0', N'system:tenant:edit', N'#', 103, 1, getdate(), NULL, NULL, N'');
 GO
-INSERT sys_menu VALUES (1609, N'租户删除', 121, 4, N'#', N'', N'', 1, 0, N'F', N'0', N'0', N'system:tenant:remove', N'#', 103, 1, getdate(), NULL, NULL, N'');
+INSERT sys_menu VALUES (1609, N'应用删除', 121, 4, N'#', N'', N'', 1, 0, N'F', N'0', N'0', N'system:tenant:remove', N'#', 103, 1, getdate(), NULL, NULL, N'');
 GO
-INSERT sys_menu VALUES (1610, N'租户导出', 121, 5, N'#', N'', N'', 1, 0, N'F', N'0', N'0', N'system:tenant:export', N'#', 103, 1, getdate(), NULL, NULL, N'');
+INSERT sys_menu VALUES (1610, N'应用导出', 121, 5, N'#', N'', N'', 1, 0, N'F', N'0', N'0', N'system:tenant:export', N'#', 103, 1, getdate(), NULL, NULL, N'');
 GO
--- 租户套餐管理相关按钮
-INSERT sys_menu VALUES (1611, N'租户套餐查询', 122, 1, N'#', N'', N'', 1, 0, N'F', N'0', N'0', N'system:tenantPackage:query', N'#', 103, 1, getdate(), NULL, NULL, N'');
+-- 应用套餐管理相关按钮
+INSERT sys_menu VALUES (1611, N'应用套餐查询', 122, 1, N'#', N'', N'', 1, 0, N'F', N'0', N'0', N'system:tenantPackage:query', N'#', 103, 1, getdate(), NULL, NULL, N'');
 GO
-INSERT sys_menu VALUES (1612, N'租户套餐新增', 122, 2, N'#', N'', N'', 1, 0, N'F', N'0', N'0', N'system:tenantPackage:add', N'#', 103, 1, getdate(), NULL, NULL, N'');
+INSERT sys_menu VALUES (1612, N'应用套餐新增', 122, 2, N'#', N'', N'', 1, 0, N'F', N'0', N'0', N'system:tenantPackage:add', N'#', 103, 1, getdate(), NULL, NULL, N'');
 GO
-INSERT sys_menu VALUES (1613, N'租户套餐修改', 122, 3, N'#', N'', N'', 1, 0, N'F', N'0', N'0', N'system:tenantPackage:edit', N'#', 103, 1, getdate(), NULL, NULL, N'');
+INSERT sys_menu VALUES (1613, N'应用套餐修改', 122, 3, N'#', N'', N'', 1, 0, N'F', N'0', N'0', N'system:tenantPackage:edit', N'#', 103, 1, getdate(), NULL, NULL, N'');
 GO
-INSERT sys_menu VALUES (1614, N'租户套餐删除', 122, 4, N'#', N'', N'', 1, 0, N'F', N'0', N'0', N'system:tenantPackage:remove', N'#', 103, 1, getdate(), NULL, NULL, N'');
+INSERT sys_menu VALUES (1614, N'应用套餐删除', 122, 4, N'#', N'', N'', 1, 0, N'F', N'0', N'0', N'system:tenantPackage:remove', N'#', 103, 1, getdate(), NULL, NULL, N'');
 GO
-INSERT sys_menu VALUES (1615, N'租户套餐导出', 122, 5, N'#', N'', N'', 1, 0, N'F', N'0', N'0', N'system:tenantPackage:export', N'#', 103, 1, getdate(), NULL, NULL, N'');
+INSERT sys_menu VALUES (1615, N'应用套餐导出', 122, 5, N'#', N'', N'', 1, 0, N'F', N'0', N'0', N'system:tenantPackage:export', N'#', 103, 1, getdate(), NULL, NULL, N'');
 GO
 -- 客户端管理按钮
 INSERT sys_menu VALUES (1061, N'客户端管理查询', 123, 1, N'#', N'', N'', 1, 0, N'F', N'0', N'0', N'system:client:query', N'#', 103, 1, getdate(), NULL, NULL, N'');
@@ -1927,7 +1927,7 @@ EXEC sys.sp_addextendedproperty
     'COLUMN', N'notice_id'
 GO
 EXEC sys.sp_addextendedproperty
-    'MS_Description', N'租户编号' ,
+    'MS_Description', N'应用编号' ,
     'SCHEMA', N'dbo',
     'TABLE', N'sys_notice',
     'COLUMN', N'tenant_id'
@@ -2044,7 +2044,7 @@ EXEC sys.sp_addextendedproperty
     'COLUMN', N'oper_id'
 GO
 EXEC sys.sp_addextendedproperty
-    'MS_Description', N'租户编号' ,
+    'MS_Description', N'应用编号' ,
     'SCHEMA', N'dbo',
     'TABLE', N'sys_oper_log',
     'COLUMN', N'tenant_id'
@@ -2181,7 +2181,7 @@ EXEC sys.sp_addextendedproperty
     'COLUMN', N'post_id'
 GO
 EXEC sys.sp_addextendedproperty
-    'MS_Description', N'租户编号' ,
+    'MS_Description', N'应用编号' ,
     'SCHEMA', N'dbo',
     'TABLE', N'sys_post',
     'COLUMN', N'tenant_id'
@@ -2305,7 +2305,7 @@ EXEC sys.sp_addextendedproperty
     'COLUMN', N'role_id'
 GO
 EXEC sys.sp_addextendedproperty
-    'MS_Description', N'租户编号' ,
+    'MS_Description', N'应用编号' ,
     'SCHEMA', N'dbo',
     'TABLE', N'sys_role',
     'COLUMN', N'tenant_id'
@@ -2742,7 +2742,7 @@ EXEC sys.sp_addextendedproperty
     'COLUMN', N'user_id'
 GO
 EXEC sys.sp_addextendedproperty
-    'MS_Description', N'租户编号' ,
+    'MS_Description', N'应用编号' ,
     'SCHEMA', N'dbo',
     'TABLE', N'sys_user',
     'COLUMN', N'tenant_id'
@@ -2971,7 +2971,7 @@ EXEC sp_addextendedproperty
     'COLUMN', N'oss_id'
 GO
 EXEC sys.sp_addextendedproperty
-    'MS_Description', N'租户编号' ,
+    'MS_Description', N'应用编号' ,
     'SCHEMA', N'dbo',
     'TABLE', N'sys_oss',
     'COLUMN', N'tenant_id'
@@ -3084,7 +3084,7 @@ EXEC sp_addextendedproperty
     'COLUMN', N'oss_config_id'
 GO
 EXEC sys.sp_addextendedproperty
-    'MS_Description', N'租户编号' ,
+    'MS_Description', N'应用编号' ,
     'SCHEMA', N'dbo',
     'TABLE', N'sys_oss_config',
     'COLUMN', N'tenant_id'
@@ -3371,7 +3371,7 @@ EXEC sp_addextendedproperty
 GO
 
 EXEC sp_addextendedproperty
-    'MS_Description', N'租户id',
+    'MS_Description', N'应用id',
     'SCHEMA', N'dbo',
     'TABLE', N'test_demo',
     'COLUMN', N'tenant_id'
@@ -3497,7 +3497,7 @@ EXEC sp_addextendedproperty
 GO
 
 EXEC sp_addextendedproperty
-    'MS_Description', N'租户id',
+    'MS_Description', N'应用id',
     'SCHEMA', N'dbo',
     'TABLE', N'test_tree',
     'COLUMN', N'tenant_id'

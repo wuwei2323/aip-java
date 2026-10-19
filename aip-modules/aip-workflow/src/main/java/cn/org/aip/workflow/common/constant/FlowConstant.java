@@ -54,7 +54,7 @@ public interface FlowConstant {
     String FLOW_CATEGORY_NAME = "flow_category_name#30d";
 
     /**
-     * 默认租户OA申请分类id
+     * 默认应用OA申请分类id
      */
     Long FLOW_CATEGORY_ID = 100L;
 

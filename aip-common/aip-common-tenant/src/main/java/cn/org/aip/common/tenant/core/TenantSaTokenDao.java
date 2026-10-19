@@ -8,7 +8,7 @@ import java.time.Duration;
 import java.util.List;
 
 /**
- * SaToken 认证数据持久层 适配多租户
+ * SaToken 认证数据持久层 适配多应用
  *
  * @author Lion Li
  */

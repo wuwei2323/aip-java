@@ -44,7 +44,7 @@ create table sys_social
 comment on table   sys_social                   is '社会化关系表';
 comment on column  sys_social.id                is '主键';
 comment on column  sys_social.user_id           is '用户ID';
-comment on column  sys_social.tenant_id         is '租户id';
+comment on column  sys_social.tenant_id         is '应用id';
 comment on column  sys_social.auth_id           is '平台+平台唯一id';
 comment on column  sys_social.source            is '用户来源';
 comment on column  sys_social.open_id           is '平台编号唯一id';

@@ -195,7 +195,7 @@ EXEC sp_addextendedproperty
 GO
 
 EXEC sp_addextendedproperty
-    'MS_Description', N'租户编号',
+    'MS_Description', N'应用编号',
     'SCHEMA', N'dbo',
     'TABLE', N'flow_instance_biz_ext',
     'COLUMN', N'tenant_id'

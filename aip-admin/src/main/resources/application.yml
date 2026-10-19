@@ -130,12 +130,16 @@ security:
     - /*/api-docs/**
     - /warm-flow-ui/config
 
-# 多租户配置
+# 多应用配置
 tenant:
   # 是否开启
   enable: true
   # 排除表
   excludes:
+    - sys_user
+    - sys_role
+    - sys_dept
+    - sys_post
     - sys_menu
     - sys_tenant
     - sys_tenant_package
@@ -198,7 +202,7 @@ springdoc:
     enabled: true
   info:
     # 标题
-    title: '标题：RuoYi-Vue-Plus多租户管理系统_接口文档'
+    title: '标题：RuoYi-Vue-Plus多应用管理系统_接口文档'
     # 描述
     description: '描述：用于管理集团旗下公司的人员信息,具体包括XXX,XXX模块...'
     # 版本

@@ -36,7 +36,7 @@ public class FlowHisTaskVo implements Serializable {
     private Date updateTime;
 
     /**
-     * 租户ID
+     * 应用ID
      */
     private String tenantId;
 

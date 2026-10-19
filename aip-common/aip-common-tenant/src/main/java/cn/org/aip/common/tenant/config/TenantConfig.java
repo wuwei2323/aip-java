@@ -23,7 +23,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 
 /**
- * 租户配置类
+ * 应用配置类
  *
  * @author Lion Li
  */
@@ -37,7 +37,7 @@ public class TenantConfig {
     static class MybatisPlusConfiguration {
 
         /**
-         * 多租户插件
+         * 多应用插件
          */
         @Bean
         public TenantLineInnerInterceptor tenantLineInnerInterceptor(TenantProperties tenantProperties) {
@@ -53,20 +53,20 @@ public class TenantConfig {
             SingleServerConfig singleServerConfig = ReflectUtils.invokeGetter(config, "singleServerConfig");
             if (ObjectUtil.isNotNull(singleServerConfig)) {
                 // 使用单机模式
-                // 设置多租户 redis key前缀
+                // 设置多应用 redis key前缀
                 singleServerConfig.setNameMapper(nameMapper);
             }
             ClusterServersConfig clusterServersConfig = ReflectUtils.invokeGetter(config, "clusterServersConfig");
             // 集群配置方式 参考下方注释
             if (ObjectUtil.isNotNull(clusterServersConfig)) {
-                // 设置多租户 redis key前缀
+                // 设置多应用 redis key前缀
                 clusterServersConfig.setNameMapper(nameMapper);
             }
         };
     }
 
     /**
-     * 多租户缓存管理器
+     * 多应用缓存管理器
      */
     @Primary
     @Bean
@@ -75,7 +75,7 @@ public class TenantConfig {
     }
 
     /**
-     * 多租户鉴权dao实现
+     * 多应用鉴权dao实现
      */
     @Primary
     @Bean

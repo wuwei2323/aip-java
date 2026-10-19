@@ -2,7 +2,7 @@
 
 ## 1. 基本介绍
 
-AIP 应用集成平台（Application Integration Platform）是基于 [RuoYi-Vue-Plus 5.5.2](https://gitee.com/dromara/RuoYi-Vue-Plus.git) 架构开发的现代化企业级系统与数据集成中台。系统采用微服务/模块化前后端分离架构，支持多租户、多端访问与高并发处理，提供异构系统互通、服务编排、消息路由适配、工作流流转与统一管控等完整的应用集成能力。
+AIP 应用集成平台（Application Integration Platform）是基于 [RuoYi-Vue-Plus 5.5.2](https://gitee.com/dromara/RuoYi-Vue-Plus.git) 架构开发的现代化企业级系统与数据集成中台。系统采用微服务/模块化前后端分离架构，支持多应用、多端访问与高并发处理，提供异构系统互通、服务编排、消息路由适配、工作流流转与统一管控等完整的应用集成能力。
 
 ### 1.1 技术栈
 
@@ -18,7 +18,7 @@ AIP 应用集成平台（Application Integration Platform）是基于 [RuoYi-Vue
 
 ### 1.2 系统特性
 
-- 支持多租户隔离，各租户数据完全独立
+- 支持多应用隔离，各应用数据完全独立
 - 支持PC端、移动端多端访问
 - 完善的权限管理体系，支持角色、部门、岗位多维度权限控制
 - 提供代码生成器，快速生成业务代码
@@ -34,7 +34,7 @@ AIP 应用集成平台（Application Integration Platform）是基于 [RuoYi-Vue
 
 ### 2.2 持久层
 
-- **Mybatis-Plus**: 基于Mybatis的增强工具，提供CRUD操作、分页、多租户、数据权限等功能
+- **Mybatis-Plus**: 基于Mybatis的增强工具，提供CRUD操作、分页、多应用、数据权限等功能
 - **Dynamic-Datasource**: 动态多数据源框架，支持异构数据库切换和事务管理
 - **HikariCP**: 高性能数据库连接池，Spring Boot官方默认连接池
 

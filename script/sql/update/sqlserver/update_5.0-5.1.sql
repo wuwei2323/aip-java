@@ -62,7 +62,7 @@ EXEC sys.sp_addextendedproperty
     'COLUMN', N'user_id'
 GO
 EXEC sys.sp_addextendedproperty
-    'MS_Description', N'租户id' ,
+    'MS_Description', N'应用id' ,
     'SCHEMA', N'dbo',
     'TABLE', N'sys_social',
     'COLUMN', N'tenant_id'
