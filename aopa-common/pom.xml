@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>aopa-vue-plus</artifactId>
+        <groupId>cn.org.aopa</groupId>
+        <version>${revision}</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <modules>
+        <module>aopa-common-bom</module>
+        <module>aopa-common-social</module>
+        <module>aopa-common-core</module>
+        <module>aopa-common-doc</module>
+        <module>aopa-common-excel</module>
+        <module>aopa-common-idempotent</module>
+        <module>aopa-common-job</module>
+        <module>aopa-common-log</module>
+        <module>aopa-common-mail</module>
+        <module>aopa-common-mybatis</module>
+        <module>aopa-common-oss</module>
+        <module>aopa-common-ratelimiter</module>
+        <module>aopa-common-redis</module>
+        <module>aopa-common-satoken</module>
+        <module>aopa-common-security</module>
+        <module>aopa-common-sms</module>
+        <module>aopa-common-web</module>
+        <module>aopa-common-translation</module>
+        <module>aopa-common-sensitive</module>
+        <module>aopa-common-json</module>
+        <module>aopa-common-encrypt</module>
+        <module>aopa-common-tenant</module>
+        <module>aopa-common-websocket</module>
+        <module>aopa-common-sse</module>
+        <module>aopa-common-ajcaptcha</module>
+    </modules>
+
+    <artifactId>aopa-common</artifactId>
+    <packaging>pom</packaging>
+
+    <description>
+        common 通用模块
+    </description>
+
+</project>

@@ -1,0 +1,3 @@
+cn.org.aopa.common.encrypt.config.EncryptorAutoConfiguration
+cn.org.aopa.common.encrypt.config.ApiDecryptAutoConfiguration
+

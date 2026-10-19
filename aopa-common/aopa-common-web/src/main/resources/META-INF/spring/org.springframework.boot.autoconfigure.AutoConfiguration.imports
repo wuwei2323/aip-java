@@ -1,0 +1,5 @@
+cn.org.aopa.common.web.config.CaptchaConfig
+cn.org.aopa.common.web.config.FilterConfig
+cn.org.aopa.common.web.config.I18nConfig
+cn.org.aopa.common.web.config.ResourcesConfig
+cn.org.aopa.common.web.config.UndertowConfig
