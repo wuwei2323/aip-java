@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import cn.org.aip.common.core.constant.CacheNames;
+import cn.org.aip.common.core.constant.SystemConstants;
 import cn.org.aip.common.core.domain.dto.DictDataDTO;
 import cn.org.aip.common.core.domain.dto.DictTypeDTO;
 import cn.org.aip.common.core.exception.ServiceException;
@@ -20,13 +21,18 @@ import cn.org.aip.common.core.utils.StringUtils;
 import cn.org.aip.common.mybatis.core.page.PageQuery;
 import cn.org.aip.common.mybatis.core.page.TableDataInfo;
 import cn.org.aip.common.redis.utils.CacheUtils;
+import cn.org.aip.common.tenant.helper.TenantHelper;
 import cn.org.aip.system.domain.SysDictData;
 import cn.org.aip.system.domain.SysDictType;
+import cn.org.aip.system.domain.SysDictTypeTenant;
+import cn.org.aip.system.domain.SysTenant;
 import cn.org.aip.system.domain.bo.SysDictTypeBo;
 import cn.org.aip.system.domain.vo.SysDictDataVo;
 import cn.org.aip.system.domain.vo.SysDictTypeVo;
 import cn.org.aip.system.mapper.SysDictDataMapper;
 import cn.org.aip.system.mapper.SysDictTypeMapper;
+import cn.org.aip.system.mapper.SysDictTypeTenantMapper;
+import cn.org.aip.system.mapper.SysTenantMapper;
 import cn.org.aip.system.service.ISysDictTypeService;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
@@ -47,6 +53,8 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
 
     private final SysDictTypeMapper baseMapper;
     private final SysDictDataMapper dictDataMapper;
+    private final SysDictTypeTenantMapper dictTypeTenantMapper;
+    private final SysTenantMapper tenantMapper;
 
     /**
      * 分页查询字典类型列表
@@ -59,6 +67,7 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
     public TableDataInfo<SysDictTypeVo> selectPageDictTypeList(SysDictTypeBo dictType, PageQuery pageQuery) {
         LambdaQueryWrapper<SysDictType> lqw = buildQueryWrapper(dictType);
         Page<SysDictTypeVo> page = baseMapper.selectVoPage(pageQuery.build(), lqw);
+        fillTenantInfo(page.getRecords());
         return TableDataInfo.build(page);
     }
 
@@ -71,7 +80,9 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
     @Override
     public List<SysDictTypeVo> selectDictTypeList(SysDictTypeBo dictType) {
         LambdaQueryWrapper<SysDictType> lqw = buildQueryWrapper(dictType);
-        return baseMapper.selectVoList(lqw);
+        List<SysDictTypeVo> list = baseMapper.selectVoList(lqw);
+        fillTenantInfo(list);
+        return list;
     }
 
     private LambdaQueryWrapper<SysDictType> buildQueryWrapper(SysDictTypeBo bo) {
@@ -79,10 +90,51 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
         LambdaQueryWrapper<SysDictType> lqw = Wrappers.lambdaQuery();
         lqw.like(StringUtils.isNotBlank(bo.getDictName()), SysDictType::getDictName, bo.getDictName());
         lqw.like(StringUtils.isNotBlank(bo.getDictType()), SysDictType::getDictType, bo.getDictType());
+        lqw.eq(StringUtils.isNotBlank(bo.getCategoryType()), SysDictType::getCategoryType, bo.getCategoryType());
+        lqw.apply(StringUtils.isNotBlank(bo.getTenantId()),
+            "dict_id IN (SELECT dict_id FROM sys_dict_type_tenant WHERE tenant_id = {0})", bo.getTenantId());
         lqw.between(params.get("beginTime") != null && params.get("endTime") != null,
             SysDictType::getCreateTime, params.get("beginTime"), params.get("endTime"));
         lqw.orderByAsc(SysDictType::getDictId);
         return lqw;
+    }
+
+    /**
+     * 批量回填字典类型关联的应用编号与应用名称
+     *
+     * @param list 字典类型列表
+     */
+    private void fillTenantInfo(List<SysDictTypeVo> list) {
+        if (CollUtil.isEmpty(list)) {
+            return;
+        }
+        List<Long> dictIds = StreamUtils.toList(list, SysDictTypeVo::getDictId);
+        List<SysDictTypeTenant> relations = dictTypeTenantMapper.selectList(
+            new LambdaQueryWrapper<SysDictTypeTenant>().in(SysDictTypeTenant::getDictId, dictIds));
+        if (CollUtil.isEmpty(relations)) {
+            list.forEach(vo -> {
+                vo.setTenantIds(new ArrayList<>());
+                vo.setTenantNames(new ArrayList<>());
+            });
+            return;
+        }
+        Set<String> tenantIds = new HashSet<>(StreamUtils.toList(relations, SysDictTypeTenant::getTenantId));
+        List<SysTenant> tenants = tenantMapper.selectList(new LambdaQueryWrapper<SysTenant>()
+            .select(SysTenant::getTenantId, SysTenant::getCompanyName)
+            .in(SysTenant::getTenantId, tenantIds));
+        Map<String, String> tenantNameMap = StreamUtils.toMap(tenants, SysTenant::getTenantId, SysTenant::getCompanyName);
+        Map<Long, List<SysDictTypeTenant>> relationMap = StreamUtils.groupByKey(relations, SysDictTypeTenant::getDictId);
+        for (SysDictTypeVo vo : list) {
+            List<SysDictTypeTenant> dictRelations = relationMap.get(vo.getDictId());
+            if (CollUtil.isEmpty(dictRelations)) {
+                vo.setTenantIds(new ArrayList<>());
+                vo.setTenantNames(new ArrayList<>());
+                continue;
+            }
+            List<String> ids = StreamUtils.toList(dictRelations, SysDictTypeTenant::getTenantId);
+            vo.setTenantIds(ids);
+            vo.setTenantNames(StreamUtils.toList(ids, id -> tenantNameMap.getOrDefault(id, id)));
+        }
     }
 
     /**
@@ -116,7 +168,11 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
      */
     @Override
     public SysDictTypeVo selectDictTypeById(Long dictId) {
-        return baseMapper.selectVoById(dictId);
+        SysDictTypeVo vo = baseMapper.selectVoById(dictId);
+        if (vo != null) {
+            fillTenantInfo(Collections.singletonList(vo));
+        }
+        return vo;
     }
 
     /**
@@ -137,6 +193,7 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
      * @param dictIds 需要删除的字典ID
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void deleteDictTypeByIds(List<Long> dictIds) {
         List<SysDictType> list = baseMapper.selectByIds(dictIds);
         list.forEach(x -> {
@@ -147,10 +204,32 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
             }
         });
         baseMapper.deleteByIds(dictIds);
-        list.forEach(x -> {
-            CacheUtils.evict(CacheNames.SYS_DICT, x.getDictType());
-            CacheUtils.evict(CacheNames.SYS_DICT_TYPE, x.getDictType());
-        });
+        dictTypeTenantMapper.delete(new LambdaQueryWrapper<SysDictTypeTenant>()
+            .in(SysDictTypeTenant::getDictId, dictIds));
+        list.forEach(x -> evictDictCache(x.getDictType()));
+    }
+
+    /**
+     * 清除所有应用下的字典缓存
+     *
+     * @param dictType 字典类型
+     */
+    private void evictDictCache(String dictType) {
+        List<String> tenantIds = tenantMapper.selectList(new LambdaQueryWrapper<SysTenant>()
+                .select(SysTenant::getTenantId)
+                .eq(SysTenant::getStatus, SystemConstants.NORMAL))
+            .stream().map(SysTenant::getTenantId).collect(Collectors.toList());
+        if (CollUtil.isEmpty(tenantIds)) {
+            CacheUtils.evict(CacheNames.SYS_DICT, dictType);
+            CacheUtils.evict(CacheNames.SYS_DICT_TYPE, dictType);
+            return;
+        }
+        for (String tenantId : tenantIds) {
+            TenantHelper.dynamic(tenantId, () -> {
+                CacheUtils.evict(CacheNames.SYS_DICT, dictType);
+                CacheUtils.evict(CacheNames.SYS_DICT_TYPE, dictType);
+            });
+        }
     }
 
     /**
@@ -158,8 +237,21 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
      */
     @Override
     public void resetDictCache() {
-        CacheUtils.clear(CacheNames.SYS_DICT);
-        CacheUtils.clear(CacheNames.SYS_DICT_TYPE);
+        List<String> tenantIds = tenantMapper.selectList(new LambdaQueryWrapper<SysTenant>()
+                .select(SysTenant::getTenantId)
+                .eq(SysTenant::getStatus, SystemConstants.NORMAL))
+            .stream().map(SysTenant::getTenantId).collect(Collectors.toList());
+        if (CollUtil.isEmpty(tenantIds)) {
+            CacheUtils.clear(CacheNames.SYS_DICT);
+            CacheUtils.clear(CacheNames.SYS_DICT_TYPE);
+            return;
+        }
+        for (String tenantId : tenantIds) {
+            TenantHelper.dynamic(tenantId, () -> {
+                CacheUtils.clear(CacheNames.SYS_DICT);
+                CacheUtils.clear(CacheNames.SYS_DICT_TYPE);
+            });
+        }
     }
 
     /**
@@ -170,10 +262,14 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
      */
     @CachePut(cacheNames = CacheNames.SYS_DICT, key = "#bo.dictType")
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public List<SysDictDataVo> insertDictType(SysDictTypeBo bo) {
         SysDictType dict = MapstructUtils.convert(bo, SysDictType.class);
         int row = baseMapper.insert(dict);
         if (row > 0) {
+            saveDictTypeTenants(dict.getDictId(), bo.getTenantIds());
+            // 清除其他应用可能存在的缓存穿透数据
+            evictDictCache(dict.getDictType());
             // 新增 type 下无 data 数据 返回空防止缓存穿透
             return new ArrayList<>();
         }
@@ -197,11 +293,39 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
             .eq(SysDictData::getDictType, oldDict.getDictType()));
         int row = baseMapper.updateById(dict);
         if (row > 0) {
-            CacheUtils.evict(CacheNames.SYS_DICT, oldDict.getDictType());
-            CacheUtils.evict(CacheNames.SYS_DICT_TYPE, oldDict.getDictType());
+            saveDictTypeTenants(dict.getDictId(), bo.getTenantIds());
+            evictDictCache(oldDict.getDictType());
+            evictDictCache(dict.getDictType());
             return dictDataMapper.selectDictDataByType(dict.getDictType());
         }
         throw new ServiceException("操作失败");
+    }
+
+    /**
+     * 保存字典类型与应用关联关系
+     *
+     * @param dictId    字典主键
+     * @param tenantIds 应用编号列表
+     */
+    private void saveDictTypeTenants(Long dictId, List<String> tenantIds) {
+        dictTypeTenantMapper.delete(new LambdaQueryWrapper<SysDictTypeTenant>()
+            .eq(SysDictTypeTenant::getDictId, dictId));
+        if (CollUtil.isEmpty(tenantIds)) {
+            return;
+        }
+        List<SysDictTypeTenant> list = tenantIds.stream()
+            .filter(StringUtils::isNotBlank)
+            .distinct()
+            .map(tenantId -> {
+                SysDictTypeTenant relation = new SysDictTypeTenant();
+                relation.setDictId(dictId);
+                relation.setTenantId(tenantId);
+                return relation;
+            })
+            .collect(Collectors.toList());
+        if (CollUtil.isNotEmpty(list)) {
+            dictTypeTenantMapper.insertBatch(list);
+        }
     }
 
     /**

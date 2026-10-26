@@ -150,6 +150,9 @@ tenant:
     - sys_client
     - sys_oss_config
     - flow_spel
+    - sys_dict_type
+    - sys_dict_data
+    - sys_dict_type_tenant
 
 # MyBatisPlus配置
 # https://baomidou.com/config/

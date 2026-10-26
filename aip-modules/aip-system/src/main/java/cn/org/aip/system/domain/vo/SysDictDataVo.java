@@ -74,6 +74,13 @@ public class SysDictDataVo implements Serializable {
     private String isDefault;
 
     /**
+     * 数据名称样式（0正常 1停用）
+     */
+    @ExcelProperty(value = "数据名称样式", converter = ExcelDictConvert.class)
+    @ExcelDictFormat(dictType = "sys_normal_disable")
+    private String labelStyle;
+
+    /**
      * 备注
      */
     @ExcelProperty(value = "备注")

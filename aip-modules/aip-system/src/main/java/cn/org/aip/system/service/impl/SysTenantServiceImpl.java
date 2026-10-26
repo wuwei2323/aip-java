@@ -54,8 +54,6 @@ public class SysTenantServiceImpl implements ISysTenantService {
     private final SysRoleMenuMapper roleMenuMapper;
     private final SysRoleDeptMapper roleDeptMapper;
     private final SysUserRoleMapper userRoleMapper;
-    private final SysDictTypeMapper dictTypeMapper;
-    private final SysDictDataMapper dictDataMapper;
     private final SysConfigMapper configMapper;
 
     /**
@@ -169,32 +167,9 @@ public class SysTenantServiceImpl implements ISysTenantService {
         userRole.setRoleId(roleId);
         userRoleMapper.insert(userRole);
 
-        String defaultTenantId = TenantConstants.DEFAULT_TENANT_ID;
-        List<SysDictType> dictTypeList = dictTypeMapper.selectList(
-            new LambdaQueryWrapper<SysDictType>().eq(SysDictType::getTenantId, defaultTenantId));
-        List<SysDictData> dictDataList = dictDataMapper.selectList(
-            new LambdaQueryWrapper<SysDictData>().eq(SysDictData::getTenantId, defaultTenantId));
-        for (SysDictType dictType : dictTypeList) {
-            dictType.setDictId(null);
-            dictType.setTenantId(tenantId);
-            dictType.setCreateDept(null);
-            dictType.setCreateBy(null);
-            dictType.setCreateTime(null);
-            dictType.setUpdateBy(null);
-            dictType.setUpdateTime(null);
-        }
-        for (SysDictData dictData : dictDataList) {
-            dictData.setDictCode(null);
-            dictData.setTenantId(tenantId);
-            dictData.setCreateDept(null);
-            dictData.setCreateBy(null);
-            dictData.setCreateTime(null);
-            dictData.setUpdateBy(null);
-            dictData.setUpdateTime(null);
-        }
-        dictTypeMapper.insertBatch(dictTypeList);
-        dictDataMapper.insertBatch(dictDataList);
+        // 字典类型与字典数据已改为全应用共享，无需为新应用复制字典数据
 
+        String defaultTenantId = TenantConstants.DEFAULT_TENANT_ID;
         List<SysConfig> sysConfigList = configMapper.selectList(
             new LambdaQueryWrapper<SysConfig>().eq(SysConfig::getTenantId, defaultTenantId));
         for (SysConfig config : sysConfigList) {
@@ -400,108 +375,21 @@ public class SysTenantServiceImpl implements ISysTenantService {
 
     /**
      * 同步应用字典
+     * <p>
+     * 字典类型与字典数据已改为全应用共享，此处仅刷新各应用的字典缓存。
      */
-    @Transactional(rollbackFor = Exception.class)
     @Override
     public void syncTenantDict() {
-        // 查询超管 所有字典数据
-        List<SysDictType> dictTypeList = new ArrayList<>();
-        List<SysDictData> dictDataList = new ArrayList<>();
-        TenantHelper.ignore(() -> {
-            dictTypeList.addAll(dictTypeMapper.selectList());
-            dictDataList.addAll(dictDataMapper.selectList());
-        });
-        // 所有应用字典类型
-        Map<String, List<SysDictType>> dictTypeMap = StreamUtils.groupByKey(dictTypeList, TenantEntity::getTenantId);
-        // 所有应用字典数据
-        Map<String, Map<String, List<SysDictData>>> dictDataMap = StreamUtils.groupBy2Key(dictDataList, TenantEntity::getTenantId, SysDictData::getDictType);
-
-        // 默认应用字典类型列表
-        List<SysDictType> defaultDictTypeList = dictTypeMap.get(TenantConstants.DEFAULT_TENANT_ID);
-        // 默认应用字典数据
-        Map<String, List<SysDictData>> defaultDictDataMap = dictDataMap.get(TenantConstants.DEFAULT_TENANT_ID);
-
-        // 获取所有应用编号
         List<String> tenantIds = baseMapper.selectObjs(
             new LambdaQueryWrapper<SysTenant>().select(SysTenant::getTenantId)
                 .eq(SysTenant::getStatus, SystemConstants.NORMAL), x -> {
                 return Convert.toStr(x);
             });
-        // 待入库的字典类型和字典数据
-        List<SysDictType> saveTypeList = new ArrayList<>();
-        List<SysDictData> saveDataList = new ArrayList<>();
-        // 待同步的应用编号（用于清除对于应用的字典缓存）
-        Set<String> syncTenantIds = new HashSet<>();
-        // 循环所有应用，处理需要同步的数据
         for (String tenantId : tenantIds) {
-            // 排除默认应用
-            if (TenantConstants.DEFAULT_TENANT_ID.equals(tenantId)) {
-                continue;
-            }
-            // 根据默认应用的字典类型进行数据同步
-            for (SysDictType dictType : defaultDictTypeList) {
-                // 获取当前应用的字典类型列表
-                List<String> typeList = StreamUtils.toList(dictTypeMap.get(tenantId), SysDictType::getDictType);
-                // 根据字典类型获取默认应用的字典数据
-                List<SysDictData> defaultDictDataList = defaultDictDataMap.get(dictType.getDictType());
-                // 排除不需要同步的字典数据
-                Set<String> excludeDictDataSet = CollUtil.newHashSet();
-                // 处理 存在type不存在data 的情况
-                if (typeList.contains(dictType.getDictType())) {
-                    // 获取应用字典数据
-                    Optional.ofNullable(dictDataMap.get(tenantId))
-                        // 获取应用当前字典类型的字典数据
-                        .map(tenantDictDataMap -> tenantDictDataMap.get(dictType.getDictType()))
-                        // 保存字典数据项的字典键值，用于判断数据是否需要同步
-                        .map(data -> StreamUtils.toSet(data, SysDictData::getDictValue))
-                        // 添加到排除集合中
-                        .ifPresent(excludeDictDataSet::addAll);
-                } else {
-                    // 同步字典类型
-                    SysDictType type = BeanUtil.toBean(dictType, SysDictType.class);
-                    type.setDictId(null);
-                    type.setTenantId(tenantId);
-                    type.setCreateTime(null);
-                    type.setUpdateTime(null);
-                    syncTenantIds.add(tenantId);
-                    saveTypeList.add(type);
-                }
-
-                // 默认应用字典数据不为空再去处理
-                if (CollUtil.isNotEmpty(defaultDictDataList)) {
-                    // 提前优化排除判断if条件语句，对于 && 并联条件，该优化可以避免不必要的 excludeDictDataSet.contains() 函数调用
-                    boolean isExclude = CollUtil.isNotEmpty(excludeDictDataSet);
-                    // 筛选出 dictType 对应的 data
-                    for (SysDictData dictData : defaultDictDataList) {
-                        // 排除不需要同步的字典数据
-                        if (isExclude && excludeDictDataSet.contains(dictData.getDictValue())) {
-                            continue;
-                        }
-                        SysDictData data = BeanUtil.toBean(dictData, SysDictData.class);
-                        // 设置字典编码为 null
-                        data.setDictCode(null);
-                        data.setTenantId(tenantId);
-                        data.setCreateTime(null);
-                        data.setUpdateTime(null);
-                        data.setCreateDept(null);
-                        data.setCreateBy(null);
-                        data.setUpdateBy(null);
-                        syncTenantIds.add(tenantId);
-                        saveDataList.add(data);
-                    }
-                }
-            }
-        }
-        TenantHelper.ignore(() -> {
-            if (CollUtil.isNotEmpty(saveTypeList)) {
-                dictTypeMapper.insertBatch(saveTypeList);
-            }
-            if (CollUtil.isNotEmpty(saveDataList)) {
-                dictDataMapper.insertBatch(saveDataList);
-            }
-        });
-        for (String tenantId : syncTenantIds) {
-            TenantHelper.dynamic(tenantId, () -> CacheUtils.clear(CacheNames.SYS_DICT));
+            TenantHelper.dynamic(tenantId, () -> {
+                CacheUtils.clear(CacheNames.SYS_DICT);
+                CacheUtils.clear(CacheNames.SYS_DICT_TYPE);
+            });
         }
     }
 

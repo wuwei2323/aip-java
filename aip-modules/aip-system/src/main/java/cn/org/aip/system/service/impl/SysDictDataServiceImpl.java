@@ -1,26 +1,32 @@
 package cn.org.aip.system.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import cn.org.aip.common.core.constant.CacheNames;
+import cn.org.aip.common.core.constant.SystemConstants;
 import cn.org.aip.common.core.exception.ServiceException;
 import cn.org.aip.common.core.utils.MapstructUtils;
 import cn.org.aip.common.core.utils.StringUtils;
 import cn.org.aip.common.mybatis.core.page.PageQuery;
 import cn.org.aip.common.mybatis.core.page.TableDataInfo;
 import cn.org.aip.common.redis.utils.CacheUtils;
+import cn.org.aip.common.tenant.helper.TenantHelper;
 import cn.org.aip.system.domain.SysDictData;
+import cn.org.aip.system.domain.SysTenant;
 import cn.org.aip.system.domain.bo.SysDictDataBo;
 import cn.org.aip.system.domain.vo.SysDictDataVo;
 import cn.org.aip.system.mapper.SysDictDataMapper;
+import cn.org.aip.system.mapper.SysTenantMapper;
 import cn.org.aip.system.service.ISysDictDataService;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 字典 业务层处理
@@ -32,6 +38,7 @@ import java.util.List;
 public class SysDictDataServiceImpl implements ISysDictDataService {
 
     private final SysDictDataMapper baseMapper;
+    private final SysTenantMapper tenantMapper;
 
     /**
      * 分页查询字典数据列表
@@ -64,6 +71,7 @@ public class SysDictDataServiceImpl implements ISysDictDataService {
         lqw.eq(bo.getDictSort() != null, SysDictData::getDictSort, bo.getDictSort());
         lqw.like(StringUtils.isNotBlank(bo.getDictLabel()), SysDictData::getDictLabel, bo.getDictLabel());
         lqw.eq(StringUtils.isNotBlank(bo.getDictType()), SysDictData::getDictType, bo.getDictType());
+        lqw.eq(StringUtils.isNotBlank(bo.getLabelStyle()), SysDictData::getLabelStyle, bo.getLabelStyle());
         lqw.orderByAsc(SysDictData::getDictSort, SysDictData::getDictCode);
         return lqw;
     }
@@ -104,7 +112,26 @@ public class SysDictDataServiceImpl implements ISysDictDataService {
     public void deleteDictDataByIds(List<Long> dictCodes) {
         List<SysDictData> list = baseMapper.selectByIds(dictCodes);
         baseMapper.deleteByIds(dictCodes);
-        list.forEach(x -> CacheUtils.evict(CacheNames.SYS_DICT, x.getDictType()));
+        list.forEach(x -> evictDictCache(x.getDictType()));
+    }
+
+    /**
+     * 清除所有应用下的字典缓存
+     *
+     * @param dictType 字典类型
+     */
+    private void evictDictCache(String dictType) {
+        List<String> tenantIds = tenantMapper.selectList(new LambdaQueryWrapper<SysTenant>()
+                .select(SysTenant::getTenantId)
+                .eq(SysTenant::getStatus, SystemConstants.NORMAL))
+            .stream().map(SysTenant::getTenantId).collect(Collectors.toList());
+        if (CollUtil.isEmpty(tenantIds)) {
+            CacheUtils.evict(CacheNames.SYS_DICT, dictType);
+            return;
+        }
+        for (String tenantId : tenantIds) {
+            TenantHelper.dynamic(tenantId, () -> CacheUtils.evict(CacheNames.SYS_DICT, dictType));
+        }
     }
 
     /**
@@ -117,8 +144,12 @@ public class SysDictDataServiceImpl implements ISysDictDataService {
     @Override
     public List<SysDictDataVo> insertDictData(SysDictDataBo bo) {
         SysDictData data = MapstructUtils.convert(bo, SysDictData.class);
+        if (StringUtils.isBlank(data.getLabelStyle())) {
+            data.setLabelStyle(SystemConstants.NORMAL);
+        }
         int row = baseMapper.insert(data);
         if (row > 0) {
+            evictDictCache(data.getDictType());
             return baseMapper.selectDictDataByType(data.getDictType());
         }
         throw new ServiceException("操作失败");
@@ -136,6 +167,7 @@ public class SysDictDataServiceImpl implements ISysDictDataService {
         SysDictData data = MapstructUtils.convert(bo, SysDictData.class);
         int row = baseMapper.updateById(data);
         if (row > 0) {
+            evictDictCache(data.getDictType());
             return baseMapper.selectDictDataByType(data.getDictType());
         }
         throw new ServiceException("操作失败");

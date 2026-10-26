@@ -1,5 +1,6 @@
 package cn.org.aip.system.domain.bo;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import io.github.linpeilie.annotations.AutoMapper;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -66,6 +67,12 @@ public class SysDictDataBo extends BaseEntity {
      * 是否默认（Y是 N否）
      */
     private String isDefault;
+
+    /**
+     * 数据名称样式（0正常 1停用）
+     */
+    @JsonAlias({"label_style", "sys_normal_disable", "sysNormalDisable", "status"})
+    private String labelStyle;
 
     /**
      * 创建部门

@@ -17,7 +17,7 @@ spring:
     enabled: ${FLYWAY_ENABLED:true}
     locations: classpath:db/migration/{vendor}, classpath:cn/org/aip/migrations
     baseline-on-migrate: true
-    baseline-version: 1_001
+    baseline-version: "0"
     ignore-migration-patterns:
     - "*:missing"
     out-of-order: true

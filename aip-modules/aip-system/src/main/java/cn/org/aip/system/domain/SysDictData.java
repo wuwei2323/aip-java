@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import cn.org.aip.common.core.constant.SystemConstants;
-import cn.org.aip.common.tenant.core.TenantEntity;
+import cn.org.aip.common.mybatis.core.domain.BaseEntity;
 
 /**
  * 字典数据表 sys_dict_data
@@ -16,7 +16,7 @@ import cn.org.aip.common.tenant.core.TenantEntity;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("sys_dict_data")
-public class SysDictData extends TenantEntity {
+public class SysDictData extends BaseEntity {
 
     /**
      * 字典编码
@@ -58,6 +58,11 @@ public class SysDictData extends TenantEntity {
      * 是否默认（Y是 N否）
      */
     private String isDefault;
+
+    /**
+     * 数据名称样式（0正常 1停用）
+     */
+    private String labelStyle;
 
     /**
      * 备注
