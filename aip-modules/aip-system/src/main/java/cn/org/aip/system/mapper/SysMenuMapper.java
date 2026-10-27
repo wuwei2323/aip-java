@@ -1,6 +1,7 @@
 package cn.org.aip.system.mapper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import cn.org.aip.common.tenant.helper.TenantHelper;
 import cn.org.aip.common.core.constant.SystemConstants;
 import cn.org.aip.common.core.utils.StreamUtils;
 import cn.org.aip.common.core.utils.StringUtils;
@@ -29,54 +30,53 @@ public interface SysMenuMapper extends BaseMapperPlus<SysMenu, SysMenuVo> {
      * @param userId 用户ID
      * @return SQL 字符串，用于 inSql 条件
      */
-    default String buildMenuByUserSql(Long userId) {
+    default String buildMenuByUserSql(Long userId, String tenantId) {
+        String tenantFilter = StringUtils.isNotBlank(tenantId)
+            ? " and tenant_id = '" + tenantId + "' "
+            : "";
         return """
                 select menu_id from sys_role_menu where role_id in (
                     select sur.role_id from sys_user_role sur
                         left join sys_role sr on sr.role_id = sur.role_id
                         where sur.user_id = %d and sr.status = '0'
-                )
-            """.formatted(userId);
+                ) %s
+            """.formatted(userId, tenantFilter);
     }
 
-    /**
-     * 构建角色对应的菜单ID SQL 子查询
-     *
-     * <p>
-     * 用于根据角色ID查询其所拥有的菜单权限（用于权限标识、菜单显示等场景）
-     * 通常配合 inSql 使用
-     * </p>
-     *
-     * @param roleId 角色ID
-     * @return 查询菜单ID的 SQL 子查询字符串
-     */
-    default String buildMenuByRoleSql(Long roleId) {
+    default String buildMenuByUserSql(Long userId) {
+        return buildMenuByUserSql(userId, TenantHelper.getTenantId());
+    }
+
+    default String buildMenuByRoleSql(Long roleId, String tenantId) {
+        String tenantFilter = StringUtils.isNotBlank(tenantId)
+            ? " and srm.tenant_id = '" + tenantId + "' "
+            : "";
         return """
                 select srm.menu_id from sys_role_menu srm
                     left join sys_role sr on sr.role_id = srm.role_id
-                    where srm.role_id = %d and sr.status = '0'
-            """.formatted(roleId);
+                    where srm.role_id = %d and sr.status = '0' %s
+            """.formatted(roleId, tenantFilter);
     }
 
-    /**
-     * 构建角色所关联菜单的父菜单ID查询 SQL
-     *
-     * <p>
-     * 用于配合菜单勾选树结构的 {@code menuCheckStrictly} 模式，过滤掉非叶子节点（父菜单），
-     * 只返回角色实际勾选的末级菜单
-     * </p>
-     *
-     * @param roleId 角色ID
-     * @return SQL 语句字符串（查询菜单的父菜单ID）
-     */
-    default String buildParentMenuByRoleSql(Long roleId) {
+    default String buildMenuByRoleSql(Long roleId) {
+        return buildMenuByRoleSql(roleId, TenantHelper.getTenantId());
+    }
+
+    default String buildParentMenuByRoleSql(Long roleId, String tenantId) {
+        String tenantFilter = StringUtils.isNotBlank(tenantId)
+            ? " and srm.tenant_id = '" + tenantId + "' "
+            : "";
         return """
                 select parent_id from sys_menu where menu_id in (
                     select srm.menu_id from sys_role_menu srm
                         left join sys_role sr on sr.role_id = srm.role_id
-                        where srm.role_id = %d and sr.status = '0'
+                        where srm.role_id = %d and sr.status = '0' %s
                 )
-            """.formatted(roleId);
+            """.formatted(roleId, tenantFilter);
+    }
+
+    default String buildParentMenuByRoleSql(Long roleId) {
+        return buildParentMenuByRoleSql(roleId, TenantHelper.getTenantId());
     }
 
     /**
@@ -132,16 +132,20 @@ public interface SysMenuMapper extends BaseMapperPlus<SysMenu, SysMenuVo> {
      * @param menuCheckStrictly 菜单树选择项是否关联显示
      * @return 选中菜单列表
      */
-    default List<Long> selectMenuListByRoleId(Long roleId, boolean menuCheckStrictly) {
+    default List<Long> selectMenuListByRoleId(Long roleId, String tenantId, boolean menuCheckStrictly) {
         LambdaQueryWrapper<SysMenu> wrapper = new LambdaQueryWrapper<>();
         wrapper.select(SysMenu::getMenuId)
-            .inSql(SysMenu::getMenuId, buildMenuByRoleSql(roleId))
+            .inSql(SysMenu::getMenuId, buildMenuByRoleSql(roleId, tenantId))
             .orderByAsc(SysMenu::getParentId)
             .orderByAsc(SysMenu::getOrderNum);
         if (menuCheckStrictly) {
-            wrapper.notInSql(SysMenu::getMenuId, this.buildParentMenuByRoleSql(roleId));
+            wrapper.notInSql(SysMenu::getMenuId, this.buildParentMenuByRoleSql(roleId, tenantId));
         }
         return this.selectObjs(wrapper);
+    }
+
+    default List<Long> selectMenuListByRoleId(Long roleId, boolean menuCheckStrictly) {
+        return selectMenuListByRoleId(roleId, TenantHelper.getTenantId(), menuCheckStrictly);
     }
 
 }

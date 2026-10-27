@@ -37,16 +37,18 @@ public class SysDataScopeServiceImpl implements ISysDataScopeService {
      * @param roleId 角色Id
      * @return 部门Id组
      */
-    @Cacheable(cacheNames = CacheNames.SYS_ROLE_CUSTOM, key = "#roleId", condition = "#roleId != null")
+    @Cacheable(cacheNames = CacheNames.SYS_ROLE_CUSTOM, key = "#roleId + ':' + (T(cn.org.aip.common.tenant.helper.TenantHelper).getTenantId() ?: '000000')", condition = "#roleId != null")
     @Override
     public String getRoleCustom(Long roleId) {
         if (ObjectUtil.isNull(roleId)) {
             return "-1";
         }
+        String tenantId = cn.org.aip.common.tenant.helper.TenantHelper.getTenantId();
         List<SysRoleDept> list = roleDeptMapper.selectList(
             new LambdaQueryWrapper<SysRoleDept>()
                 .select(SysRoleDept::getDeptId)
-                .eq(SysRoleDept::getRoleId, roleId));
+                .eq(SysRoleDept::getRoleId, roleId)
+                .eq(cn.org.aip.common.core.utils.StringUtils.isNotBlank(tenantId), SysRoleDept::getTenantId, tenantId));
         if (CollUtil.isNotEmpty(list)) {
             return StreamUtils.join(list, rd -> Convert.toStr(rd.getDeptId()));
         }

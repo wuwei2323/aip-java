@@ -66,6 +66,15 @@ public interface ISysMenuService {
     List<Long> selectMenuListByRoleId(Long roleId);
 
     /**
+     * 根据角色ID与应用编号查询菜单树信息
+     *
+     * @param roleId   角色ID
+     * @param tenantId 应用编号
+     * @return 选中菜单列表
+     */
+    List<Long> selectMenuListByRoleId(Long roleId, String tenantId);
+
+    /**
      * 根据应用套餐ID查询菜单树信息
      *
      * @param packageId 应用套餐ID

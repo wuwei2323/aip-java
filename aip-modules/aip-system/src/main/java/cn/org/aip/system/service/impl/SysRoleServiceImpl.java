@@ -24,16 +24,30 @@ import cn.org.aip.common.mybatis.core.page.PageQuery;
 import cn.org.aip.common.mybatis.core.page.TableDataInfo;
 import cn.org.aip.common.satoken.utils.LoginHelper;
 import cn.org.aip.common.tenant.helper.TenantHelper;
+import cn.hutool.core.lang.tree.Tree;
+import cn.org.aip.common.redis.utils.CacheUtils;
 import cn.org.aip.system.domain.SysRole;
+import cn.org.aip.system.domain.SysRoleDataScope;
 import cn.org.aip.system.domain.SysRoleDept;
 import cn.org.aip.system.domain.SysRoleMenu;
+import cn.org.aip.system.domain.SysTenant;
 import cn.org.aip.system.domain.SysUserRole;
+import cn.org.aip.system.domain.bo.RoleAppConfigBo;
+import cn.org.aip.system.domain.bo.RoleDictValueBo;
+import cn.org.aip.system.domain.bo.SysMenuBo;
 import cn.org.aip.system.domain.bo.SysRoleBo;
+import cn.org.aip.system.domain.vo.RoleAppConfigVo;
+import cn.org.aip.system.domain.vo.SysMenuVo;
 import cn.org.aip.system.domain.vo.SysRoleVo;
+import cn.org.aip.system.mapper.SysRoleDataScopeMapper;
 import cn.org.aip.system.mapper.SysRoleDeptMapper;
 import cn.org.aip.system.mapper.SysRoleMapper;
 import cn.org.aip.system.mapper.SysRoleMenuMapper;
+import cn.org.aip.system.mapper.SysTenantMapper;
 import cn.org.aip.system.mapper.SysUserRoleMapper;
+import cn.org.aip.system.service.ISysDeptService;
+import cn.org.aip.system.service.ISysMenuService;
+import cn.org.aip.system.service.ISysRoleDictService;
 import cn.org.aip.system.service.ISysRoleService;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
@@ -54,6 +68,11 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
     private final SysRoleMenuMapper roleMenuMapper;
     private final SysUserRoleMapper userRoleMapper;
     private final SysRoleDeptMapper roleDeptMapper;
+    private final SysRoleDataScopeMapper roleDataScopeMapper;
+    private final SysTenantMapper tenantMapper;
+    private final ISysMenuService menuService;
+    private final ISysDeptService deptService;
+    private final ISysRoleDictService roleDictService;
 
     /**
      * 分页查询角色列表
@@ -100,7 +119,23 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
      */
     @Override
     public List<SysRoleVo> selectRolesByUserId(Long userId) {
-        return baseMapper.selectRolesByUserId(userId);
+        List<SysRoleVo> roles = baseMapper.selectRolesByUserId(userId);
+        if (CollUtil.isNotEmpty(roles)) {
+            String tenantId = TenantHelper.getTenantId();
+            if (StringUtils.isNotBlank(tenantId)) {
+                List<Long> roleIds = StreamUtils.toList(roles, SysRoleVo::getRoleId);
+                List<SysRoleDataScope> scopes = roleDataScopeMapper.selectList(new LambdaQueryWrapper<SysRoleDataScope>()
+                    .in(SysRoleDataScope::getRoleId, roleIds)
+                    .eq(SysRoleDataScope::getTenantId, tenantId));
+                Map<Long, String> scopeMap = StreamUtils.toMap(scopes, SysRoleDataScope::getRoleId, SysRoleDataScope::getDataScope);
+                for (SysRoleVo role : roles) {
+                    if (scopeMap.containsKey(role.getRoleId()) && StringUtils.isNotBlank(scopeMap.get(role.getRoleId()))) {
+                        role.setDataScope(scopeMap.get(role.getRoleId()));
+                    }
+                }
+            }
+        }
+        return roles;
     }
 
     /**
@@ -211,6 +246,9 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
      */
     @Override
     public boolean checkRoleKeyUnique(SysRoleBo role) {
+        if (StringUtils.isBlank(role.getRoleKey())) {
+            return true;
+        }
         return TenantHelper.ignore(() -> {
             boolean exist = baseMapper.exists(new LambdaQueryWrapper<SysRole>()
                 .eq(SysRole::getRoleKey, role.getRoleKey())
@@ -229,6 +267,9 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
         if (ObjectUtil.isNotNull(role.getRoleId()) && LoginHelper.isSuperAdmin(role.getRoleId())) {
             throw new ServiceException("不允许操作超级管理员角色");
         }
+        if (StringUtils.isBlank(role.getRoleKey())) {
+            return;
+        }
         String[] keys = new String[]{TenantConstants.SUPER_ADMIN_ROLE_KEY, TenantConstants.TENANT_ADMIN_ROLE_KEY};
         // 新增不允许使用 管理员标识符
         if (ObjectUtil.isNull(role.getRoleId())
@@ -239,7 +280,7 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
         if (ObjectUtil.isNotNull(role.getRoleId())) {
             SysRole sysRole = baseMapper.selectById(role.getRoleId());
             // 如果标识符不相等 判断为修改了管理员标识符
-            if (!StringUtils.equals(sysRole.getRoleKey(), role.getRoleKey())) {
+            if (sysRole != null && !StringUtils.equals(sysRole.getRoleKey(), role.getRoleKey())) {
                 if (StringUtils.equalsAny(sysRole.getRoleKey(), keys)) {
                     throw new ServiceException("不允许修改系统内置管理员角色标识符!");
                 } else if (StringUtils.equalsAny(role.getRoleKey(), keys)) {
@@ -298,10 +339,34 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int insertRole(SysRoleBo bo) {
+        if (StringUtils.isBlank(bo.getRoleKey())) {
+            bo.setRoleKey("role_" + cn.hutool.core.util.IdUtil.fastSimpleUUID());
+        }
         SysRole role = MapstructUtils.convert(bo, SysRole.class);
         // 新增角色信息
         baseMapper.insert(role);
         bo.setRoleId(role.getRoleId());
+
+        if (CollUtil.isNotEmpty(bo.getAppConfigs())) {
+            return saveRoleAppConfigs(role.getRoleId(), bo.getAppConfigs(), bo.getDictValues());
+        }
+
+        String tenantId = StringUtils.defaultIfBlank(bo.getTenantId(), TenantConstants.DEFAULT_TENANT_ID);
+        // 初始化 sys_role_data_scope
+        SysRoleDataScope rds = new SysRoleDataScope();
+        rds.setRoleId(role.getRoleId());
+        rds.setTenantId(tenantId);
+        rds.setDataScope(StringUtils.defaultIfBlank(bo.getDataScope(), "1"));
+        rds.setMenuCheckStrictly(bo.getMenuCheckStrictly() != null ? bo.getMenuCheckStrictly() : true);
+        rds.setDeptCheckStrictly(bo.getDeptCheckStrictly() != null ? bo.getDeptCheckStrictly() : true);
+        roleDataScopeMapper.insert(rds);
+
+        if (bo.getDeptIds() != null) {
+            insertRoleDept(bo);
+        }
+        if (bo.getRoleDictIds() != null || bo.getDictValues() != null) {
+            roleDictService.saveRoleDictConfig(role.getRoleId(), bo.getRoleDictIds(), bo.getDictValues());
+        }
         return insertRoleMenu(bo);
     }
 
@@ -314,6 +379,10 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int updateRole(SysRoleBo bo) {
+        SysRole oldRole = baseMapper.selectById(bo.getRoleId());
+        if (oldRole != null && StringUtils.isBlank(bo.getRoleKey())) {
+            bo.setRoleKey(oldRole.getRoleKey());
+        }
         SysRole role = MapstructUtils.convert(bo, SysRole.class);
 
         if (SystemConstants.DISABLE.equals(role.getStatus()) && this.countUserRoleByRoleId(role.getRoleId()) > 0) {
@@ -321,8 +390,25 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
         }
         // 修改角色信息
         baseMapper.updateById(role);
+
+        if (CollUtil.isNotEmpty(bo.getAppConfigs())) {
+            return saveRoleAppConfigs(role.getRoleId(), bo.getAppConfigs(), bo.getDictValues());
+        }
+
+        String tenantId = StringUtils.defaultIfBlank(bo.getTenantId(), TenantConstants.DEFAULT_TENANT_ID);
         // 删除角色与菜单关联
-        roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>().eq(SysRoleMenu::getRoleId, role.getRoleId()));
+        roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>()
+            .eq(SysRoleMenu::getRoleId, role.getRoleId())
+            .eq(SysRoleMenu::getTenantId, tenantId));
+        if (bo.getDeptIds() != null) {
+            roleDeptMapper.delete(new LambdaQueryWrapper<SysRoleDept>()
+                .eq(SysRoleDept::getRoleId, role.getRoleId())
+                .eq(SysRoleDept::getTenantId, tenantId));
+            insertRoleDept(bo);
+        }
+        if (bo.getRoleDictIds() != null || bo.getDictValues() != null) {
+            roleDictService.saveRoleDictConfig(role.getRoleId(), bo.getRoleDictIds(), bo.getDictValues());
+        }
         return insertRoleMenu(bo);
     }
 
@@ -350,15 +436,45 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
      * @param bo 角色信息
      * @return 结果
      */
-    @CacheEvict(cacheNames = CacheNames.SYS_ROLE_CUSTOM, key = "#bo.roleId")
+    @CacheEvict(cacheNames = CacheNames.SYS_ROLE_CUSTOM, allEntries = true)
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int authDataScope(SysRoleBo bo) {
+        if (CollUtil.isNotEmpty(bo.getAppConfigs())) {
+            return saveRoleAppConfigs(bo.getRoleId(), bo.getAppConfigs(), bo.getDictValues());
+        }
         SysRole role = MapstructUtils.convert(bo, SysRole.class);
         // 修改角色信息
         baseMapper.updateById(role);
+
+        String tenantId = StringUtils.defaultIfBlank(bo.getTenantId(), TenantConstants.DEFAULT_TENANT_ID);
+        SysRoleDataScope existing = roleDataScopeMapper.selectOne(new LambdaQueryWrapper<SysRoleDataScope>()
+            .eq(SysRoleDataScope::getRoleId, bo.getRoleId())
+            .eq(SysRoleDataScope::getTenantId, tenantId));
+        String dataScope = StringUtils.defaultIfBlank(bo.getDataScope(), "1");
+        boolean deptStrictly = bo.getDeptCheckStrictly() != null ? bo.getDeptCheckStrictly() : true;
+        if (existing != null) {
+            existing.setDataScope(dataScope);
+            existing.setDeptCheckStrictly(deptStrictly);
+            roleDataScopeMapper.updateById(existing);
+        } else {
+            SysRoleDataScope add = new SysRoleDataScope();
+            add.setRoleId(bo.getRoleId());
+            add.setTenantId(tenantId);
+            add.setDataScope(dataScope);
+            add.setDeptCheckStrictly(deptStrictly);
+            add.setMenuCheckStrictly(bo.getMenuCheckStrictly() != null ? bo.getMenuCheckStrictly() : true);
+            roleDataScopeMapper.insert(add);
+        }
+
         // 删除角色与部门关联
-        roleDeptMapper.delete(new LambdaQueryWrapper<SysRoleDept>().eq(SysRoleDept::getRoleId, role.getRoleId()));
+        roleDeptMapper.delete(new LambdaQueryWrapper<SysRoleDept>()
+            .eq(SysRoleDept::getRoleId, role.getRoleId())
+            .eq(SysRoleDept::getTenantId, tenantId));
+        // 保存角色自定义字典配置值（未传字典关联且未传配置值时不做变更）
+        if (bo.getRoleDictIds() != null || bo.getDictValues() != null) {
+            roleDictService.saveRoleDictConfig(role.getRoleId(), bo.getRoleDictIds(), bo.getDictValues());
+        }
         // 新增角色和部门信息（数据权限）
         return insertRoleDept(bo);
     }
@@ -370,13 +486,16 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
      */
     private int insertRoleMenu(SysRoleBo role) {
         int rows = 1;
-        // 新增用户与角色管理
+        String tenantId = StringUtils.defaultIfBlank(role.getTenantId(), TenantConstants.DEFAULT_TENANT_ID);
         List<SysRoleMenu> list = new ArrayList<>();
-        for (Long menuId : role.getMenuIds()) {
-            SysRoleMenu rm = new SysRoleMenu();
-            rm.setRoleId(role.getRoleId());
-            rm.setMenuId(menuId);
-            list.add(rm);
+        if (role.getMenuIds() != null) {
+            for (Long menuId : role.getMenuIds()) {
+                SysRoleMenu rm = new SysRoleMenu();
+                rm.setRoleId(role.getRoleId());
+                rm.setMenuId(menuId);
+                rm.setTenantId(tenantId);
+                list.add(rm);
+            }
         }
         if (CollUtil.isNotEmpty(list)) {
             rows = roleMenuMapper.insertBatch(list) ? list.size() : 0;
@@ -391,13 +510,16 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
      */
     private int insertRoleDept(SysRoleBo role) {
         int rows = 1;
-        // 新增角色与部门（数据权限）管理
+        String tenantId = StringUtils.defaultIfBlank(role.getTenantId(), TenantConstants.DEFAULT_TENANT_ID);
         List<SysRoleDept> list = new ArrayList<>();
-        for (Long deptId : role.getDeptIds()) {
-            SysRoleDept rd = new SysRoleDept();
-            rd.setRoleId(role.getRoleId());
-            rd.setDeptId(deptId);
-            list.add(rd);
+        if (role.getDeptIds() != null) {
+            for (Long deptId : role.getDeptIds()) {
+                SysRoleDept rd = new SysRoleDept();
+                rd.setRoleId(role.getRoleId());
+                rd.setDeptId(deptId);
+                rd.setTenantId(tenantId);
+                list.add(rd);
+            }
         }
         if (CollUtil.isNotEmpty(list)) {
             rows = roleDeptMapper.insertBatch(list) ? list.size() : 0;
@@ -411,7 +533,7 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
      * @param roleId 角色ID
      * @return 结果
      */
-    @CacheEvict(cacheNames = CacheNames.SYS_ROLE_CUSTOM, key = "#roleId")
+    @CacheEvict(cacheNames = CacheNames.SYS_ROLE_CUSTOM, allEntries = true)
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int deleteRoleById(Long roleId) {
@@ -419,6 +541,10 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
         roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>().eq(SysRoleMenu::getRoleId, roleId));
         // 删除角色与部门关联
         roleDeptMapper.delete(new LambdaQueryWrapper<SysRoleDept>().eq(SysRoleDept::getRoleId, roleId));
+        // 删除角色数据权限配置
+        roleDataScopeMapper.delete(new LambdaQueryWrapper<SysRoleDataScope>().eq(SysRoleDataScope::getRoleId, roleId));
+        // 删除角色自定义字典配置值与字典关联
+        roleDictService.deleteByRoleIds(List.of(roleId));
         return baseMapper.deleteById(roleId);
     }
 
@@ -444,6 +570,10 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
         roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>().in(SysRoleMenu::getRoleId, roleIds));
         // 删除角色与部门关联
         roleDeptMapper.delete(new LambdaQueryWrapper<SysRoleDept>().in(SysRoleDept::getRoleId, roleIds));
+        // 删除角色数据权限配置
+        roleDataScopeMapper.delete(new LambdaQueryWrapper<SysRoleDataScope>().in(SysRoleDataScope::getRoleId, roleIds));
+        // 删除角色自定义字典配置值与字典关联
+        roleDictService.deleteByRoleIds(roleIds);
         return baseMapper.deleteByIds(roleIds);
     }
 
@@ -614,6 +744,178 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
                 .in(SysRole::getRoleId, roleIds)
         );
         return StreamUtils.toMap(list, SysRole::getRoleId, SysRole::getRoleName);
+    }
+
+    /**
+     * 查询角色在各应用下的配置列表（菜单、数据权限等）
+     *
+     * @param roleId 角色ID
+     * @return 各应用配置列表
+     */
+    @Override
+    public List<RoleAppConfigVo> selectRoleAppConfigs(Long roleId) {
+        if (ObjectUtil.isNull(roleId)) {
+            return new ArrayList<>();
+        }
+        List<SysTenant> allTenants = TenantHelper.ignore(() -> tenantMapper.selectList(
+            new LambdaQueryWrapper<SysTenant>()
+                .select(SysTenant::getTenantId, SysTenant::getCompanyName, SysTenant::getPackageId)
+                .eq(SysTenant::getStatus, SystemConstants.NORMAL)
+                .orderByAsc(SysTenant::getId)
+        ));
+
+        List<SysRoleDataScope> existingDataScopes = roleDataScopeMapper.selectList(
+            new LambdaQueryWrapper<SysRoleDataScope>().eq(SysRoleDataScope::getRoleId, roleId)
+        );
+        Map<String, SysRoleDataScope> dataScopeMap = StreamUtils.toMap(existingDataScopes, SysRoleDataScope::getTenantId, java.util.function.Function.identity());
+        SysRole role = baseMapper.selectById(roleId);
+
+        // 获取全量菜单
+        List<SysMenuVo> allMenus = menuService.selectMenuList(LoginHelper.getUserId());
+        List<Tree<Long>> fullMenuTree = menuService.buildMenuTreeSelect(allMenus);
+
+        List<RoleAppConfigVo> result = new ArrayList<>();
+        for (SysTenant tenant : allTenants) {
+            String tenantId = tenant.getTenantId();
+            RoleAppConfigVo vo = new RoleAppConfigVo();
+            vo.setTenantId(tenantId);
+            vo.setTenantName(tenant.getCompanyName());
+
+            SysRoleDataScope rds = dataScopeMap.get(tenantId);
+            String dataScope = (rds != null && StringUtils.isNotBlank(rds.getDataScope()))
+                ? rds.getDataScope()
+                : (role != null && StringUtils.isNotBlank(role.getDataScope()) ? role.getDataScope() : "1");
+            Boolean menuStrictly = (rds != null && rds.getMenuCheckStrictly() != null)
+                ? rds.getMenuCheckStrictly()
+                : (role != null && role.getMenuCheckStrictly() != null ? role.getMenuCheckStrictly() : Boolean.TRUE);
+            Boolean deptStrictly = (rds != null && rds.getDeptCheckStrictly() != null)
+                ? rds.getDeptCheckStrictly()
+                : (role != null && role.getDeptCheckStrictly() != null ? role.getDeptCheckStrictly() : Boolean.TRUE);
+
+            vo.setDataScope(dataScope);
+            vo.setMenuCheckStrictly(menuStrictly);
+            vo.setDeptCheckStrictly(deptStrictly);
+
+            // 当前应用下的已关联菜单ID与部门ID
+            vo.setMenuIds(menuService.selectMenuListByRoleId(roleId, tenantId));
+            vo.setDeptIds(deptService.selectDeptListByRoleId(roleId, tenantId));
+
+            // 当前应用下的可用菜单树
+            if (tenant.getPackageId() != null && tenant.getPackageId() > 0) {
+                List<Long> packageMenuIds = menuService.selectMenuListByPackageId(tenant.getPackageId());
+                List<SysMenuVo> packageMenus = allMenus.stream()
+                    .filter(m -> packageMenuIds.contains(m.getMenuId()))
+                    .toList();
+                vo.setMenuTree(menuService.buildMenuTreeSelect(packageMenus));
+            } else {
+                vo.setMenuTree(fullMenuTree);
+            }
+            result.add(vo);
+        }
+        return result;
+    }
+
+    /**
+     * 保存角色在各应用下的配置
+     *
+     * @param roleId     角色ID
+     * @param appConfigs 各应用配置列表
+     * @param dictValues 角色自定义字典值列表（可选）
+     * @return 结果
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int saveRoleAppConfigs(Long roleId, List<RoleAppConfigBo> appConfigs, List<RoleDictValueBo> dictValues) {
+        SysRole role = baseMapper.selectById(roleId);
+        if (role == null) {
+            throw new ServiceException("角色不存在");
+        }
+        if (CollUtil.isNotEmpty(appConfigs)) {
+            for (RoleAppConfigBo cfg : appConfigs) {
+                String tenantId = cfg.getTenantId();
+                if (StringUtils.isBlank(tenantId)) {
+                    continue;
+                }
+
+                // 1. 保存 sys_role_data_scope
+                SysRoleDataScope existing = roleDataScopeMapper.selectOne(
+                    new LambdaQueryWrapper<SysRoleDataScope>()
+                        .eq(SysRoleDataScope::getRoleId, roleId)
+                        .eq(SysRoleDataScope::getTenantId, tenantId)
+                );
+                String dataScope = StringUtils.defaultIfBlank(cfg.getDataScope(), "1");
+                boolean menuStrictly = cfg.getMenuCheckStrictly() != null ? cfg.getMenuCheckStrictly() : true;
+                boolean deptStrictly = cfg.getDeptCheckStrictly() != null ? cfg.getDeptCheckStrictly() : true;
+                if (existing != null) {
+                    existing.setDataScope(dataScope);
+                    existing.setMenuCheckStrictly(menuStrictly);
+                    existing.setDeptCheckStrictly(deptStrictly);
+                    roleDataScopeMapper.updateById(existing);
+                } else {
+                    SysRoleDataScope add = new SysRoleDataScope();
+                    add.setRoleId(roleId);
+                    add.setTenantId(tenantId);
+                    add.setDataScope(dataScope);
+                    add.setMenuCheckStrictly(menuStrictly);
+                    add.setDeptCheckStrictly(deptStrictly);
+                    roleDataScopeMapper.insert(add);
+                }
+
+                // 2. 默认应用同步更新主表 sys_role
+                if (TenantConstants.DEFAULT_TENANT_ID.equals(tenantId)) {
+                    role.setDataScope(dataScope);
+                    role.setMenuCheckStrictly(menuStrictly);
+                    role.setDeptCheckStrictly(deptStrictly);
+                    baseMapper.updateById(role);
+                }
+
+                // 3. 保存菜单关联 sys_role_menu
+                if (cfg.getMenuIds() != null) {
+                    roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>()
+                        .eq(SysRoleMenu::getRoleId, roleId)
+                        .eq(SysRoleMenu::getTenantId, tenantId));
+                    List<SysRoleMenu> menuList = new ArrayList<>();
+                    for (Long menuId : cfg.getMenuIds()) {
+                        SysRoleMenu rm = new SysRoleMenu();
+                        rm.setRoleId(roleId);
+                        rm.setMenuId(menuId);
+                        rm.setTenantId(tenantId);
+                        menuList.add(rm);
+                    }
+                    if (CollUtil.isNotEmpty(menuList)) {
+                        roleMenuMapper.insertBatch(menuList);
+                    }
+                }
+
+                // 4. 保存部门关联 sys_role_dept
+                if (cfg.getDeptIds() != null) {
+                    roleDeptMapper.delete(new LambdaQueryWrapper<SysRoleDept>()
+                        .eq(SysRoleDept::getRoleId, roleId)
+                        .eq(SysRoleDept::getTenantId, tenantId));
+                    List<SysRoleDept> deptList = new ArrayList<>();
+                    for (Long deptId : cfg.getDeptIds()) {
+                        SysRoleDept rd = new SysRoleDept();
+                        rd.setRoleId(roleId);
+                        rd.setDeptId(deptId);
+                        rd.setTenantId(tenantId);
+                        deptList.add(rd);
+                    }
+                    if (CollUtil.isNotEmpty(deptList)) {
+                        roleDeptMapper.insertBatch(deptList);
+                    }
+                }
+            }
+        }
+
+        // 5. 保存字典配置
+        if (dictValues != null) {
+            roleDictService.saveRoleDictConfig(roleId, null, dictValues);
+        }
+
+        // 6. 清理缓存与在线用户
+        CacheUtils.clear(CacheNames.SYS_ROLE_CUSTOM);
+        cleanOnlineUserByRole(roleId);
+        return 1;
     }
 
 }

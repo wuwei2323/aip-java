@@ -24,10 +24,12 @@ import cn.org.aip.common.satoken.utils.LoginHelper;
 import cn.org.aip.common.tenant.helper.TenantHelper;
 import cn.org.aip.system.domain.SysDept;
 import cn.org.aip.system.domain.SysRole;
+import cn.org.aip.system.domain.SysRoleDataScope;
 import cn.org.aip.system.domain.SysUser;
 import cn.org.aip.system.domain.bo.SysDeptBo;
 import cn.org.aip.system.domain.vo.SysDeptVo;
 import cn.org.aip.system.mapper.SysDeptMapper;
+import cn.org.aip.system.mapper.SysRoleDataScopeMapper;
 import cn.org.aip.system.mapper.SysRoleMapper;
 import cn.org.aip.system.mapper.SysUserMapper;
 import cn.org.aip.system.service.ISysDeptService;
@@ -51,6 +53,7 @@ public class SysDeptServiceImpl implements ISysDeptService, DeptService {
     private final SysDeptMapper baseMapper;
     private final SysRoleMapper roleMapper;
     private final SysUserMapper userMapper;
+    private final SysRoleDataScopeMapper roleDataScopeMapper;
 
     /**
      * 分页查询部门管理数据
@@ -147,8 +150,29 @@ public class SysDeptServiceImpl implements ISysDeptService, DeptService {
      */
     @Override
     public List<Long> selectDeptListByRoleId(Long roleId) {
+        return selectDeptListByRoleId(roleId, TenantHelper.getTenantId());
+    }
+
+    /**
+     * 根据角色ID与应用编号查询部门树信息
+     *
+     * @param roleId   角色ID
+     * @param tenantId 应用编号
+     * @return 选中部门列表
+     */
+    @Override
+    public List<Long> selectDeptListByRoleId(Long roleId, String tenantId) {
         SysRole role = roleMapper.selectById(roleId);
-        return baseMapper.selectDeptListByRoleId(roleId, role.getDeptCheckStrictly());
+        boolean strictly = role != null && Boolean.TRUE.equals(role.getDeptCheckStrictly());
+        if (StringUtils.isNotBlank(tenantId)) {
+            SysRoleDataScope rds = roleDataScopeMapper.selectOne(new LambdaQueryWrapper<SysRoleDataScope>()
+                .eq(SysRoleDataScope::getRoleId, roleId)
+                .eq(SysRoleDataScope::getTenantId, tenantId));
+            if (rds != null && rds.getDeptCheckStrictly() != null) {
+                strictly = rds.getDeptCheckStrictly();
+            }
+        }
+        return baseMapper.selectDeptListByRoleId(roleId, tenantId, strictly);
     }
 
     /**

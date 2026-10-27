@@ -1,6 +1,7 @@
 package cn.org.aip.system.domain.bo;
 
 import io.github.linpeilie.annotations.AutoMapper;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -10,6 +11,8 @@ import lombok.NoArgsConstructor;
 import cn.org.aip.common.core.constant.SystemConstants;
 import cn.org.aip.common.mybatis.core.domain.BaseEntity;
 import cn.org.aip.system.domain.SysRole;
+
+import java.util.List;
 
 /**
  * 角色信息业务对象 sys_role
@@ -36,9 +39,8 @@ public class SysRoleBo extends BaseEntity {
     private String roleName;
 
     /**
-     * 角色权限字符串
+     * 角色权限字符串（非必填）
      */
-    @NotBlank(message = "角色权限字符串不能为空")
     @Size(min = 0, max = 100, message = "权限字符长度不能超过{max}个字符")
     private String roleKey;
 
@@ -82,6 +84,28 @@ public class SysRoleBo extends BaseEntity {
      * 部门组（数据权限）
      */
     private Long[] deptIds;
+
+    /**
+     * 角色关联的字典ID列表
+     */
+    private List<Long> roleDictIds;
+
+    /**
+     * 角色自定义字典配置值
+     */
+    @Valid
+    private List<RoleDictValueBo> dictValues;
+
+    /**
+     * 角色在各应用下的配置列表
+     */
+    @Valid
+    private List<RoleAppConfigBo> appConfigs;
+
+    /**
+     * 当前操作针对的应用编号（单个应用操作时使用）
+     */
+    private String tenantId;
 
     public SysRoleBo(Long roleId) {
         this.roleId = roleId;

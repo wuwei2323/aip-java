@@ -51,11 +51,6 @@ public class SysDictTypeBo extends BaseEntity {
     private String categoryType;
 
     /**
-     * 关联角色ID列表（JSON数组）
-     */
-    private String roleIds;
-
-    /**
      * 组件配置信息（JSON）
      */
     private String componentInfo;

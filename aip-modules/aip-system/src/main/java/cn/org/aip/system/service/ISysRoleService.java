@@ -3,7 +3,10 @@ package cn.org.aip.system.service;
 import cn.org.aip.common.mybatis.core.page.PageQuery;
 import cn.org.aip.common.mybatis.core.page.TableDataInfo;
 import cn.org.aip.system.domain.SysUserRole;
+import cn.org.aip.system.domain.bo.RoleAppConfigBo;
+import cn.org.aip.system.domain.bo.RoleDictValueBo;
 import cn.org.aip.system.domain.bo.SysRoleBo;
+import cn.org.aip.system.domain.vo.RoleAppConfigVo;
 import cn.org.aip.system.domain.vo.SysRoleVo;
 
 import java.util.List;
@@ -232,5 +235,23 @@ public interface ISysRoleService {
      * @param userIds 需要清除的用户ID列表
      */
     void cleanOnlineUser(List<Long> userIds);
+
+    /**
+     * 查询角色在各应用下的配置列表（菜单、数据权限等）
+     *
+     * @param roleId 角色ID
+     * @return 各应用配置列表
+     */
+    List<RoleAppConfigVo> selectRoleAppConfigs(Long roleId);
+
+    /**
+     * 保存角色在各应用下的配置
+     *
+     * @param roleId     角色ID
+     * @param appConfigs 各应用配置列表
+     * @param dictValues 角色自定义字典值列表（可选）
+     * @return 结果
+     */
+    int saveRoleAppConfigs(Long roleId, List<RoleAppConfigBo> appConfigs, List<RoleDictValueBo> dictValues);
 
 }

@@ -158,6 +158,9 @@ tenant:
     - sys_dict_type
     - sys_dict_data
     - sys_dict_type_tenant
+    - sys_dict_type_role
+    - sys_role_dict_value
+    - sys_role_data_scope
 
 # MyBatisPlus配置
 # https://baomidou.com/config/

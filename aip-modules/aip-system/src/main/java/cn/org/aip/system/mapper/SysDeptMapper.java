@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import cn.org.aip.common.core.utils.StreamUtils;
+import cn.org.aip.common.core.utils.StringUtils;
+import cn.org.aip.common.tenant.helper.TenantHelper;
 import cn.org.aip.common.mybatis.annotation.DataColumn;
 import cn.org.aip.common.mybatis.annotation.DataPermission;
 import cn.org.aip.common.mybatis.core.mapper.BaseMapperPlus;
@@ -28,32 +30,36 @@ public interface SysDeptMapper extends BaseMapperPlus<SysDept, SysDeptVo> {
      * @param roleId 角色ID
      * @return 查询部门ID的 SQL 语句字符串
      */
-    default String buildDeptByRoleSql(Long roleId) {
+    default String buildDeptByRoleSql(Long roleId, String tenantId) {
+        String tenantFilter = StringUtils.isNotBlank(tenantId)
+            ? " and srd.tenant_id = '" + tenantId + "' "
+            : "";
         return """
                 select srd.dept_id from sys_role_dept srd
                     left join sys_role sr on sr.role_id = srd.role_id
-                    where srd.role_id = %d and sr.status = '0'
-            """.formatted(roleId);
+                    where srd.role_id = %d and sr.status = '0' %s
+            """.formatted(roleId, tenantFilter);
     }
 
-    /**
-     * 构建 SQL 查询，用于获取当前角色拥有的部门中所有的父部门ID
-     *
-     * <p>
-     * 该 SQL 用于 deptCheckStrictly 场景下，排除非叶子节点（父节点）用。
-     * </p>
-     *
-     * @param roleId 角色ID
-     * @return SQL 语句字符串，查询角色下部门的所有父部门ID
-     */
-    default String buildParentDeptByRoleSql(Long roleId) {
+    default String buildDeptByRoleSql(Long roleId) {
+        return buildDeptByRoleSql(roleId, TenantHelper.getTenantId());
+    }
+
+    default String buildParentDeptByRoleSql(Long roleId, String tenantId) {
+        String tenantFilter = StringUtils.isNotBlank(tenantId)
+            ? " and srd.tenant_id = '" + tenantId + "' "
+            : "";
         return """
                 select parent_id from sys_dept where dept_id in (
                     select srd.dept_id from sys_role_dept srd
                         left join sys_role sr on sr.role_id = srd.role_id
-                        where srd.role_id = %d and sr.status = '0'
+                        where srd.role_id = %d and sr.status = '0' %s
                 )
-            """.formatted(roleId);
+            """.formatted(roleId, tenantFilter);
+    }
+
+    default String buildParentDeptByRoleSql(Long roleId) {
+        return buildParentDeptByRoleSql(roleId, TenantHelper.getTenantId());
     }
 
     /**
@@ -128,16 +134,20 @@ public interface SysDeptMapper extends BaseMapperPlus<SysDept, SysDeptVo> {
      * @param deptCheckStrictly 部门树选择项是否关联显示
      * @return 选中部门列表
      */
-    default List<Long> selectDeptListByRoleId(Long roleId, boolean deptCheckStrictly) {
+    default List<Long> selectDeptListByRoleId(Long roleId, String tenantId, boolean deptCheckStrictly) {
         LambdaQueryWrapper<SysDept> wrapper = new LambdaQueryWrapper<>();
         wrapper.select(SysDept::getDeptId)
-            .inSql(SysDept::getDeptId, this.buildDeptByRoleSql(roleId))
+            .inSql(SysDept::getDeptId, this.buildDeptByRoleSql(roleId, tenantId))
             .orderByAsc(SysDept::getParentId)
             .orderByAsc(SysDept::getOrderNum);
         if (deptCheckStrictly) {
-            wrapper.notInSql(SysDept::getDeptId, this.buildParentDeptByRoleSql(roleId));
+            wrapper.notInSql(SysDept::getDeptId, this.buildParentDeptByRoleSql(roleId, tenantId));
         }
         return this.selectObjs(wrapper);
+    }
+
+    default List<Long> selectDeptListByRoleId(Long roleId, boolean deptCheckStrictly) {
+        return selectDeptListByRoleId(roleId, TenantHelper.getTenantId(), deptCheckStrictly);
     }
 
 }

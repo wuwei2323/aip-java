@@ -91,14 +91,17 @@ public class SysMenuController extends BaseController {
     /**
      * 加载对应角色菜单列表树
      *
-     * @param roleId 角色ID
+     * @param roleId   角色ID
+     * @param tenantId 应用编号（可选）
      */
     @SaCheckPermission("system:menu:query")
     @GetMapping(value = "/roleMenuTreeselect/{roleId}")
-    public R<MenuTreeSelectVo> roleMenuTreeselect(@PathVariable("roleId") Long roleId) {
+    public R<MenuTreeSelectVo> roleMenuTreeselect(@PathVariable("roleId") Long roleId,
+                                                 @RequestParam(value = "tenantId", required = false) String tenantId) {
         List<SysMenuVo> menus = menuService.selectMenuList(LoginHelper.getUserId());
+        String queryTenantId = StringUtils.defaultIfBlank(tenantId, cn.org.aip.common.tenant.helper.TenantHelper.getTenantId());
         MenuTreeSelectVo selectVo = new MenuTreeSelectVo(
-            menuService.selectMenuListByRoleId(roleId),
+            menuService.selectMenuListByRoleId(roleId, queryTenantId),
             menuService.buildMenuTreeSelect(menus));
         return R.ok(selectVo);
     }

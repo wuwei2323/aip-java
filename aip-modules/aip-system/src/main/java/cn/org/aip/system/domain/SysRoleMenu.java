@@ -26,4 +26,9 @@ public class SysRoleMenu {
      */
     private Long menuId;
 
+    /**
+     * 应用编号
+     */
+    private String tenantId;
+
 }

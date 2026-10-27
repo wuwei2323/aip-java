@@ -15,6 +15,7 @@ import cn.org.aip.common.core.utils.TreeBuildUtils;
 import cn.org.aip.common.satoken.utils.LoginHelper;
 import cn.org.aip.system.domain.SysMenu;
 import cn.org.aip.system.domain.SysRole;
+import cn.org.aip.system.domain.SysRoleDataScope;
 import cn.org.aip.system.domain.SysRoleMenu;
 import cn.org.aip.system.domain.SysTenantPackage;
 import cn.org.aip.system.domain.bo.SysMenuBo;
@@ -22,6 +23,7 @@ import cn.org.aip.system.domain.vo.MetaVo;
 import cn.org.aip.system.domain.vo.RouterVo;
 import cn.org.aip.system.domain.vo.SysMenuVo;
 import cn.org.aip.system.mapper.SysMenuMapper;
+import cn.org.aip.system.mapper.SysRoleDataScopeMapper;
 import cn.org.aip.system.mapper.SysRoleMapper;
 import cn.org.aip.system.mapper.SysRoleMenuMapper;
 import cn.org.aip.system.mapper.SysTenantPackageMapper;
@@ -44,6 +46,7 @@ public class SysMenuServiceImpl implements ISysMenuService {
     private final SysRoleMapper roleMapper;
     private final SysRoleMenuMapper roleMenuMapper;
     private final SysTenantPackageMapper tenantPackageMapper;
+    private final SysRoleDataScopeMapper roleDataScopeMapper;
 
     /**
      * 根据用户查询系统菜单列表
@@ -135,8 +138,29 @@ public class SysMenuServiceImpl implements ISysMenuService {
      */
     @Override
     public List<Long> selectMenuListByRoleId(Long roleId) {
+        return selectMenuListByRoleId(roleId, cn.org.aip.common.tenant.helper.TenantHelper.getTenantId());
+    }
+
+    /**
+     * 根据角色ID与应用编号查询菜单树信息
+     *
+     * @param roleId   角色ID
+     * @param tenantId 应用编号
+     * @return 选中菜单列表
+     */
+    @Override
+    public List<Long> selectMenuListByRoleId(Long roleId, String tenantId) {
         SysRole role = roleMapper.selectById(roleId);
-        return baseMapper.selectMenuListByRoleId(roleId, role.getMenuCheckStrictly());
+        boolean strictly = role != null && Boolean.TRUE.equals(role.getMenuCheckStrictly());
+        if (StringUtils.isNotBlank(tenantId)) {
+            SysRoleDataScope rds = roleDataScopeMapper.selectOne(new LambdaQueryWrapper<SysRoleDataScope>()
+                .eq(SysRoleDataScope::getRoleId, roleId)
+                .eq(SysRoleDataScope::getTenantId, tenantId));
+            if (rds != null && rds.getMenuCheckStrictly() != null) {
+                strictly = rds.getMenuCheckStrictly();
+            }
+        }
+        return baseMapper.selectMenuListByRoleId(roleId, tenantId, strictly);
     }
 
     /**

@@ -39,12 +39,7 @@ public class SysDictType extends BaseEntity {
     private String categoryType;
 
     /**
-     * 关联角色ID列表（JSON数组）
-     */
-    private String roleIds;
-
-    /**
-     * 组件配置信息（JSON）
+     * 组件配置信息（JSON，角色字典使用）
      */
     private String componentInfo;
 

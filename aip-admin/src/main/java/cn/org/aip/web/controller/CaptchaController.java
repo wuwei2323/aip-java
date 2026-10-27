@@ -1,7 +1,12 @@
 package cn.org.aip.web.controller;
 
 import cn.dev33.satoken.annotation.SaIgnore;
+import cn.hutool.captcha.AbstractCaptcha;
+import cn.hutool.captcha.generator.CodeGenerator;
+import cn.hutool.core.convert.Convert;
+import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.ReflectUtil;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,11 +15,13 @@ import cn.org.aip.common.core.constant.GlobalConstants;
 import cn.org.aip.common.core.domain.R;
 import cn.org.aip.common.core.exception.ServiceException;
 import cn.org.aip.common.core.utils.SpringUtils;
+import cn.org.aip.common.core.utils.StringUtils;
 import cn.org.aip.common.mail.config.properties.MailProperties;
 import cn.org.aip.common.mail.utils.MailUtils;
 import cn.org.aip.common.ratelimiter.annotation.RateLimiter;
 import cn.org.aip.common.redis.utils.RedisUtils;
 import cn.org.aip.common.web.config.properties.CaptchaProperties;
+import cn.org.aip.common.web.enums.CaptchaType;
 import org.dromara.sms4j.api.SmsBlend;
 import org.dromara.sms4j.api.entity.SmsResponse;
 import org.dromara.sms4j.core.factory.SmsFactory;
@@ -101,18 +108,43 @@ public class CaptchaController {
      */
     @GetMapping("/auth/code")
     public R<CaptchaVo> getCode() {
+        CaptchaVo captchaVo = new CaptchaVo();
         boolean captchaEnabled = captchaProperties.getEnable();
         if (!captchaEnabled) {
-            CaptchaVo captchaVo = new CaptchaVo();
             captchaVo.setCaptchaEnabled(false);
             return R.ok(captchaVo);
         }
-        // 返回滑动验证码配置
-        CaptchaVo captchaVo = new CaptchaVo();
+        // 保存验证码信息
+        String uuid = IdUtil.fastSimpleUUID();
+        String verifyKey = GlobalConstants.CAPTCHA_CODE_KEY + uuid;
+        // 生成验证码
+        CaptchaType captchaType = captchaProperties.getType();
+        boolean isMath = CaptchaType.MATH == captchaType;
+        Integer length = isMath ? captchaProperties.getNumberLength() : captchaProperties.getCharLength();
+        CodeGenerator codeGenerator = ReflectUtil.newInstance(captchaType.getClazz(), length);
+        AbstractCaptcha captcha = SpringUtils.getBean(captchaProperties.getCategory().getClazz());
+        captcha.setGenerator(codeGenerator);
+        captcha.createCode();
+        String code = isMath ? getCodeResult(captcha.getCode()) : captcha.getCode();
+        RedisUtils.setCacheObject(verifyKey, code, Duration.ofMinutes(Constants.CAPTCHA_EXPIRATION));
+        captchaVo.setUuid(uuid);
+        captchaVo.setImg(captcha.getImageBase64());
         captchaVo.setCaptchaEnabled(true);
-        // 这里返回true表示使用滑动验证码，前端根据这个字段切换验证码类型
-        captchaVo.setSlidingCaptcha(true);
+        captchaVo.setSlidingCaptcha(false);
         return R.ok(captchaVo);
+    }
+
+    private String getCodeResult(String capStr) {
+        int numberLength = captchaProperties.getNumberLength();
+        int a = Convert.toInt(StringUtils.substring(capStr, 0, numberLength).trim());
+        char charAt = capStr.charAt(numberLength);
+        int b = Convert.toInt(StringUtils.substring(capStr, numberLength + 1, capStr.length() - 1).trim());
+        return switch (charAt) {
+            case '+' -> String.valueOf(a + b);
+            case '-' -> String.valueOf(a - b);
+            case '*' -> String.valueOf(a * b);
+            default -> "";
+        };
     }
 
 }

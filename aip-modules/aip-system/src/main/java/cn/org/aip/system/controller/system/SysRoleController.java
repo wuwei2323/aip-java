@@ -16,9 +16,12 @@ import cn.org.aip.system.domain.SysUserRole;
 import cn.org.aip.system.domain.bo.SysDeptBo;
 import cn.org.aip.system.domain.bo.SysRoleBo;
 import cn.org.aip.system.domain.bo.SysUserBo;
+import cn.org.aip.system.domain.vo.RoleAppConfigVo;
+import cn.org.aip.system.domain.vo.RoleDictConfigVo;
 import cn.org.aip.system.domain.vo.SysRoleVo;
 import cn.org.aip.system.domain.vo.SysUserVo;
 import cn.org.aip.system.service.ISysDeptService;
+import cn.org.aip.system.service.ISysRoleDictService;
 import cn.org.aip.system.service.ISysRoleService;
 import cn.org.aip.system.service.ISysUserService;
 import org.springframework.validation.annotation.Validated;
@@ -40,6 +43,7 @@ public class SysRoleController extends BaseController {
     private final ISysRoleService roleService;
     private final ISysUserService userService;
     private final ISysDeptService deptService;
+    private final ISysRoleDictService roleDictService;
 
     /**
      * 获取角色信息列表
@@ -84,7 +88,7 @@ public class SysRoleController extends BaseController {
         roleService.checkRoleAllowed(role);
         if (!roleService.checkRoleNameUnique(role)) {
             return R.fail("新增角色'" + role.getRoleName() + "'失败，角色名称已存在");
-        } else if (!roleService.checkRoleKeyUnique(role)) {
+        } else if (cn.org.aip.common.core.utils.StringUtils.isNotBlank(role.getRoleKey()) && !roleService.checkRoleKeyUnique(role)) {
             return R.fail("新增角色'" + role.getRoleName() + "'失败，角色权限已存在");
         }
         return toAjax(roleService.insertRole(role));
@@ -103,7 +107,7 @@ public class SysRoleController extends BaseController {
         roleService.checkRoleDataScope(role.getRoleId());
         if (!roleService.checkRoleNameUnique(role)) {
             return R.fail("修改角色'" + role.getRoleName() + "'失败，角色名称已存在");
-        } else if (!roleService.checkRoleKeyUnique(role)) {
+        } else if (cn.org.aip.common.core.utils.StringUtils.isNotBlank(role.getRoleKey()) && !roleService.checkRoleKeyUnique(role)) {
             return R.fail("修改角色'" + role.getRoleName() + "'失败，角色权限已存在");
         }
 
@@ -125,6 +129,44 @@ public class SysRoleController extends BaseController {
         roleService.checkRoleAllowed(role);
         roleService.checkRoleDataScope(role.getRoleId());
         return toAjax(roleService.authDataScope(role));
+    }
+
+    /**
+     * 查询角色关联的角色类字典配置（按应用分组）
+     *
+     * @param roleId 角色ID
+     */
+    @SaCheckPermission("system:role:query")
+    @GetMapping("/{roleId}/dictConfig")
+    public R<List<RoleDictConfigVo>> dictConfig(@PathVariable Long roleId) {
+        roleService.checkRoleDataScope(roleId);
+        return R.ok(roleDictService.selectRoleDictConfig(roleId));
+    }
+
+    /**
+     * 查询角色在各应用下的配置列表（菜单权限、数据权限等）
+     *
+     * @param roleId 角色ID
+     */
+    @SaCheckPermission("system:role:query")
+    @GetMapping("/{roleId}/appConfigs")
+    public R<List<RoleAppConfigVo>> appConfigs(@PathVariable Long roleId) {
+        roleService.checkRoleDataScope(roleId);
+        return R.ok(roleService.selectRoleAppConfigs(roleId));
+    }
+
+    /**
+     * 保存角色在各应用下的配置（菜单权限、数据权限、自定义权限等）
+     */
+    @SaCheckPermission("system:role:edit")
+    @Log(title = "角色管理", businessType = BusinessType.UPDATE)
+    @RepeatSubmit()
+    @PutMapping("/{roleId}/appConfigs")
+    public R<Void> saveAppConfigs(@PathVariable Long roleId, @RequestBody SysRoleBo bo) {
+        roleService.checkRoleAllowed(new SysRoleBo(roleId));
+        roleService.checkRoleDataScope(roleId);
+        roleService.saveRoleAppConfigs(roleId, bo.getAppConfigs(), bo.getDictValues());
+        return R.ok();
     }
 
     /**
@@ -224,13 +266,16 @@ public class SysRoleController extends BaseController {
     /**
      * 获取对应角色部门树列表
      *
-     * @param roleId 角色ID
+     * @param roleId   角色ID
+     * @param tenantId 应用编号（可选）
      */
     @SaCheckPermission("system:role:list")
     @GetMapping(value = "/deptTree/{roleId}")
-    public R<DeptTreeSelectVo> roleDeptTreeselect(@PathVariable("roleId") Long roleId) {
+    public R<DeptTreeSelectVo> roleDeptTreeselect(@PathVariable("roleId") Long roleId,
+                                                 @RequestParam(value = "tenantId", required = false) String tenantId) {
+        String queryTenantId = cn.org.aip.common.core.utils.StringUtils.defaultIfBlank(tenantId, cn.org.aip.common.tenant.helper.TenantHelper.getTenantId());
         DeptTreeSelectVo selectVo = new DeptTreeSelectVo(
-            deptService.selectDeptListByRoleId(roleId),
+            deptService.selectDeptListByRoleId(roleId, queryTenantId),
             deptService.selectDeptTreeList(new SysDeptBo()));
         return R.ok(selectVo);
     }

@@ -57,6 +57,15 @@ public interface ISysDeptService {
     List<Long> selectDeptListByRoleId(Long roleId);
 
     /**
+     * 根据角色ID与应用编号查询部门树信息
+     *
+     * @param roleId   角色ID
+     * @param tenantId 应用编号
+     * @return 选中部门列表
+     */
+    List<Long> selectDeptListByRoleId(Long roleId, String tenantId);
+
+    /**
      * 根据部门ID查询信息
      *
      * @param deptId 部门ID

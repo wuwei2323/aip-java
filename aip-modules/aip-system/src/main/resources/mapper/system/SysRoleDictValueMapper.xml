@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.org.aip.system.mapper.SysRoleDictValueMapper">
+
+    <select id="selectAllRoleDicts" resultType="cn.org.aip.system.domain.vo.RoleDictConfigItemVo">
+        select distinct t.dict_id,
+               t.dict_type,
+               t.dict_name,
+               t.component_info,
+               r.tenant_id,
+               tn.company_name as tenant_name
+        from sys_dict_type t
+                 join sys_dict_type_tenant r on r.dict_id = t.dict_id
+                 join (
+                     select tenant_id, max(company_name) as company_name
+                     from sys_tenant
+                     where del_flag = '0'
+                     group by tenant_id
+                 ) tn on tn.tenant_id = r.tenant_id
+        where t.category_type = 'role'
+        <if test="tenantId != null and tenantId != ''">
+            and r.tenant_id = #{tenantId}
+        </if>
+        order by r.tenant_id, t.dict_id
+    </select>
+
+    <select id="selectRoleDictConfig" resultType="cn.org.aip.system.domain.vo.RoleDictConfigItemVo">
+        select distinct t.dict_id,
+               t.dict_type,
+               t.dict_name,
+               t.component_info,
+               r.tenant_id,
+               tn.company_name as tenant_name,
+               v.field_key,
+               v.field_value
+        from sys_dict_type t
+                 join sys_dict_type_tenant r on r.dict_id = t.dict_id
+                 join sys_dict_type_role dr on dr.dict_id = t.dict_id and dr.role_id = #{roleId}
+                 join (
+                     select tenant_id, max(company_name) as company_name
+                     from sys_tenant
+                     where del_flag = '0'
+                     group by tenant_id
+                 ) tn on tn.tenant_id = r.tenant_id
+                 left join sys_role_dict_value v
+                           on v.dict_id = t.dict_id
+                               and v.role_id = #{roleId}
+                               and v.tenant_id = r.tenant_id
+        where t.category_type = 'role'
+        <if test="tenantId != null and tenantId != ''">
+            and r.tenant_id = #{tenantId}
+        </if>
+        order by r.tenant_id, t.dict_id
+    </select>
+
+</mapper>

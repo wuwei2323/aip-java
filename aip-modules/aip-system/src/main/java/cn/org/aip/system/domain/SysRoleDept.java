@@ -26,4 +26,9 @@ public class SysRoleDept {
      */
     private Long deptId;
 
+    /**
+     * 应用编号
+     */
+    private String tenantId;
+
 }
