@@ -128,6 +128,11 @@ security:
     - /error
     - /*/api-docs
     - /*/api-docs/**
+    - /swagger-ui.html
+    - /swagger-ui/**
+    - /swagger-resources/**
+    - /webjars/**
+    - /v3/api-docs/**
     - /warm-flow-ui/config
 
 # 多应用配置
@@ -203,6 +208,12 @@ springdoc:
   api-docs:
     # 是否开启接口文档
     enabled: true
+  swagger-ui:
+    # 是否开启 Swagger UI 页面
+    enabled: true
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
   info:
     # 标题
     title: '标题：RuoYi-Vue-Plus多应用管理系统_接口文档'
