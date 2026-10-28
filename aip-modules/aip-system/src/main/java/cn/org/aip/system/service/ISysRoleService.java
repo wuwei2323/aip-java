@@ -247,11 +247,24 @@ public interface ISysRoleService {
     /**
      * 保存角色在各应用下的配置
      *
+     * @param roleId      角色ID
+     * @param appConfigs  各应用配置列表
+     * @param roleDictIds 角色关联的字典ID列表（可选）
+     * @param dictValues  角色自定义字典值列表（可选）
+     * @return 结果
+     */
+    int saveRoleAppConfigs(Long roleId, List<RoleAppConfigBo> appConfigs, List<Long> roleDictIds, List<RoleDictValueBo> dictValues);
+
+    /**
+     * 保存角色在各应用下的配置
+     *
      * @param roleId     角色ID
      * @param appConfigs 各应用配置列表
      * @param dictValues 角色自定义字典值列表（可选）
      * @return 结果
      */
-    int saveRoleAppConfigs(Long roleId, List<RoleAppConfigBo> appConfigs, List<RoleDictValueBo> dictValues);
+    default int saveRoleAppConfigs(Long roleId, List<RoleAppConfigBo> appConfigs, List<RoleDictValueBo> dictValues) {
+        return saveRoleAppConfigs(roleId, appConfigs, null, dictValues);
+    }
 
 }

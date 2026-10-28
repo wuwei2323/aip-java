@@ -343,12 +343,18 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
             bo.setRoleKey("role_" + cn.hutool.core.util.IdUtil.fastSimpleUUID());
         }
         SysRole role = MapstructUtils.convert(bo, SysRole.class);
+        if (role.getMenuCheckStrictly() == null) {
+            role.setMenuCheckStrictly(true);
+        }
+        if (role.getDeptCheckStrictly() == null) {
+            role.setDeptCheckStrictly(true);
+        }
         // 新增角色信息
         baseMapper.insert(role);
         bo.setRoleId(role.getRoleId());
 
         if (CollUtil.isNotEmpty(bo.getAppConfigs())) {
-            return saveRoleAppConfigs(role.getRoleId(), bo.getAppConfigs(), bo.getDictValues());
+            return saveRoleAppConfigs(role.getRoleId(), bo.getAppConfigs(), bo.getRoleDictIds(), bo.getDictValues());
         }
 
         String tenantId = StringUtils.defaultIfBlank(bo.getTenantId(), TenantConstants.DEFAULT_TENANT_ID);
@@ -392,7 +398,7 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
         baseMapper.updateById(role);
 
         if (CollUtil.isNotEmpty(bo.getAppConfigs())) {
-            return saveRoleAppConfigs(role.getRoleId(), bo.getAppConfigs(), bo.getDictValues());
+            return saveRoleAppConfigs(role.getRoleId(), bo.getAppConfigs(), bo.getRoleDictIds(), bo.getDictValues());
         }
 
         String tenantId = StringUtils.defaultIfBlank(bo.getTenantId(), TenantConstants.DEFAULT_TENANT_ID);
@@ -441,7 +447,7 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
     @Transactional(rollbackFor = Exception.class)
     public int authDataScope(SysRoleBo bo) {
         if (CollUtil.isNotEmpty(bo.getAppConfigs())) {
-            return saveRoleAppConfigs(bo.getRoleId(), bo.getAppConfigs(), bo.getDictValues());
+            return saveRoleAppConfigs(bo.getRoleId(), bo.getAppConfigs(), bo.getRoleDictIds(), bo.getDictValues());
         }
         SysRole role = MapstructUtils.convert(bo, SysRole.class);
         // 修改角色信息
@@ -818,14 +824,15 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
     /**
      * 保存角色在各应用下的配置
      *
-     * @param roleId     角色ID
-     * @param appConfigs 各应用配置列表
-     * @param dictValues 角色自定义字典值列表（可选）
+     * @param roleId      角色ID
+     * @param appConfigs  各应用配置列表
+     * @param roleDictIds 角色关联的字典ID列表（可选）
+     * @param dictValues  角色自定义字典值列表（可选）
      * @return 结果
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public int saveRoleAppConfigs(Long roleId, List<RoleAppConfigBo> appConfigs, List<RoleDictValueBo> dictValues) {
+    public int saveRoleAppConfigs(Long roleId, List<RoleAppConfigBo> appConfigs, List<Long> roleDictIds, List<RoleDictValueBo> dictValues) {
         SysRole role = baseMapper.selectById(roleId);
         if (role == null) {
             throw new ServiceException("角色不存在");
@@ -908,8 +915,8 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
         }
 
         // 5. 保存字典配置
-        if (dictValues != null) {
-            roleDictService.saveRoleDictConfig(roleId, null, dictValues);
+        if (roleDictIds != null || dictValues != null) {
+            roleDictService.saveRoleDictConfig(roleId, roleDictIds, dictValues);
         }
 
         // 6. 清理缓存与在线用户

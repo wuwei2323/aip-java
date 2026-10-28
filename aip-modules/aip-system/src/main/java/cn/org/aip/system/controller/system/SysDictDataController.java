@@ -90,6 +90,9 @@ public class SysDictDataController extends BaseController {
     @RepeatSubmit()
     @PostMapping
     public R<Void> add(@Validated @RequestBody SysDictDataBo dict) {
+        if (dictTypeService.selectDictTypeByType(dict.getDictType()) == null) {
+            return R.fail("新增字典数据'" + dict.getDictValue() + "'失败，字典类型不存在");
+        }
         if (!dictDataService.checkDictDataUnique(dict)) {
             return R.fail("新增字典数据'" + dict.getDictValue() + "'失败，字典键值已存在");
         }
@@ -105,6 +108,9 @@ public class SysDictDataController extends BaseController {
     @RepeatSubmit()
     @PutMapping
     public R<Void> edit(@Validated @RequestBody SysDictDataBo dict) {
+        if (dictTypeService.selectDictTypeByType(dict.getDictType()) == null) {
+            return R.fail("修改字典数据'" + dict.getDictValue() + "'失败，字典类型不存在");
+        }
         if (!dictDataService.checkDictDataUnique(dict)) {
             return R.fail("修改字典数据'" + dict.getDictValue() + "'失败，字典键值已存在");
         }

@@ -165,7 +165,7 @@ public class SysRoleController extends BaseController {
     public R<Void> saveAppConfigs(@PathVariable Long roleId, @RequestBody SysRoleBo bo) {
         roleService.checkRoleAllowed(new SysRoleBo(roleId));
         roleService.checkRoleDataScope(roleId);
-        roleService.saveRoleAppConfigs(roleId, bo.getAppConfigs(), bo.getDictValues());
+        roleService.saveRoleAppConfigs(roleId, bo.getAppConfigs(), bo.getRoleDictIds(), bo.getDictValues());
         return R.ok();
     }
 

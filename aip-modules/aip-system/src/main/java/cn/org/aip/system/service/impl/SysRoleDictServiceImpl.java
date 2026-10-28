@@ -176,84 +176,108 @@ public class SysRoleDictServiceImpl implements ISysRoleDictService, RoleDictServ
             throw new ServiceException("角色ID不能为空");
         }
 
-        // 1. 全量更新角色关联的字典 (sys_dict_type_role)
-        dictTypeRoleMapper.delete(new LambdaQueryWrapper<SysDictTypeRole>().eq(SysDictTypeRole::getRoleId, roleId));
-        if (CollUtil.isNotEmpty(roleDictIds)) {
-            List<SysDictTypeRole> roleDicts = roleDictIds.stream()
-                .filter(ObjectUtil::isNotNull)
-                .distinct()
-                .map(dictId -> {
-                    SysDictTypeRole r = new SysDictTypeRole();
-                    r.setRoleId(roleId);
-                    r.setDictId(dictId);
-                    return r;
-                }).collect(Collectors.toList());
-            if (CollUtil.isNotEmpty(roleDicts)) {
-                dictTypeRoleMapper.insertBatch(roleDicts);
+        // 1. 全量更新角色关联的字典 (sys_dict_type_role) - 仅当传入 roleDictIds 时更新
+        if (roleDictIds != null) {
+            dictTypeRoleMapper.delete(new LambdaQueryWrapper<SysDictTypeRole>().eq(SysDictTypeRole::getRoleId, roleId));
+            if (CollUtil.isNotEmpty(roleDictIds)) {
+                List<SysDictTypeRole> roleDicts = roleDictIds.stream()
+                    .filter(ObjectUtil::isNotNull)
+                    .distinct()
+                    .map(dictId -> {
+                        SysDictTypeRole r = new SysDictTypeRole();
+                        r.setRoleId(roleId);
+                        r.setDictId(dictId);
+                        return r;
+                    }).collect(Collectors.toList());
+                if (CollUtil.isNotEmpty(roleDicts)) {
+                    dictTypeRoleMapper.insertBatch(roleDicts);
+                }
             }
         }
 
-        // 2. 全量更新角色字典配置值 (sys_role_dict_value)
-        baseMapper.delete(new LambdaQueryWrapper<SysRoleDictValue>().eq(SysRoleDictValue::getRoleId, roleId));
-        if (CollUtil.isEmpty(values)) {
-            return;
+        // 2. 计算允许配置值的字典ID范围
+        Set<Long> allowedDictIds;
+        if (roleDictIds != null) {
+            allowedDictIds = roleDictIds.stream().filter(ObjectUtil::isNotNull).collect(Collectors.toSet());
+        } else {
+            // 未显式传入 roleDictIds 时，保留现有角色关联字典
+            List<SysDictTypeRole> existingRoleDicts = dictTypeRoleMapper.selectList(
+                new LambdaQueryWrapper<SysDictTypeRole>().eq(SysDictTypeRole::getRoleId, roleId));
+            allowedDictIds = StreamUtils.toSet(existingRoleDicts, SysDictTypeRole::getDictId);
         }
 
-        Set<Long> allowedDictIds = CollUtil.isEmpty(roleDictIds) ? Collections.emptySet() : new HashSet<>(roleDictIds);
-        // 只保存角色已勾选关联字典的配置值
-        List<RoleDictValueBo> filteredValues = values.stream()
-            .filter(v -> v != null && v.getDictId() != null && allowedDictIds.contains(v.getDictId()))
-            .collect(Collectors.toList());
-        if (CollUtil.isEmpty(filteredValues)) {
-            return;
-        }
+        // 3. 全量更新角色字典配置值 (sys_role_dict_value)
+        if (values != null) {
+            baseMapper.delete(new LambdaQueryWrapper<SysRoleDictValue>().eq(SysRoleDictValue::getRoleId, roleId));
+            if (CollUtil.isEmpty(values) || CollUtil.isEmpty(allowedDictIds)) {
+                return;
+            }
 
-        List<Long> dictIds = StreamUtils.toList(filteredValues, RoleDictValueBo::getDictId);
-        Map<Long, SysDictType> dictMap = StreamUtils.toIdentityMap(
-            dictTypeMapper.selectByIds(dictIds), SysDictType::getDictId);
-        Set<String> tenantRelations = dictTypeTenantMapper.selectList(new LambdaQueryWrapper<SysDictTypeTenant>()
-                .in(SysDictTypeTenant::getDictId, dictIds))
-            .stream().map(relation -> relation.getDictId() + ":" + relation.getTenantId()).collect(Collectors.toSet());
+            // 只保存角色已勾选关联字典的配置值
+            List<RoleDictValueBo> filteredValues = values.stream()
+                .filter(v -> v != null && v.getDictId() != null && allowedDictIds.contains(v.getDictId()))
+                .collect(Collectors.toList());
+            if (CollUtil.isEmpty(filteredValues)) {
+                return;
+            }
 
-        // 同一应用同一字典只保留一条记录
-        Map<String, SysRoleDictValue> result = new LinkedHashMap<>();
-        for (RoleDictValueBo value : filteredValues) {
-            SysDictType dict = dictMap.get(value.getDictId());
-            if (ObjectUtil.isNull(dict)) {
-                throw new ServiceException("字典不存在：{}", value.getDictId());
+            List<Long> dictIds = StreamUtils.toList(filteredValues, RoleDictValueBo::getDictId);
+            Map<Long, SysDictType> dictMap = StreamUtils.toIdentityMap(
+                dictTypeMapper.selectByIds(dictIds), SysDictType::getDictId);
+            Set<String> tenantRelations = dictTypeTenantMapper.selectList(new LambdaQueryWrapper<SysDictTypeTenant>()
+                    .in(SysDictTypeTenant::getDictId, dictIds))
+                .stream().map(relation -> relation.getDictId() + ":" + relation.getTenantId()).collect(Collectors.toSet());
+
+            // 同一应用同一字典只保留一条记录
+            Map<String, SysRoleDictValue> result = new LinkedHashMap<>();
+            for (RoleDictValueBo value : filteredValues) {
+                SysDictType dict = dictMap.get(value.getDictId());
+                if (ObjectUtil.isNull(dict)) {
+                    throw new ServiceException("字典不存在：{}", value.getDictId());
+                }
+                if (!DictConstants.CATEGORY_ROLE.equals(dict.getCategoryType())) {
+                    throw new ServiceException("字典「{}」不是角色类字典", dict.getDictName());
+                }
+                if (!tenantRelations.contains(value.getDictId() + ":" + value.getTenantId())) {
+                    throw new ServiceException("字典「{}」未关联应用「{}」", dict.getDictName(), value.getTenantId());
+                }
+                DictComponentDTO component = parseComponent(dict.getComponentInfo());
+                if (component == null) {
+                    throw new ServiceException("字典「{}」未配置组件信息", dict.getDictName());
+                }
+                // 从字典数据加载 options 用于校验
+                List<SysDictDataVo> dataList = dictDataMapper.selectDictDataByType(dict.getDictType());
+                if (CollUtil.isNotEmpty(dataList)) {
+                    component.setOptions(StreamUtils.toList(dataList, d -> {
+                        DictComponentDTO.Option opt = new DictComponentDTO.Option();
+                        opt.setLabel(d.getDictLabel());
+                        opt.setValue(d.getDictValue());
+                        return opt;
+                    }));
+                }
+                String fieldKey = StringUtils.isNotBlank(value.getFieldKey())
+                    ? value.getFieldKey() : component.getFieldKey();
+                SysRoleDictValue entity = new SysRoleDictValue();
+                entity.setRoleId(roleId);
+                entity.setTenantId(value.getTenantId());
+                entity.setDictId(value.getDictId());
+                entity.setFieldKey(fieldKey);
+                entity.setFieldValue(normalizeValue(dict.getDictName(), component, value.getFieldValue()));
+                result.put(value.getTenantId() + ":" + value.getDictId(), entity);
             }
-            if (!DictConstants.CATEGORY_ROLE.equals(dict.getCategoryType())) {
-                throw new ServiceException("字典「{}」不是角色类字典", dict.getDictName());
+            if (CollUtil.isNotEmpty(result)) {
+                baseMapper.insertBatch(result.values());
             }
-            if (!tenantRelations.contains(value.getDictId() + ":" + value.getTenantId())) {
-                throw new ServiceException("字典「{}」未关联应用「{}」", dict.getDictName(), value.getTenantId());
+        } else if (roleDictIds != null) {
+            // 未传入 values 但修改了 roleDictIds 时，清理不再属于该角色的字典配置值
+            if (CollUtil.isNotEmpty(allowedDictIds)) {
+                baseMapper.delete(new LambdaQueryWrapper<SysRoleDictValue>()
+                    .eq(SysRoleDictValue::getRoleId, roleId)
+                    .notIn(SysRoleDictValue::getDictId, allowedDictIds));
+            } else {
+                baseMapper.delete(new LambdaQueryWrapper<SysRoleDictValue>()
+                    .eq(SysRoleDictValue::getRoleId, roleId));
             }
-            DictComponentDTO component = parseComponent(dict.getComponentInfo());
-            if (component == null) {
-                throw new ServiceException("字典「{}」未配置组件信息", dict.getDictName());
-            }
-            // 从字典数据加载 options 用于校验
-            List<SysDictDataVo> dataList = dictDataMapper.selectDictDataByType(dict.getDictType());
-            if (CollUtil.isNotEmpty(dataList)) {
-                component.setOptions(StreamUtils.toList(dataList, d -> {
-                    DictComponentDTO.Option opt = new DictComponentDTO.Option();
-                    opt.setLabel(d.getDictLabel());
-                    opt.setValue(d.getDictValue());
-                    return opt;
-                }));
-            }
-            String fieldKey = StringUtils.isNotBlank(value.getFieldKey())
-                ? value.getFieldKey() : component.getFieldKey();
-            SysRoleDictValue entity = new SysRoleDictValue();
-            entity.setRoleId(roleId);
-            entity.setTenantId(value.getTenantId());
-            entity.setDictId(value.getDictId());
-            entity.setFieldKey(fieldKey);
-            entity.setFieldValue(normalizeValue(dict.getDictName(), component, value.getFieldValue()));
-            result.put(value.getTenantId() + ":" + value.getDictId(), entity);
-        }
-        if (CollUtil.isNotEmpty(result)) {
-            baseMapper.insertBatch(result.values());
         }
     }
 

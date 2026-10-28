@@ -1,10 +1,14 @@
 package cn.org.aip.system.domain.dto;
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import lombok.Data;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 角色字典组件配置
@@ -48,6 +52,49 @@ public class DictComponentDTO implements Serializable {
      * 默认值
      */
     private Object defaultValue;
+
+    /**
+     * 展示样式（radio / checkbox 使用，如 default / button）
+     */
+    private String displayStyle;
+
+    /**
+     * 最少选择项数（checkbox 使用）
+     */
+    private Integer minSelections;
+
+    /**
+     * 最多选择项数（checkbox 使用）
+     */
+    private Integer maxSelections;
+
+    /**
+     * 时间类型（datetime 使用，如 datetime / date 等）
+     */
+    private String dateType;
+
+    /**
+     * 显示格式（datetime 使用，如 yyyy-MM-dd HH:mm:ss）
+     */
+    private String format;
+
+    /**
+     * 其他扩展属性
+     */
+    private Map<String, Object> extra = new HashMap<>();
+
+    @JsonAnyGetter
+    public Map<String, Object> getExtra() {
+        return extra;
+    }
+
+    @JsonAnySetter
+    public void setExtra(String key, Object value) {
+        if (extra == null) {
+            extra = new HashMap<>();
+        }
+        extra.put(key, value);
+    }
 
     /**
      * 选项列表（select / radio / checkbox 使用）
