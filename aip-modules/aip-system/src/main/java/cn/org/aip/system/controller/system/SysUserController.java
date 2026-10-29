@@ -116,6 +116,7 @@ public class SysUserController extends BaseController {
         if (ObjectUtil.isNull(user)) {
             return R.fail("没有权限访问用户数据!");
         }
+        user.setTenantId(loginUser.getTenantId());
         userInfoVo.setUser(user);
         userInfoVo.setPermissions(loginUser.getMenuPermission());
         userInfoVo.setRoles(loginUser.getRolePermission());
@@ -166,6 +167,8 @@ public class SysUserController extends BaseController {
             return R.fail("新增用户'" + user.getUserName() + "'失败，手机号码已存在");
         } else if (StringUtils.isNotEmpty(user.getEmail()) && !userService.checkEmailUnique(user)) {
             return R.fail("新增用户'" + user.getUserName() + "'失败，邮箱账号已存在");
+        } else if (StringUtils.isNotEmpty(user.getEmployeeNo()) && !userService.checkEmployeeNoUnique(user)) {
+            return R.fail("新增用户'" + user.getUserName() + "'失败，员工工号已存在");
         }
         user.setPassword(BCrypt.hashpw(user.getPassword()));
         return toAjax(userService.insertUser(user));
@@ -188,6 +191,8 @@ public class SysUserController extends BaseController {
             return R.fail("修改用户'" + user.getUserName() + "'失败，手机号码已存在");
         } else if (StringUtils.isNotEmpty(user.getEmail()) && !userService.checkEmailUnique(user)) {
             return R.fail("修改用户'" + user.getUserName() + "'失败，邮箱账号已存在");
+        } else if (StringUtils.isNotEmpty(user.getEmployeeNo()) && !userService.checkEmployeeNoUnique(user)) {
+            return R.fail("修改用户'" + user.getUserName() + "'失败，员工工号已存在");
         }
         return toAjax(userService.updateUser(user));
     }

@@ -43,6 +43,7 @@ import cn.org.aip.web.domain.vo.TenantListVo;
 import cn.org.aip.web.service.IAuthStrategy;
 import cn.org.aip.web.service.SysLoginService;
 import cn.org.aip.web.service.SysRegisterService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -76,6 +77,9 @@ public class AuthController {
     private final ISysClientService clientService;
     private final ScheduledExecutorService scheduledExecutorService;
 
+    @Value("${auth.local-login.enabled:false}")
+    private Boolean localLoginEnabled;
+
 
     /**
      * 登录方法
@@ -86,6 +90,9 @@ public class AuthController {
     @ApiEncrypt
     @PostMapping("/login")
     public R<LoginVo> login(@RequestBody String body) {
+        if (Boolean.FALSE.equals(localLoginEnabled)) {
+            return R.fail("平台已开启统一身份认证，请使用统一身份认证登录");
+        }
         LoginBody loginBody = JsonUtils.parseObject(body, LoginBody.class);
         ValidatorUtils.validate(loginBody);
         // 授权类型和客户端id

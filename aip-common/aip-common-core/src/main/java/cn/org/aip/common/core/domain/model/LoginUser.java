@@ -133,6 +133,31 @@ public class LoginUser implements Serializable {
     private String deviceType;
 
     /**
+     * Keycloak用户ID (sub)
+     */
+    private String keycloakUserId;
+
+    /**
+     * 员工工号
+     */
+    private String employeeNo;
+
+    /**
+     * SSO会话ID (Keycloak sid)
+     */
+    private String ssoSid;
+
+    /**
+     * SSO主体ID (Keycloak sub)
+     */
+    private String ssoSub;
+
+    /**
+     * 是否需要强制重置密码
+     */
+    private Boolean passwordResetRequired;
+
+    /**
      * 获取登录id
      */
     public String getLoginId() {

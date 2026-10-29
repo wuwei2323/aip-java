@@ -37,6 +37,11 @@ public class MetaVo {
      */
     private String activeMenu;
 
+    /**
+     * 关联应用ID
+     */
+    private String appId;
+
     public MetaVo(String title, String icon) {
         this.title = title;
         this.icon = icon;

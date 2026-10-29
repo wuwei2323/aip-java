@@ -186,6 +186,13 @@
                 <version>${revision}</version>
             </dependency>
 
+            <!-- SSO模块 -->
+            <dependency>
+                <groupId>cn.org.aip</groupId>
+                <artifactId>aip-common-sso</artifactId>
+                <version>${revision}</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 

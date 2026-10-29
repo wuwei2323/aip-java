@@ -36,6 +36,12 @@ public class SysUserImportVo implements Serializable {
     private Long deptId;
 
     /**
+     * 员工工号
+     */
+    @ExcelProperty(value = "员工工号")
+    private String employeeNo;
+
+    /**
      * 用户账号
      */
     @ExcelProperty(value = "登录名称")

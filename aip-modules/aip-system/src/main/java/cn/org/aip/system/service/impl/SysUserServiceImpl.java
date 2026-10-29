@@ -279,6 +279,24 @@ public class SysUserServiceImpl implements ISysUserService, UserService {
     }
 
     /**
+     * 校验工号是否唯一
+     *
+     * @param user 用户信息
+     */
+    @Override
+    public boolean checkEmployeeNoUnique(SysUserBo user) {
+        if (StringUtils.isBlank(user.getEmployeeNo())) {
+            return true;
+        }
+        return TenantHelper.ignore(() -> {
+            boolean exist = baseMapper.exists(new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getEmployeeNo, user.getEmployeeNo())
+                .ne(ObjectUtil.isNotNull(user.getUserId()), SysUser::getUserId, user.getUserId()));
+            return !exist;
+        });
+    }
+
+    /**
      * 校验用户是否允许操作
      *
      * @param userId 用户ID

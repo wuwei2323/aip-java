@@ -90,6 +90,27 @@ public class SysUserBo extends BaseEntity {
     private String remark;
 
     /**
+     * 员工工号（全局唯一）
+     */
+    @Size(min = 0, max = 64, message = "工号长度不能超过{max}个字符")
+    private String employeeNo;
+
+    /**
+     * Keycloak用户ID
+     */
+    private String keycloakUserId;
+
+    /**
+     * 认证来源（PLATFORM/LOCAL/LDAP）
+     */
+    private String authSource;
+
+    /**
+     * 是否需要重置密码（首次登录强制改密）
+     */
+    private Boolean passwordResetRequired;
+
+    /**
      * 角色组
      */
 //    @Size(min = 1, message = "用户角色不能为空")

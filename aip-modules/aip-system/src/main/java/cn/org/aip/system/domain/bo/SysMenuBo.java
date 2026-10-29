@@ -110,4 +110,10 @@ public class SysMenuBo extends BaseEntity {
      */
     private String remark;
 
+    /**
+     * 关联应用ID（仅menu_type='C'可配置，未关联为普通菜单）
+     */
+    @Size(max = 64, message = "关联应用ID长度不能超过{max}个字符")
+    private String appId;
+
 }

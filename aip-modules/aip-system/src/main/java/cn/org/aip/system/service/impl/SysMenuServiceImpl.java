@@ -210,7 +210,9 @@ public class SysMenuServiceImpl implements ISysMenuService {
             router.setPath(menu.getRouterPath());
             router.setComponent(menu.getComponentInfo());
             router.setQuery(menu.getQueryParam());
-            router.setMeta(new MetaVo(menu.getMenuName(), menu.getIcon(), StringUtils.equals("1", menu.getIsCache()), menu.getPath(), menu.getRemark()));
+            MetaVo meta = new MetaVo(menu.getMenuName(), menu.getIcon(), StringUtils.equals("1", menu.getIsCache()), menu.getPath(), menu.getRemark());
+            meta.setAppId(menu.getAppId());
+            router.setMeta(meta);
             List<SysMenu> cMenus = menu.getChildren();
             if (CollUtil.isNotEmpty(cMenus) && SystemConstants.TYPE_DIR.equals(menu.getMenuType())) {
                 router.setAlwaysShow(true);
@@ -224,7 +226,9 @@ public class SysMenuServiceImpl implements ISysMenuService {
                 children.setPath(menu.getPath());
                 children.setComponent(menu.getComponent());
                 children.setName(frameName);
-                children.setMeta(new MetaVo(menu.getMenuName(), menu.getIcon(), StringUtils.equals("1", menu.getIsCache()), menu.getPath(), menu.getRemark()));
+                MetaVo frameMeta = new MetaVo(menu.getMenuName(), menu.getIcon(), StringUtils.equals("1", menu.getIsCache()), menu.getPath(), menu.getRemark());
+                frameMeta.setAppId(menu.getAppId());
+                children.setMeta(frameMeta);
                 children.setQuery(menu.getQueryParam());
                 childrenList.add(children);
                 router.setChildren(childrenList);
@@ -238,7 +242,9 @@ public class SysMenuServiceImpl implements ISysMenuService {
                 children.setPath(routerPath);
                 children.setComponent(SystemConstants.INNER_LINK);
                 children.setName(innerLinkName);
-                children.setMeta(new MetaVo(menu.getMenuName(), menu.getIcon(), menu.getPath()));
+                MetaVo innerMeta = new MetaVo(menu.getMenuName(), menu.getIcon(), menu.getPath());
+                innerMeta.setAppId(menu.getAppId());
+                children.setMeta(innerMeta);
                 childrenList.add(children);
                 router.setChildren(childrenList);
             }
@@ -322,8 +328,13 @@ public class SysMenuServiceImpl implements ISysMenuService {
      */
     @Override
     public int insertMenu(SysMenuBo bo) {
+        if (!SystemConstants.TYPE_MENU.equals(bo.getMenuType())) {
+            bo.setAppId(null);
+        }
         SysMenu menu = MapstructUtils.convert(bo, SysMenu.class);
-        return baseMapper.insert(menu);
+        int rows = baseMapper.insert(menu);
+        bo.setMenuId(menu.getMenuId());
+        return rows;
     }
 
     /**
@@ -334,6 +345,9 @@ public class SysMenuServiceImpl implements ISysMenuService {
      */
     @Override
     public int updateMenu(SysMenuBo bo) {
+        if (!SystemConstants.TYPE_MENU.equals(bo.getMenuType())) {
+            bo.setAppId(null);
+        }
         SysMenu menu = MapstructUtils.convert(bo, SysMenu.class);
         return baseMapper.updateById(menu);
     }

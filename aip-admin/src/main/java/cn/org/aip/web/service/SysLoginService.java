@@ -168,6 +168,9 @@ public class SysLoginService {
         List<SysPostVo> posts = postService.selectPostsByUserId(userId);
         loginUser.setRoles(BeanUtil.copyToList(roles, RoleDTO.class));
         loginUser.setPosts(BeanUtil.copyToList(posts, PostDTO.class));
+        loginUser.setEmployeeNo(user.getEmployeeNo());
+        loginUser.setKeycloakUserId(user.getKeycloakUserId());
+        loginUser.setPasswordResetRequired(user.getPasswordResetRequired());
         return loginUser;
     }
 

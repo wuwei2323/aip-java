@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <groupId>cn.org.aip</groupId>
+        <artifactId>aip-common</artifactId>
+        <version>${revision}</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>aip-common-sso</artifactId>
+    <description>统一认证与 SSO 模块（Keycloak OIDC 客户端接入）</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>cn.org.aip</groupId>
+            <artifactId>aip-common-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.org.aip</groupId>
+            <artifactId>aip-common-json</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.org.aip</groupId>
+            <artifactId>aip-common-redis</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.org.aip</groupId>
+            <artifactId>aip-common-satoken</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.org.aip</groupId>
+            <artifactId>aip-common-tenant</artifactId>
+        </dependency>
+
+        <!-- Nimbus JOSE+JWT 验签与令牌解析，严禁引入 spring-boot-starter-security / oauth2-client -->
+        <dependency>
+            <groupId>com.nimbusds</groupId>
+            <artifactId>nimbus-jose-jwt</artifactId>
+            <version>9.40</version>
+        </dependency>
+    </dependencies>
+
+</project>

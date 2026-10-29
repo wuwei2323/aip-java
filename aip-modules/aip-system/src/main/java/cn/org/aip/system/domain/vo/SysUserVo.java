@@ -109,6 +109,26 @@ public class SysUserVo implements Serializable {
     private String remark;
 
     /**
+     * 员工工号（全局唯一）
+     */
+    private String employeeNo;
+
+    /**
+     * Keycloak用户ID
+     */
+    private String keycloakUserId;
+
+    /**
+     * 认证来源（PLATFORM/LOCAL/LDAP）
+     */
+    private String authSource;
+
+    /**
+     * 是否需要重置密码（首次登录强制改密）
+     */
+    private Boolean passwordResetRequired;
+
+    /**
      * 创建时间
      */
     private Date createTime;

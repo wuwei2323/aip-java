@@ -35,6 +35,7 @@
         <module>aip-common-websocket</module>
         <module>aip-common-sse</module>
         <module>aip-common-ajcaptcha</module>
+        <module>aip-common-sso</module>
     </modules>
 
     <artifactId>aip-common</artifactId>

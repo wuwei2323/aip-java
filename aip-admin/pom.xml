@@ -93,6 +93,12 @@
             <artifactId>aip-workflow</artifactId>
         </dependency>
 
+        <!-- SSO 模块 -->
+        <dependency>
+            <groupId>cn.org.aip</groupId>
+            <artifactId>aip-common-sso</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>de.codecentric</groupId>
             <artifactId>spring-boot-admin-starter-client</artifactId>

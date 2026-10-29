@@ -1,5 +1,6 @@
 package cn.org.aip.system.domain;
 
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -99,6 +100,12 @@ public class SysMenu extends BaseEntity {
      * 备注
      */
     private String remark;
+
+    /**
+     * 关联应用ID（仅menu_type='C'可配置，未关联为普通菜单）
+     */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private String appId;
 
     /**
      * 父菜单名称

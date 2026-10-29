@@ -104,6 +104,11 @@ public class SysMenuVo implements Serializable {
     private String remark;
 
     /**
+     * 关联应用ID（仅menu_type='C'可配置，未关联为普通菜单）
+     */
+    private String appId;
+
+    /**
      * 创建时间
      */
     private Date createTime;

@@ -134,6 +134,25 @@ security:
     - /webjars/**
     - /v3/api-docs/**
     - /warm-flow-ui/config
+    - /auth/sso/**
+    - /internal/keycloak/**
+
+# 本地传统登录开关
+auth:
+  local-login:
+    enabled: ${AUTH_LOCAL_LOGIN_ENABLED:false}
+
+# Keycloak OIDC 配置
+keycloak:
+  enabled: ${KEYCLOAK_ENABLED:true}
+  server-url: ${KEYCLOAK_SERVER_URL:http://192.168.43.100:8080}
+  realm: ${KEYCLOAK_REALM:aip}
+  client-id: ${KEYCLOAK_CLIENT_ID:000000}
+  client-secret: ${KEYCLOAK_CLIENT_SECRET:aip-portal-secret-2026}
+  admin-client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:aip-admin-svc}
+  admin-client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:aip-admin-svc-secret-2026}
+  frontend-base-url: ${KEYCLOAK_FRONTEND_BASE_URL:http://localhost:9090}
+  backend-base-url: ${KEYCLOAK_BACKEND_BASE_URL:http://localhost:8080}
 
 # 多应用配置
 tenant:
@@ -161,6 +180,7 @@ tenant:
     - sys_dict_type_role
     - sys_role_dict_value
     - sys_role_data_scope
+    - sys_application
 
 # MyBatisPlus配置
 # https://baomidou.com/config/

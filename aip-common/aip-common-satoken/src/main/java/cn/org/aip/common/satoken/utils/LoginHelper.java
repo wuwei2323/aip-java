@@ -39,6 +39,9 @@ public class LoginHelper {
     public static final String DEPT_NAME_KEY = "deptName";
     public static final String DEPT_CATEGORY_KEY = "deptCategory";
     public static final String CLIENT_KEY = "clientid";
+    public static final String SSO_SID_KEY = "sso_sid";
+    public static final String SSO_SUB_KEY = "sso_sub";
+    public static final String EMPLOYEE_NO_KEY = "employeeNo";
 
     /**
      * 登录系统 基于 设备类型
@@ -56,6 +59,9 @@ public class LoginHelper {
                 .setExtra(DEPT_KEY, loginUser.getDeptId())
                 .setExtra(DEPT_NAME_KEY, loginUser.getDeptName())
                 .setExtra(DEPT_CATEGORY_KEY, loginUser.getDeptCategory())
+                .setExtra(SSO_SID_KEY, loginUser.getSsoSid())
+                .setExtra(SSO_SUB_KEY, loginUser.getSsoSub())
+                .setExtra(EMPLOYEE_NO_KEY, loginUser.getEmployeeNo())
         );
         StpUtil.getTokenSession().set(LOGIN_USER_KEY, loginUser);
     }
@@ -131,6 +137,27 @@ public class LoginHelper {
      */
     public static String getDeptCategory() {
         return Convert.toStr(getExtra(DEPT_CATEGORY_KEY));
+    }
+
+    /**
+     * 获取SSO会话ID (Keycloak sid)
+     */
+    public static String getSsoSid() {
+        return Convert.toStr(getExtra(SSO_SID_KEY));
+    }
+
+    /**
+     * 获取SSO主体ID (Keycloak sub)
+     */
+    public static String getSsoSub() {
+        return Convert.toStr(getExtra(SSO_SUB_KEY));
+    }
+
+    /**
+     * 获取员工工号
+     */
+    public static String getEmployeeNo() {
+        return Convert.toStr(getExtra(EMPLOYEE_NO_KEY));
     }
 
     /**
