@@ -220,6 +220,8 @@ public class SsoStateStore {
         private String redirect;
         private String nonce;
         private String codeVerifier;
+        private String callbackUrl;
+        private String frontendBaseUrl;
         private Long createTime;
     }
 

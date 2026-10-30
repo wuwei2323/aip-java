@@ -30,15 +30,28 @@ public class AjCaptchaConfig {
         Properties config = new Properties();
         config.put(Const.CAPTCHA_CACHETYPE, "redis");
         config.put(Const.CAPTCHA_WATER_MARK, "");
-        // 滑动验证
-        config.put(Const.CAPTCHA_TYPE, CaptchaTypeEnum.BLOCKPUZZLE.getCodeValue());
+        config.put(Const.CAPTCHA_FONT_TYPE, "WenQuanZhengHei.ttf");
+        // 默认汉字点选验证码
+        config.put(Const.CAPTCHA_TYPE, CaptchaTypeEnum.CLICKWORD.getCodeValue());
         config.put(Const.CAPTCHA_INIT_ORIGINAL, "true");
         initializeBaseMap();
-        return CaptchaServiceFactory.getInstance(config);
+        CaptchaService clickService = CaptchaServiceFactory.getInstance(config);
+
+        // 同步初始化滑块拼图验证码 (blockPuzzle)
+        Properties blockConfig = new Properties();
+        blockConfig.putAll(config);
+        blockConfig.put(Const.CAPTCHA_TYPE, CaptchaTypeEnum.BLOCKPUZZLE.getCodeValue());
+        CaptchaServiceFactory.getInstance(blockConfig);
+
+        return clickService;
     }
 
     private static void initializeBaseMap() {
-        ImageUtils.cacheBootImage(getResourcesImagesFile("classpath:captcha" + "/original/*.png"), getResourcesImagesFile("classpath:captcha" + "/slidingBlock/*.png"), Collections.emptyMap());
+        ImageUtils.cacheBootImage(
+            getResourcesImagesFile("classpath:captcha" + "/original/*.png"),
+            getResourcesImagesFile("classpath:captcha" + "/slidingBlock/*.png"),
+            getResourcesImagesFile("classpath:captcha" + "/pic-click/*.png")
+        );
     }
 
     public static Map<String, String> getResourcesImagesFile(String path) {

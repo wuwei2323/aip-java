@@ -15,6 +15,7 @@
         <module>aip-monitor-admin</module>
         <module>aip-snailjob-server</module>
         <module>aip-keycloak-user-storage</module>
+        <module>aip-keycloak-theme</module>
     </modules>
 
 </project>

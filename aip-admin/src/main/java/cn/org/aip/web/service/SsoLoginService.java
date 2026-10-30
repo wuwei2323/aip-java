@@ -11,6 +11,7 @@ import cn.hutool.crypto.SecureUtil;
 import cn.hutool.crypto.digest.BCrypt;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.nimbusds.jwt.JWTClaimsSet;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +20,7 @@ import cn.org.aip.common.core.constant.SystemConstants;
 import cn.org.aip.common.core.constant.TenantConstants;
 import cn.org.aip.common.core.domain.model.LoginUser;
 import cn.org.aip.common.core.exception.ServiceException;
+import cn.org.aip.common.core.utils.ServletUtils;
 import cn.org.aip.common.core.utils.StringUtils;
 import cn.org.aip.common.satoken.utils.LoginHelper;
 import cn.org.aip.common.sso.config.KeycloakProperties;
@@ -39,6 +41,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
@@ -86,19 +89,24 @@ public class SsoLoginService {
         String state = IdUtil.fastSimpleUUID();
         String nonce = IdUtil.fastSimpleUUID();
 
-        // 3. 存入 Redis (TTL 5分钟)
+        // 3. 构建回调地址与前端地址
+        String callbackUrl = resolveCallbackUrl();
+        String frontendBaseUrl = resolveFrontendBaseUrl();
+
+        // 存入 Redis (TTL 5分钟)
         SsoStateStore.StateData stateData = SsoStateStore.StateData.builder()
             .tenantId(portalConfig.getTenantId())
             .oidcClientId(portalConfig.getAppId())
             .redirect(safeRedirect)
             .nonce(nonce)
             .codeVerifier(codeVerifier)
+            .callbackUrl(callbackUrl)
+            .frontendBaseUrl(frontendBaseUrl)
             .createTime(System.currentTimeMillis())
             .build();
         ssoStateStore.saveState(state, stateData);
 
-        // 4. 构建回调地址与 Keycloak 授权 URL
-        String callbackUrl = getCallbackUrl();
+        // 4. 构建 Keycloak 授权 URL
         String normalizedScopes = normalizeScopes(portalConfig.getScopes());
         StringBuilder sb = new StringBuilder(keycloakProperties.getAuthUrl());
         sb.append("?response_type=code")
@@ -117,7 +125,11 @@ public class SsoLoginService {
      * 处理 Keycloak 回调
      */
     public void handleCallback(String code, String state, String error, String errorDescription, HttpServletResponse response) throws IOException {
-        String frontendBase = keycloakProperties.getFrontendBaseUrl();
+        // 1. 优先尝试消费 state 获取当时发起授权的前端与回调地址
+        SsoStateStore.StateData stateData = StringUtils.isNotBlank(state) ? ssoStateStore.consumeState(state) : null;
+        String frontendBase = stateData != null && StringUtils.isNotBlank(stateData.getFrontendBaseUrl())
+            ? stateData.getFrontendBaseUrl()
+            : resolveFrontendBaseUrl();
 
         if (StringUtils.isNotBlank(error)) {
             log.warn("SSO callback received error from Keycloak: {} - {}", error, errorDescription);
@@ -135,8 +147,6 @@ public class SsoLoginService {
             return;
         }
 
-        // 1. 消费 state
-        SsoStateStore.StateData stateData = ssoStateStore.consumeState(state);
         if (stateData == null) {
             log.warn("SSO state expired or invalid: {}", state);
             response.sendRedirect(frontendBase + "/login?error=state_expired");
@@ -144,7 +154,9 @@ public class SsoLoginService {
         }
 
         PortalAppProvider.PortalAppConfig portalConfig = portalAppProvider.getPortalAppConfig();
-        String callbackUrl = getCallbackUrl();
+        String callbackUrl = StringUtils.isNotBlank(stateData.getCallbackUrl())
+            ? stateData.getCallbackUrl()
+            : resolveCallbackUrl();
 
         // 2. 用 code + code_verifier 向 Keycloak 兑换 Token
         KeycloakTokenClient.OidcTokenResponse tokenResponse;
@@ -490,9 +502,46 @@ public class SsoLoginService {
             .collect(Collectors.joining(" "));
     }
 
-    private String getCallbackUrl() {
+    private String resolveFrontendBaseUrl() {
+        try {
+            HttpServletRequest request = ServletUtils.getRequest();
+            if (request != null) {
+                String origin = request.getHeader("Origin");
+                if (StringUtils.isNotBlank(origin) && (origin.startsWith("http://") || origin.startsWith("https://"))) {
+                    return origin;
+                }
+                String referer = request.getHeader("Referer");
+                if (StringUtils.isNotBlank(referer) && (referer.startsWith("http://") || referer.startsWith("https://"))) {
+                    URI uri = URI.create(referer);
+                    String portStr = uri.getPort() != -1 ? ":" + uri.getPort() : "";
+                    return uri.getScheme() + "://" + uri.getHost() + portStr;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return keycloakProperties.getFrontendBaseUrl();
+    }
+
+    private String resolveCallbackUrl() {
         if (StringUtils.isNotBlank(keycloakProperties.getCallbackUrl())) {
             return keycloakProperties.getCallbackUrl();
+        }
+        try {
+            HttpServletRequest request = ServletUtils.getRequest();
+            if (request != null) {
+                String origin = request.getHeader("Origin");
+                if (StringUtils.isBlank(origin)) {
+                    origin = request.getHeader("Referer");
+                }
+                if (StringUtils.isNotBlank(origin) && (origin.startsWith("http://") || origin.startsWith("https://"))) {
+                    URI uri = URI.create(origin);
+                    String host = uri.getHost();
+                    if (StringUtils.isNotBlank(host) && !"localhost".equalsIgnoreCase(host) && !"127.0.0.1".equals(host)) {
+                        return uri.getScheme() + "://" + host + ":8080/auth/sso/callback";
+                    }
+                }
+            }
+        } catch (Exception ignored) {
         }
         return keycloakProperties.getBackendBaseUrl() + "/auth/sso/callback";
     }

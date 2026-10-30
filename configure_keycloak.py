@@ -164,14 +164,17 @@ def main():
             "http://localhost:8080/auth/sso/callback",
             "http://127.0.0.1:8080/auth/sso/callback",
             "http://192.168.43.1:8080/auth/sso/callback",
+            "http://192.168.3.82:8080/auth/sso/callback",
             "http://localhost:9090/*",
             "http://127.0.0.1:9090/*",
+            "http://192.168.3.82:9090/*",
             "http://localhost:81/*",
-            "http://127.0.0.1:81/*"
+            "http://127.0.0.1:81/*",
+            "*"
         ],
         "webOrigins": ["*"],
         "attributes": {
-            "post.logout.redirect.uris": "http://localhost:9090/login##http://localhost:9090/*##http://localhost:81/login##http://localhost:81/*##+",
+            "post.logout.redirect.uris": "http://localhost:9090/login##http://localhost:9090/*##http://192.168.3.82:9090/login##http://192.168.3.82:9090/*##http://localhost:81/login##http://localhost:81/*##+",
             "backchannel.logout.url": f"{INTERNAL_API_URL}/auth/sso/backchannel-logout",
             "backchannel.logout.session.required": "true",
             "backchannel.logout.revoke.offline.tokens": "false",
