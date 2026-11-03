@@ -19,6 +19,7 @@ import cn.org.aip.common.core.exception.ServiceException;
 import cn.org.aip.common.core.utils.ValidatorUtils;
 import cn.org.aip.common.json.utils.JsonUtils;
 import cn.org.aip.common.satoken.utils.LoginHelper;
+import cn.org.aip.common.tenant.helper.TenantHelper;
 import cn.org.aip.system.domain.vo.SysClientVo;
 import cn.org.aip.system.domain.vo.SysUserVo;
 import cn.org.aip.web.domain.vo.LoginVo;
@@ -67,7 +68,7 @@ public class XcxAuthStrategy implements IAuthStrategy {
         SysUserVo user = loadUserByOpenid(openid);
         // 此处可根据登录用户的数据不同 自行创建 loginUser 属性不够用继承扩展就行了
         XcxLoginUser loginUser = new XcxLoginUser();
-        loginUser.setTenantId(user.getTenantId());
+        loginUser.setTenantId(TenantHelper.getTenantId());
         loginUser.setUserId(user.getUserId());
         loginUser.setUsername(user.getUserName());
         loginUser.setNickname(user.getNickName());

@@ -151,7 +151,7 @@ public class SysLoginService {
     public LoginUser buildLoginUser(SysUserVo user) {
         LoginUser loginUser = new LoginUser();
         Long userId = user.getUserId();
-        loginUser.setTenantId(StringUtils.defaultIfBlank(user.getTenantId(), TenantHelper.getTenantId()));
+        loginUser.setTenantId(TenantHelper.getTenantId());
         loginUser.setUserId(userId);
         loginUser.setDeptId(user.getDeptId());
         loginUser.setUsername(user.getUserName());

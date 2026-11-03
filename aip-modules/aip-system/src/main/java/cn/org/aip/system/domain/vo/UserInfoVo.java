@@ -18,6 +18,11 @@ public class UserInfoVo {
     private SysUserVo user;
 
     /**
+     * 当前登录会话生效的应用/租户ID
+     */
+    private String tenantId;
+
+    /**
      * 菜单权限
      */
     private Set<String> permissions;

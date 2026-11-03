@@ -115,7 +115,7 @@ public class SsoLoginService {
             throw new ServiceException(MessageUtils.message("sso.user.blocked"));
         }
 
-        String userTenantId = StringUtils.isNotBlank(user.getTenantId()) ? user.getTenantId() : portalConfig.getTenantId();
+        String tenantId = portalConfig.getTenantId();
 
         // 4. 首次登录强制改密判断 (平滑返回改密凭据，不签发会话，销毁刚才建立的 Keycloak Session 防止死锁免密直通)
         if (Boolean.TRUE.equals(user.getPasswordResetRequired())) {
@@ -129,7 +129,7 @@ public class SsoLoginService {
             String resetTicket = IdUtil.fastSimpleUUID();
             ssoStateStore.savePasswordResetTicket(
                 resetTicket,
-                new SsoStateStore.PasswordResetData(user.getUserId(), user.getUserName(), userTenantId)
+                new SsoStateStore.PasswordResetData(user.getUserId(), user.getUserName(), tenantId)
             );
             LoginVo loginVo = new LoginVo();
             loginVo.setPasswordResetRequired(true);
@@ -138,7 +138,7 @@ public class SsoLoginService {
         }
 
         // 5. 构建 LoginUser 并签发 Sa-Token 会话
-        LoginUser loginUser = TenantHelper.dynamic(userTenantId, () -> sysLoginService.buildLoginUser(user));
+        LoginUser loginUser = TenantHelper.dynamic(tenantId, () -> sysLoginService.buildLoginUser(user));
         loginUser.setSsoSid(sid);
         loginUser.setSsoSub(sub);
         loginUser.setEmployeeNo(user.getEmployeeNo());
@@ -162,18 +162,6 @@ public class SsoLoginService {
         loginVo.setExpireIn(StpUtil.getTokenTimeout());
         loginVo.setClientId(effectiveClientId);
         return loginVo;
-    }
-
-    /**
-     * 兼容旧版换票重载方法
-     */
-    public LoginVo exchangeCode(String code, String redirectUri) {
-        SsoExchangeBo bo = new SsoExchangeBo();
-        bo.setCode(code);
-        bo.setRedirectUri(redirectUri);
-        bo.setCodeVerifier("");
-        bo.setNonce("");
-        return exchangeCode(bo);
     }
 
     /**

@@ -116,8 +116,8 @@ public class SysUserController extends BaseController {
         if (ObjectUtil.isNull(user)) {
             return R.fail("没有权限访问用户数据!");
         }
-        user.setTenantId(loginUser.getTenantId());
         userInfoVo.setUser(user);
+        userInfoVo.setTenantId(loginUser.getTenantId());
         userInfoVo.setPermissions(loginUser.getMenuPermission());
         userInfoVo.setRoles(loginUser.getRolePermission());
         return R.ok(userInfoVo);
