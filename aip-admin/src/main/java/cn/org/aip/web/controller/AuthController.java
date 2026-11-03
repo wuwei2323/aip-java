@@ -30,13 +30,13 @@ import cn.org.aip.common.social.utils.SocialUtils;
 import cn.org.aip.common.sse.dto.SseMessageDto;
 import cn.org.aip.common.sse.utils.SseMessageUtils;
 import cn.org.aip.common.tenant.helper.TenantHelper;
-import cn.org.aip.system.domain.bo.SysTenantBo;
+import cn.org.aip.system.domain.bo.SysApplicationBo;
+import cn.org.aip.system.domain.vo.SysApplicationVo;
 import cn.org.aip.system.domain.vo.SysClientVo;
-import cn.org.aip.system.domain.vo.SysTenantVo;
+import cn.org.aip.system.service.ISysApplicationService;
 import cn.org.aip.system.service.ISysClientService;
 import cn.org.aip.system.service.ISysConfigService;
 import cn.org.aip.system.service.ISysSocialService;
-import cn.org.aip.system.service.ISysTenantService;
 import cn.org.aip.web.domain.vo.LoginTenantVo;
 import cn.org.aip.web.domain.vo.LoginVo;
 import cn.org.aip.web.domain.vo.TenantListVo;
@@ -72,7 +72,7 @@ public class AuthController {
     private final SysLoginService loginService;
     private final SysRegisterService registerService;
     private final ISysConfigService configService;
-    private final ISysTenantService tenantService;
+    private final ISysApplicationService applicationService;
     private final ISysSocialService socialUserService;
     private final ISysClientService clientService;
     private final ScheduledExecutorService scheduledExecutorService;
@@ -220,30 +220,17 @@ public class AuthController {
             return R.ok(result);
         }
 
-        List<SysTenantVo> tenantList = tenantService.queryList(new SysTenantBo());
-        List<TenantListVo> voList = MapstructUtils.convert(tenantList, TenantListVo.class);
-        try {
-            // 如果只超管返回所有应用
-            if (LoginHelper.isSuperAdmin()) {
-                result.setVoList(voList);
-                return R.ok(result);
-            }
-        } catch (NotLoginException ignored) {
-        }
-
-        // 获取域名
-        String host;
-        String referer = request.getHeader("referer");
-        if (StringUtils.isNotBlank(referer)) {
-            // 这里从referer中取值是为了本地使用hosts添加虚拟域名，方便本地环境调试
-            host = referer.split("//")[1].split("/")[0];
-        } else {
-            host = new URL(request.getRequestURL().toString()).getHost();
-        }
-        // 根据域名进行筛选
-        List<TenantListVo> list = StreamUtils.filter(voList, vo ->
-            StringUtils.equalsIgnoreCase(vo.getDomain(), host));
-        result.setVoList(CollUtil.isNotEmpty(list) ? list : voList);
+        SysApplicationBo queryBo = new SysApplicationBo();
+        queryBo.setStatus(SystemConstants.NORMAL);
+        List<SysApplicationVo> appList = applicationService.queryList(queryBo);
+        List<TenantListVo> voList = StreamUtils.toList(appList, app -> {
+            TenantListVo vo = new TenantListVo();
+            vo.setTenantId(app.getAppId());
+            vo.setCompanyName(app.getAppName());
+            vo.setDomain(app.getEntryUrl());
+            return vo;
+        });
+        result.setVoList(voList);
         return R.ok(result);
     }
 

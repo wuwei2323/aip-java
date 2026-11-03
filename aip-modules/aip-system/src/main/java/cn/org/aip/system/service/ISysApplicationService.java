@@ -9,7 +9,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * 应用注册 Service 接口
+ * 应用管理 Service 接口
  *
  * @author Michelle.Chung
  */
@@ -21,14 +21,16 @@ public interface ISysApplicationService {
     SysApplicationVo queryById(Long id);
 
     /**
-     * 根据客户端ID查询应用
+     * 根据应用编码(client_id)查询应用
      */
     SysApplicationVo queryByAppId(String appId);
 
     /**
-     * 根据租户编号查询应用
+     * 兼容方法：根据租户/应用编号查询应用
      */
-    SysApplicationVo queryByTenantId(String tenantId);
+    default SysApplicationVo queryByTenantId(String tenantId) {
+        return queryByAppId(tenantId);
+    }
 
     /**
      * 查询应用分页列表
@@ -64,18 +66,25 @@ public interface ISysApplicationService {
     String resetSecret(Long id);
 
     /**
+     * 获取指定应用的明文密钥（内部调用，如门户）
+     */
+    String getDecryptedSecret(String appId);
+
+    /**
      * 批量删除应用
      */
     Boolean deleteWithValidByIds(Collection<Long> ids, Boolean isValid);
 
     /**
-     * 校验客户端ID是否唯一
+     * 校验应用编码是否唯一
      */
     boolean checkAppIdUnique(SysApplicationBo bo);
 
     /**
-     * 校验租户编号是否唯一
+     * 校验租户编号是否唯一（兼容调用）
      */
-    boolean checkTenantIdUnique(SysApplicationBo bo);
+    default boolean checkTenantIdUnique(SysApplicationBo bo) {
+        return checkAppIdUnique(bo);
+    }
 
 }

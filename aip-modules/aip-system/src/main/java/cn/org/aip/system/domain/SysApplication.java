@@ -10,7 +10,7 @@ import lombok.EqualsAndHashCode;
 import java.io.Serial;
 
 /**
- * 应用注册对象 sys_application
+ * 应用管理对象 sys_application
  *
  * @author Michelle.Chung
  */
@@ -29,7 +29,7 @@ public class SysApplication extends BaseEntity {
     private Long id;
 
     /**
-     * OIDC客户端ID (client_id)
+     * 应用编码 / OIDC客户端ID (client_id)
      */
     private String appId;
 
@@ -39,79 +39,14 @@ public class SysApplication extends BaseEntity {
     private String appName;
 
     /**
-     * 应用/租户编号 (与 sys_tenant 1:1)
+     * 应用分类
      */
-    private String tenantId;
+    private String category;
 
     /**
-     * 客户端认证方式 (client_secret_basic / client_secret_post / none)
+     * 应用简介
      */
-    private String clientAuthMethod;
-
-    /**
-     * 客户端密钥 (AES加密存储)
-     */
-    private String clientSecretEnc;
-
-    /**
-     * 登录重定向URI列表 (JSON数组)
-     */
-    private String redirectUris;
-
-    /**
-     * 登出重定向URI列表 (JSON数组)
-     */
-    private String postLogoutRedirectUris;
-
-    /**
-     * 授权范围
-     */
-    private String scopes;
-
-    /**
-     * 授权类型
-     */
-    private String grantTypes;
-
-    /**
-     * 访问令牌有效期 (分钟)
-     */
-    private Integer accessTokenTtlMinutes;
-
-    /**
-     * 刷新令牌有效期 (天)
-     */
-    private Integer refreshTokenTtlDays;
-
-    /**
-     * 是否复用刷新令牌 (0否 1是)
-     */
-    private String reuseRefreshTokens;
-
-    /**
-     * 是否强制PKCE (0否 1是)
-     */
-    private String requirePkce;
-
-    /**
-     * 应用域名
-     */
-    private String domain;
-
-    /**
-     * 应用入口地址
-     */
-    private String entryUrl;
-
-    /**
-     * 企微配置标识
-     */
-    private String wecomConfigKey;
-
-    /**
-     * 用户绑定策略 (REJECT / AUTO_REGISTER / PROMPT_BIND)
-     */
-    private String bindPolicy;
+    private String description;
 
     /**
      * 应用图标
@@ -119,9 +54,19 @@ public class SysApplication extends BaseEntity {
     private String icon;
 
     /**
-     * 显示顺序
+     * 访问地址 (入口地址)
      */
-    private Integer orderNum;
+    private String entryUrl;
+
+    /**
+     * 登录重定向URI列表 (JSON数组)
+     */
+    private String redirectUris;
+
+    /**
+     * 客户端密钥 (AES加密存储)
+     */
+    private String clientSecretEnc;
 
     /**
      * 状态 (0正常 1停用)

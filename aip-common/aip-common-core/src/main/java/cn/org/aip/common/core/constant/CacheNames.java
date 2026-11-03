@@ -39,7 +39,13 @@ public interface CacheNames {
     /**
      * 应用
      */
-    String SYS_TENANT = GlobalConstants.GLOBAL_REDIS_KEY + "sys_tenant#30d";
+    String SYS_APPLICATION = GlobalConstants.GLOBAL_REDIS_KEY + "sys_application#30d";
+
+    /**
+     * @deprecated 使用 SYS_APPLICATION
+     */
+    @Deprecated
+    String SYS_TENANT = SYS_APPLICATION;
 
     /**
      * 客户端

@@ -12,24 +12,24 @@ import cn.org.aip.common.core.utils.StringUtils;
 import cn.org.aip.common.json.utils.JsonUtils;
 import cn.org.aip.common.tenant.helper.TenantHelper;
 import cn.org.aip.system.constant.DictConstants;
+import cn.org.aip.system.domain.SysApplication;
 import cn.org.aip.system.domain.SysDictType;
 import cn.org.aip.system.domain.SysDictTypeRole;
 import cn.org.aip.system.domain.SysDictTypeTenant;
 import cn.org.aip.system.domain.SysRoleDictValue;
-import cn.org.aip.system.domain.SysTenant;
 import cn.org.aip.system.domain.bo.RoleDictValueBo;
 import cn.org.aip.system.domain.dto.DictComponentDTO;
 import cn.org.aip.system.domain.vo.RoleDictConfigItemVo;
 import cn.org.aip.system.domain.vo.RoleDictConfigVo;
 import cn.org.aip.system.domain.vo.SysDictDataVo;
 import cn.org.aip.system.domain.vo.SysRoleVo;
+import cn.org.aip.system.mapper.SysApplicationMapper;
 import cn.org.aip.system.mapper.SysDictDataMapper;
 import cn.org.aip.system.mapper.SysDictTypeMapper;
 import cn.org.aip.system.mapper.SysDictTypeRoleMapper;
 import cn.org.aip.system.mapper.SysDictTypeTenantMapper;
 import cn.org.aip.system.mapper.SysRoleDictValueMapper;
 import cn.org.aip.system.mapper.SysRoleMapper;
-import cn.org.aip.system.mapper.SysTenantMapper;
 import cn.org.aip.system.service.ISysRoleDictService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,7 +52,7 @@ public class SysRoleDictServiceImpl implements ISysRoleDictService, RoleDictServ
     private final SysDictTypeRoleMapper dictTypeRoleMapper;
     private final SysDictDataMapper dictDataMapper;
     private final SysRoleMapper roleMapper;
-    private final SysTenantMapper tenantMapper;
+    private final SysApplicationMapper applicationMapper;
 
     /**
      * 查询角色关联的角色类字典配置（按应用分组）
@@ -67,16 +67,17 @@ public class SysRoleDictServiceImpl implements ISysRoleDictService, RoleDictServ
         }
 
         // 1. 先查询所有正常状态的应用，初始化分组（确保所有应用都在顶部Tab中可选）
-        List<SysTenant> allTenants = TenantHelper.ignore(() -> tenantMapper.selectList(new LambdaQueryWrapper<SysTenant>()
-            .select(SysTenant::getTenantId, SysTenant::getCompanyName)
-            .eq(SysTenant::getStatus, SystemConstants.NORMAL)
-            .orderByAsc(SysTenant::getId)));
+        List<SysApplication> allApps = TenantHelper.ignore(() -> applicationMapper.selectList(new LambdaQueryWrapper<SysApplication>()
+            .select(SysApplication::getAppId, SysApplication::getAppName)
+            .eq(SysApplication::getStatus, SystemConstants.NORMAL)
+            .orderByDesc(SysApplication::getCreateTime)
+            .orderByAsc(SysApplication::getId)));
         Map<String, RoleDictConfigVo> grouped = new LinkedHashMap<>();
-        for (SysTenant tenant : allTenants) {
-            grouped.computeIfAbsent(tenant.getTenantId(), tenantId -> {
+        for (SysApplication app : allApps) {
+            grouped.computeIfAbsent(app.getAppId(), tenantId -> {
                 RoleDictConfigVo vo = new RoleDictConfigVo();
                 vo.setTenantId(tenantId);
-                vo.setTenantName(tenant.getCompanyName());
+                vo.setTenantName(app.getAppName());
                 vo.setCheckedDictIds(new ArrayList<>());
                 vo.setAllDicts(new ArrayList<>());
                 return vo;

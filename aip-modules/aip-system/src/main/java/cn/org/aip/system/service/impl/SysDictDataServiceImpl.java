@@ -15,12 +15,12 @@ import cn.org.aip.common.mybatis.core.page.PageQuery;
 import cn.org.aip.common.mybatis.core.page.TableDataInfo;
 import cn.org.aip.common.redis.utils.CacheUtils;
 import cn.org.aip.common.tenant.helper.TenantHelper;
+import cn.org.aip.system.domain.SysApplication;
 import cn.org.aip.system.domain.SysDictData;
-import cn.org.aip.system.domain.SysTenant;
 import cn.org.aip.system.domain.bo.SysDictDataBo;
 import cn.org.aip.system.domain.vo.SysDictDataVo;
+import cn.org.aip.system.mapper.SysApplicationMapper;
 import cn.org.aip.system.mapper.SysDictDataMapper;
-import cn.org.aip.system.mapper.SysTenantMapper;
 import cn.org.aip.system.service.ISysDictDataService;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.stereotype.Service;
@@ -38,7 +38,7 @@ import java.util.stream.Collectors;
 public class SysDictDataServiceImpl implements ISysDictDataService {
 
     private final SysDictDataMapper baseMapper;
-    private final SysTenantMapper tenantMapper;
+    private final SysApplicationMapper applicationMapper;
 
     /**
      * 分页查询字典数据列表
@@ -121,10 +121,10 @@ public class SysDictDataServiceImpl implements ISysDictDataService {
      * @param dictType 字典类型
      */
     private void evictDictCache(String dictType) {
-        List<String> tenantIds = tenantMapper.selectList(new LambdaQueryWrapper<SysTenant>()
-                .select(SysTenant::getTenantId)
-                .eq(SysTenant::getStatus, SystemConstants.NORMAL))
-            .stream().map(SysTenant::getTenantId).collect(Collectors.toList());
+        List<String> tenantIds = applicationMapper.selectList(new LambdaQueryWrapper<SysApplication>()
+                .select(SysApplication::getAppId)
+                .eq(SysApplication::getStatus, SystemConstants.NORMAL))
+            .stream().map(SysApplication::getAppId).collect(Collectors.toList());
         if (CollUtil.isEmpty(tenantIds)) {
             CacheUtils.evict(CacheNames.SYS_DICT, dictType);
             return;

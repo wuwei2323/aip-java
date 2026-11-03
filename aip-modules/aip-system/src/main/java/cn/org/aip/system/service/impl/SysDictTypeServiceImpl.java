@@ -25,22 +25,22 @@ import cn.org.aip.common.mybatis.core.page.TableDataInfo;
 import cn.org.aip.common.redis.utils.CacheUtils;
 import cn.org.aip.common.tenant.helper.TenantHelper;
 import cn.org.aip.system.constant.DictConstants;
+import cn.org.aip.system.domain.SysApplication;
 import cn.org.aip.system.domain.SysDictData;
 import cn.org.aip.system.domain.SysDictType;
 import cn.org.aip.system.domain.SysDictTypeRole;
 import cn.org.aip.system.domain.SysDictTypeTenant;
 import cn.org.aip.system.domain.SysRole;
-import cn.org.aip.system.domain.SysTenant;
 import cn.org.aip.system.domain.bo.SysDictTypeBo;
 import cn.org.aip.system.domain.dto.DictComponentDTO;
 import cn.org.aip.system.domain.vo.SysDictDataVo;
 import cn.org.aip.system.domain.vo.SysDictTypeVo;
+import cn.org.aip.system.mapper.SysApplicationMapper;
 import cn.org.aip.system.mapper.SysDictDataMapper;
 import cn.org.aip.system.mapper.SysDictTypeMapper;
 import cn.org.aip.system.mapper.SysDictTypeRoleMapper;
 import cn.org.aip.system.mapper.SysDictTypeTenantMapper;
 import cn.org.aip.system.mapper.SysRoleMapper;
-import cn.org.aip.system.mapper.SysTenantMapper;
 import cn.org.aip.system.service.ISysDictTypeService;
 import cn.org.aip.system.service.ISysRoleDictService;
 import org.springframework.cache.annotation.CachePut;
@@ -63,7 +63,7 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
     private final SysDictTypeMapper baseMapper;
     private final SysDictDataMapper dictDataMapper;
     private final SysDictTypeTenantMapper dictTypeTenantMapper;
-    private final SysTenantMapper tenantMapper;
+    private final SysApplicationMapper applicationMapper;
     private final ISysRoleDictService roleDictService;
 
     /**
@@ -129,10 +129,10 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
             return;
         }
         Set<String> tenantIds = new HashSet<>(StreamUtils.toList(relations, SysDictTypeTenant::getTenantId));
-        List<SysTenant> tenants = tenantMapper.selectList(new LambdaQueryWrapper<SysTenant>()
-            .select(SysTenant::getTenantId, SysTenant::getCompanyName)
-            .in(SysTenant::getTenantId, tenantIds));
-        Map<String, String> tenantNameMap = StreamUtils.toMap(tenants, SysTenant::getTenantId, SysTenant::getCompanyName);
+        List<SysApplication> apps = applicationMapper.selectList(new LambdaQueryWrapper<SysApplication>()
+            .select(SysApplication::getAppId, SysApplication::getAppName)
+            .in(SysApplication::getAppId, tenantIds));
+        Map<String, String> tenantNameMap = StreamUtils.toMap(apps, SysApplication::getAppId, SysApplication::getAppName);
         Map<Long, List<SysDictTypeTenant>> relationMap = StreamUtils.groupByKey(relations, SysDictTypeTenant::getDictId);
         for (SysDictTypeVo vo : list) {
             List<SysDictTypeTenant> dictRelations = relationMap.get(vo.getDictId());
@@ -227,10 +227,10 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
      * @param dictType 字典类型
      */
     private void evictDictCache(String dictType) {
-        List<String> tenantIds = tenantMapper.selectList(new LambdaQueryWrapper<SysTenant>()
-                .select(SysTenant::getTenantId)
-                .eq(SysTenant::getStatus, SystemConstants.NORMAL))
-            .stream().map(SysTenant::getTenantId).collect(Collectors.toList());
+        List<String> tenantIds = applicationMapper.selectList(new LambdaQueryWrapper<SysApplication>()
+                .select(SysApplication::getAppId)
+                .eq(SysApplication::getStatus, SystemConstants.NORMAL))
+            .stream().map(SysApplication::getAppId).collect(Collectors.toList());
         if (CollUtil.isEmpty(tenantIds)) {
             CacheUtils.evict(CacheNames.SYS_DICT, dictType);
             CacheUtils.evict(CacheNames.SYS_DICT_TYPE, dictType);
@@ -249,10 +249,10 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
      */
     @Override
     public void resetDictCache() {
-        List<String> tenantIds = tenantMapper.selectList(new LambdaQueryWrapper<SysTenant>()
-                .select(SysTenant::getTenantId)
-                .eq(SysTenant::getStatus, SystemConstants.NORMAL))
-            .stream().map(SysTenant::getTenantId).collect(Collectors.toList());
+        List<String> tenantIds = applicationMapper.selectList(new LambdaQueryWrapper<SysApplication>()
+                .select(SysApplication::getAppId)
+                .eq(SysApplication::getStatus, SystemConstants.NORMAL))
+            .stream().map(SysApplication::getAppId).collect(Collectors.toList());
         if (CollUtil.isEmpty(tenantIds)) {
             CacheUtils.clear(CacheNames.SYS_DICT);
             CacheUtils.clear(CacheNames.SYS_DICT_TYPE);

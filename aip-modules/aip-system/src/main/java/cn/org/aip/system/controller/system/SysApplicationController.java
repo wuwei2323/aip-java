@@ -2,20 +2,21 @@ package cn.org.aip.system.controller.system;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.annotation.SaCheckRole;
-import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import cn.org.aip.common.core.constant.TenantConstants;
 import cn.org.aip.common.core.domain.R;
+import cn.org.aip.common.core.utils.MessageUtils;
 import cn.org.aip.common.core.validate.AddGroup;
 import cn.org.aip.common.core.validate.EditGroup;
-import cn.org.aip.common.excel.utils.ExcelUtil;
 import cn.org.aip.common.idempotent.annotation.RepeatSubmit;
 import cn.org.aip.common.log.annotation.Log;
 import cn.org.aip.common.log.enums.BusinessType;
 import cn.org.aip.common.mybatis.core.page.PageQuery;
 import cn.org.aip.common.mybatis.core.page.TableDataInfo;
+import cn.org.aip.common.tenant.helper.TenantHelper;
 import cn.org.aip.common.web.core.BaseController;
 import cn.org.aip.system.domain.bo.SysApplicationBo;
 import cn.org.aip.system.domain.vo.SysApplicationVo;
@@ -48,17 +49,6 @@ public class SysApplicationController extends BaseController {
     }
 
     /**
-     * 导出应用列表
-     */
-    @SaCheckPermission("system:application:export")
-    @Log(title = "应用管理", businessType = BusinessType.EXPORT)
-    @PostMapping("/export")
-    public void export(SysApplicationBo bo, HttpServletResponse response) {
-        List<SysApplicationVo> list = applicationService.queryList(bo);
-        ExcelUtil.exportExcel(list, "应用管理", SysApplicationVo.class, response);
-    }
-
-    /**
      * 获取应用详细信息
      *
      * @param id 主键
@@ -78,11 +68,8 @@ public class SysApplicationController extends BaseController {
     @RepeatSubmit()
     @PostMapping
     public R<SysApplicationVo> add(@Validated(AddGroup.class) @RequestBody SysApplicationBo bo) {
-        if (!applicationService.checkTenantIdUnique(bo)) {
-            return R.fail("新增应用'" + bo.getAppName() + "'失败，租户编号已存在");
-        }
         if (bo.getAppId() != null && !applicationService.checkAppIdUnique(bo)) {
-            return R.fail("新增应用'" + bo.getAppName() + "'失败，客户端ID已存在");
+            return R.fail(MessageUtils.message("application.appId.exists", bo.getAppName()));
         }
         return R.ok(applicationService.insertByBo(bo));
     }
@@ -95,11 +82,8 @@ public class SysApplicationController extends BaseController {
     @RepeatSubmit()
     @PutMapping
     public R<Void> edit(@Validated(EditGroup.class) @RequestBody SysApplicationBo bo) {
-        if (!applicationService.checkTenantIdUnique(bo)) {
-            return R.fail("修改应用'" + bo.getAppName() + "'失败，租户编号已存在");
-        }
         if (!applicationService.checkAppIdUnique(bo)) {
-            return R.fail("修改应用'" + bo.getAppName() + "'失败，客户端ID已存在");
+            return R.fail(MessageUtils.message("application.appId.edit.exists", bo.getAppName()));
         }
         return toAjax(applicationService.updateByBo(bo));
     }
@@ -137,6 +121,28 @@ public class SysApplicationController extends BaseController {
     public R<Void> remove(@NotEmpty(message = "主键不能为空")
                           @PathVariable Long[] ids) {
         return toAjax(applicationService.deleteWithValidByIds(List.of(ids), true));
+    }
+
+    /**
+     * 动态切换应用
+     *
+     * @param tenantId 应用ID
+     */
+    @SaCheckRole(TenantConstants.SUPER_ADMIN_ROLE_KEY)
+    @GetMapping("/dynamic/{tenantId}")
+    public R<Void> dynamicTenant(@NotBlank(message = "应用ID不能为空") @PathVariable String tenantId) {
+        TenantHelper.setDynamic(tenantId, true);
+        return R.ok();
+    }
+
+    /**
+     * 清除动态应用
+     */
+    @SaCheckRole(TenantConstants.SUPER_ADMIN_ROLE_KEY)
+    @GetMapping("/dynamic/clear")
+    public R<Void> dynamicClear() {
+        TenantHelper.clearDynamic();
+        return R.ok();
     }
 
 }

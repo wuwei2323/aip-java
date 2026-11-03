@@ -26,11 +26,11 @@ import cn.org.aip.common.satoken.utils.LoginHelper;
 import cn.org.aip.common.tenant.helper.TenantHelper;
 import cn.hutool.core.lang.tree.Tree;
 import cn.org.aip.common.redis.utils.CacheUtils;
+import cn.org.aip.system.domain.SysApplication;
 import cn.org.aip.system.domain.SysRole;
 import cn.org.aip.system.domain.SysRoleDataScope;
 import cn.org.aip.system.domain.SysRoleDept;
 import cn.org.aip.system.domain.SysRoleMenu;
-import cn.org.aip.system.domain.SysTenant;
 import cn.org.aip.system.domain.SysUserRole;
 import cn.org.aip.system.domain.bo.RoleAppConfigBo;
 import cn.org.aip.system.domain.bo.RoleDictValueBo;
@@ -39,11 +39,11 @@ import cn.org.aip.system.domain.bo.SysRoleBo;
 import cn.org.aip.system.domain.vo.RoleAppConfigVo;
 import cn.org.aip.system.domain.vo.SysMenuVo;
 import cn.org.aip.system.domain.vo.SysRoleVo;
+import cn.org.aip.system.mapper.SysApplicationMapper;
 import cn.org.aip.system.mapper.SysRoleDataScopeMapper;
 import cn.org.aip.system.mapper.SysRoleDeptMapper;
 import cn.org.aip.system.mapper.SysRoleMapper;
 import cn.org.aip.system.mapper.SysRoleMenuMapper;
-import cn.org.aip.system.mapper.SysTenantMapper;
 import cn.org.aip.system.mapper.SysUserRoleMapper;
 import cn.org.aip.system.service.ISysDeptService;
 import cn.org.aip.system.service.ISysMenuService;
@@ -69,7 +69,7 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
     private final SysUserRoleMapper userRoleMapper;
     private final SysRoleDeptMapper roleDeptMapper;
     private final SysRoleDataScopeMapper roleDataScopeMapper;
-    private final SysTenantMapper tenantMapper;
+    private final SysApplicationMapper applicationMapper;
     private final ISysMenuService menuService;
     private final ISysDeptService deptService;
     private final ISysRoleDictService roleDictService;
@@ -763,11 +763,12 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
         if (ObjectUtil.isNull(roleId)) {
             return new ArrayList<>();
         }
-        List<SysTenant> allTenants = TenantHelper.ignore(() -> tenantMapper.selectList(
-            new LambdaQueryWrapper<SysTenant>()
-                .select(SysTenant::getTenantId, SysTenant::getCompanyName, SysTenant::getPackageId)
-                .eq(SysTenant::getStatus, SystemConstants.NORMAL)
-                .orderByAsc(SysTenant::getId)
+        List<SysApplication> allApps = TenantHelper.ignore(() -> applicationMapper.selectList(
+            new LambdaQueryWrapper<SysApplication>()
+                .select(SysApplication::getAppId, SysApplication::getAppName)
+                .eq(SysApplication::getStatus, SystemConstants.NORMAL)
+                .orderByDesc(SysApplication::getCreateTime)
+                .orderByAsc(SysApplication::getId)
         ));
 
         List<SysRoleDataScope> existingDataScopes = roleDataScopeMapper.selectList(
@@ -781,11 +782,11 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
         List<Tree<Long>> fullMenuTree = menuService.buildMenuTreeSelect(allMenus);
 
         List<RoleAppConfigVo> result = new ArrayList<>();
-        for (SysTenant tenant : allTenants) {
-            String tenantId = tenant.getTenantId();
+        for (SysApplication app : allApps) {
+            String tenantId = app.getAppId();
             RoleAppConfigVo vo = new RoleAppConfigVo();
             vo.setTenantId(tenantId);
-            vo.setTenantName(tenant.getCompanyName());
+            vo.setTenantName(app.getAppName());
 
             SysRoleDataScope rds = dataScopeMap.get(tenantId);
             String dataScope = (rds != null && StringUtils.isNotBlank(rds.getDataScope()))
@@ -806,16 +807,8 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
             vo.setMenuIds(menuService.selectMenuListByRoleId(roleId, tenantId));
             vo.setDeptIds(deptService.selectDeptListByRoleId(roleId, tenantId));
 
-            // 当前应用下的可用菜单树
-            if (tenant.getPackageId() != null && tenant.getPackageId() > 0) {
-                List<Long> packageMenuIds = menuService.selectMenuListByPackageId(tenant.getPackageId());
-                List<SysMenuVo> packageMenus = allMenus.stream()
-                    .filter(m -> packageMenuIds.contains(m.getMenuId()))
-                    .toList();
-                vo.setMenuTree(menuService.buildMenuTreeSelect(packageMenus));
-            } else {
-                vo.setMenuTree(fullMenuTree);
-            }
+            // 当前应用下的可用菜单树 (统一使用完整菜单树，不再受旧套餐限制)
+            vo.setMenuTree(fullMenuTree);
             result.add(vo);
         }
         return result;

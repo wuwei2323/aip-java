@@ -56,7 +56,7 @@ public class SysLoginService {
     @Value("${user.password.lockTime}")
     private Integer lockTime;
 
-    private final ISysTenantService tenantService;
+    private final ISysApplicationService applicationService;
     private final ISysPermissionService permissionService;
     private final ISysSocialService sysSocialService;
     private final ISysRoleService roleService;
@@ -237,17 +237,13 @@ public class SysLoginService {
         if (TenantConstants.DEFAULT_TENANT_ID.equals(tenantId)) {
             return;
         }
-        SysTenantVo tenant = tenantService.queryByTenantId(tenantId);
-        if (ObjectUtil.isNull(tenant)) {
+        SysApplicationVo app = applicationService.queryByAppId(tenantId);
+        if (ObjectUtil.isNull(app)) {
             log.info("登录应用：{} 不存在.", tenantId);
             throw new TenantException("tenant.not.exists");
-        } else if (SystemConstants.DISABLE.equals(tenant.getStatus())) {
+        } else if (SystemConstants.DISABLE.equals(app.getStatus())) {
             log.info("登录应用：{} 已被停用.", tenantId);
             throw new TenantException("tenant.blocked");
-        } else if (ObjectUtil.isNotNull(tenant.getExpireTime())
-            && new Date().after(tenant.getExpireTime())) {
-            log.info("登录应用：{} 已超过有效期.", tenantId);
-            throw new TenantException("tenant.expired");
         }
     }
 

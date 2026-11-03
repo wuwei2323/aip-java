@@ -17,7 +17,6 @@ import cn.org.aip.system.domain.SysMenu;
 import cn.org.aip.system.domain.SysRole;
 import cn.org.aip.system.domain.SysRoleDataScope;
 import cn.org.aip.system.domain.SysRoleMenu;
-import cn.org.aip.system.domain.SysTenantPackage;
 import cn.org.aip.system.domain.bo.SysMenuBo;
 import cn.org.aip.system.domain.vo.MetaVo;
 import cn.org.aip.system.domain.vo.RouterVo;
@@ -26,7 +25,6 @@ import cn.org.aip.system.mapper.SysMenuMapper;
 import cn.org.aip.system.mapper.SysRoleDataScopeMapper;
 import cn.org.aip.system.mapper.SysRoleMapper;
 import cn.org.aip.system.mapper.SysRoleMenuMapper;
-import cn.org.aip.system.mapper.SysTenantPackageMapper;
 import cn.org.aip.system.service.ISysMenuService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,7 +43,6 @@ public class SysMenuServiceImpl implements ISysMenuService {
     private final SysMenuMapper baseMapper;
     private final SysRoleMapper roleMapper;
     private final SysRoleMenuMapper roleMenuMapper;
-    private final SysTenantPackageMapper tenantPackageMapper;
     private final SysRoleDataScopeMapper roleDataScopeMapper;
 
     /**
@@ -161,35 +158,6 @@ public class SysMenuServiceImpl implements ISysMenuService {
             }
         }
         return baseMapper.selectMenuListByRoleId(roleId, tenantId, strictly);
-    }
-
-    /**
-     * 根据应用套餐ID查询菜单树信息
-     *
-     * @param packageId 应用套餐ID
-     * @return 选中菜单列表
-     */
-    @Override
-    public List<Long> selectMenuListByPackageId(Long packageId) {
-        SysTenantPackage tenantPackage = tenantPackageMapper.selectById(packageId);
-        List<Long> menuIds = StringUtils.splitTo(tenantPackage.getMenuIds(), Convert::toLong);
-        if (CollUtil.isEmpty(menuIds)) {
-            return List.of();
-        }
-        List<Long> parentIds = null;
-        if (tenantPackage.getMenuCheckStrictly()) {
-            parentIds = baseMapper.selectObjs(new LambdaQueryWrapper<SysMenu>()
-                .select(SysMenu::getParentId)
-                .in(SysMenu::getMenuId, menuIds), x -> {
-                return Convert.toLong(x);
-            });
-        }
-        return baseMapper.selectObjs(new LambdaQueryWrapper<SysMenu>()
-            .select(SysMenu::getMenuId)
-            .in(SysMenu::getMenuId, menuIds)
-            .notIn(CollUtil.isNotEmpty(parentIds), SysMenu::getMenuId, parentIds), x -> {
-            return Convert.toLong(x);
-        });
     }
 
     /**

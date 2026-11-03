@@ -1,16 +1,13 @@
 package cn.org.aip.web.domain.vo;
 
-import cn.org.aip.system.domain.vo.SysTenantVo;
-import io.github.linpeilie.annotations.AutoMapper;
 import lombok.Data;
 
 /**
- * 应用列表
+ * 应用列表 (登录页与导航栏应用切换展示对象)
  *
  * @author Lion Li
  */
 @Data
-@AutoMapper(target = SysTenantVo.class)
 public class TenantListVo {
 
     /**
@@ -19,12 +16,12 @@ public class TenantListVo {
     private String tenantId;
 
     /**
-     * 企业名称
+     * 应用名称
      */
     private String companyName;
 
     /**
-     * 域名
+     * 访问地址/域名
      */
     private String domain;
 

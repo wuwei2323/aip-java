@@ -13,7 +13,7 @@ import java.io.Serializable;
 import java.util.Date;
 
 /**
- * 应用注册视图对象 sys_application
+ * 应用管理视图对象 sys_application
  *
  * @author Michelle.Chung
  */
@@ -32,9 +32,9 @@ public class SysApplicationVo implements Serializable {
     private Long id;
 
     /**
-     * OIDC客户端ID (client_id)
+     * 应用编码 / OIDC客户端ID (client_id)
      */
-    @ExcelProperty(value = "客户端ID")
+    @ExcelProperty(value = "应用编码")
     private String appId;
 
     /**
@@ -44,99 +44,39 @@ public class SysApplicationVo implements Serializable {
     private String appName;
 
     /**
-     * 应用/租户编号
+     * 应用分类
      */
-    @ExcelProperty(value = "应用编号")
-    private String tenantId;
+    @ExcelProperty(value = "应用分类")
+    private String category;
 
     /**
-     * 客户端认证方式
+     * 应用简介
      */
-    @ExcelProperty(value = "客户端认证方式")
-    private String clientAuthMethod;
+    @ExcelProperty(value = "应用简介")
+    private String description;
+
+    /**
+     * 应用图标
+     */
+    @ExcelProperty(value = "应用图标")
+    private String icon;
+
+    /**
+     * 访问地址 (入口地址)
+     */
+    @ExcelProperty(value = "访问地址")
+    private String entryUrl;
+
+    /**
+     * 登录重定向URI列表 (JSON数组)
+     */
+    @ExcelProperty(value = "登录重定向URI列表")
+    private String redirectUris;
 
     /**
      * 客户端密钥 (明文，仅在新增或重置密钥时返回一次)
      */
     private String clientSecret;
-
-    /**
-     * 登录重定向URI列表 (JSON数组)
-     */
-    @ExcelProperty(value = "重定向URI列表")
-    private String redirectUris;
-
-    /**
-     * 登出重定向URI列表 (JSON数组)
-     */
-    @ExcelProperty(value = "登出重定向URI列表")
-    private String postLogoutRedirectUris;
-
-    /**
-     * 授权范围
-     */
-    @ExcelProperty(value = "授权范围")
-    private String scopes;
-
-    /**
-     * 授权类型
-     */
-    @ExcelProperty(value = "授权类型")
-    private String grantTypes;
-
-    /**
-     * 访问令牌有效期 (分钟)
-     */
-    @ExcelProperty(value = "访问令牌有效期(分钟)")
-    private Integer accessTokenTtlMinutes;
-
-    /**
-     * 刷新令牌有效期 (天)
-     */
-    @ExcelProperty(value = "刷新令牌有效期(天)")
-    private Integer refreshTokenTtlDays;
-
-    /**
-     * 是否复用刷新令牌
-     */
-    private String reuseRefreshTokens;
-
-    /**
-     * 是否强制PKCE
-     */
-    private String requirePkce;
-
-    /**
-     * 应用域名
-     */
-    @ExcelProperty(value = "应用域名")
-    private String domain;
-
-    /**
-     * 应用入口地址
-     */
-    @ExcelProperty(value = "入口地址")
-    private String entryUrl;
-
-    /**
-     * 企微配置标识
-     */
-    private String wecomConfigKey;
-
-    /**
-     * 用户绑定策略
-     */
-    private String bindPolicy;
-
-    /**
-     * 应用图标
-     */
-    private String icon;
-
-    /**
-     * 显示顺序
-     */
-    private Integer orderNum;
 
     /**
      * 状态 (0正常 1停用)
@@ -146,9 +86,9 @@ public class SysApplicationVo implements Serializable {
     private String status;
 
     /**
-     * 创建时间
+     * 创建时间 (接入时间)
      */
-    @ExcelProperty(value = "创建时间")
+    @ExcelProperty(value = "接入时间")
     private Date createTime;
 
 }

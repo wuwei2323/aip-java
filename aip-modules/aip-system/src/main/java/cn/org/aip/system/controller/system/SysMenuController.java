@@ -107,27 +107,6 @@ public class SysMenuController extends BaseController {
     }
 
     /**
-     * 加载对应应用套餐菜单列表树
-     *
-     * @param packageId 应用套餐ID
-     */
-    @SaCheckRole(TenantConstants.SUPER_ADMIN_ROLE_KEY)
-    @SaCheckPermission("system:menu:query")
-    @GetMapping(value = "/tenantPackageMenuTreeselect/{packageId}")
-    public R<MenuTreeSelectVo> tenantPackageMenuTreeselect(@PathVariable("packageId") Long packageId) {
-        List<SysMenuVo> menus = menuService.selectMenuList(LoginHelper.getUserId());
-        List<Tree<Long>> list = menuService.buildMenuTreeSelect(menus);
-        // 删除应用管理菜单
-        list.removeIf(menu -> menu.getId() == 6L);
-        List<Long> ids = new ArrayList<>();
-        if (packageId > 0L) {
-            ids = menuService.selectMenuListByPackageId(packageId);
-        }
-        MenuTreeSelectVo selectVo = new MenuTreeSelectVo(ids, list);
-        return R.ok(selectVo);
-    }
-
-    /**
      * 新增菜单
      */
     @SaCheckRole(TenantConstants.SUPER_ADMIN_ROLE_KEY)

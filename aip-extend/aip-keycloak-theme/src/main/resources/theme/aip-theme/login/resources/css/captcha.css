@@ -96,7 +96,7 @@
   border-radius: 8px;
   overflow: hidden;
   background-color: #f2f3f5;
-  cursor: crosshair;
+  cursor: default;
 }
 
 .captcha-bg-img {
@@ -104,6 +104,7 @@
   height: 100%;
   display: block;
   object-fit: cover;
+  cursor: default;
 }
 
 .captcha-dots-container {

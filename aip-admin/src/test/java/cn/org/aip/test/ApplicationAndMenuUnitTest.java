@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 /**
- * 阶段一单测：应用注册、菜单关联应用、用户工号字段
+ * 阶段一单测：应用管理与菜单/用户改造
  */
 @SpringBootTest
 @DisplayName("阶段一单测：应用管理与菜单/用户改造")
@@ -38,43 +38,50 @@ public class ApplicationAndMenuUnitTest {
     private ISysUserService userService;
 
     @Tag("dev")
-    @DisplayName("测试应用新增、密钥AES加密与重置密钥")
+    @DisplayName("测试应用自动生成编码、新增、密钥AES加密与重置密钥")
     @Test
     @Transactional
     public void testApplicationCrudAndSecret() {
-        String testTenantId = "app_" + (System.currentTimeMillis() % 10000000);
         SysApplicationBo bo = new SysApplicationBo();
-        bo.setTenantId(testTenantId);
-        bo.setAppName("单元测试子应用");
-        bo.setClientAuthMethod("client_secret_basic");
+        bo.setAppName("单元测试应用");
+        bo.setCategory("系统");
+        bo.setDescription("单元测试应用简介");
+        bo.setIcon("https://example.com/icon.png");
+        bo.setEntryUrl("https://app.example.com");
+        bo.setRedirectUris("https://app.example.com/oauth/callback");
 
-        // 1. 新增应用
+        // 1. 新增应用 (未提供 appId，系统自动生成6位唯一编码)
         SysApplicationVo vo = applicationService.insertByBo(bo);
         Assertions.assertNotNull(vo);
         Assertions.assertNotNull(vo.getId());
-        Assertions.assertEquals(testTenantId, vo.getAppId()); // 默认 appId = tenantId
+        Assertions.assertNotNull(vo.getAppId());
+        Assertions.assertEquals(6, vo.getAppId().length());
         Assertions.assertNotNull(vo.getClientSecret()); // 明文返回一次
 
+        String generatedAppId = vo.getAppId();
         String originalSecret = vo.getClientSecret();
 
-        // 2. 查库验证
+        // 2. 查库验证与明文密钥解密获取
         SysApplicationVo queried = applicationService.queryById(vo.getId());
         Assertions.assertNotNull(queried);
-        Assertions.assertEquals("单元测试子应用", queried.getAppName());
+        Assertions.assertEquals("单元测试应用", queried.getAppName());
+        Assertions.assertEquals("系统", queried.getCategory());
+        Assertions.assertEquals("单元测试应用简介", queried.getDescription());
+        Assertions.assertEquals(generatedAppId, queried.getAppId());
+
+        String decryptedSecret = applicationService.getDecryptedSecret(generatedAppId);
+        Assertions.assertEquals(originalSecret, decryptedSecret);
 
         // 3. 重置密钥
         String newSecret = applicationService.resetSecret(vo.getId());
         Assertions.assertNotNull(newSecret);
         Assertions.assertNotEquals(originalSecret, newSecret);
+        Assertions.assertEquals(newSecret, applicationService.getDecryptedSecret(generatedAppId));
 
-        // 4. 客户端ID/租户唯一性校验
-        SysApplicationBo duplicateTenant = new SysApplicationBo();
-        duplicateTenant.setTenantId(testTenantId);
-        Assertions.assertFalse(applicationService.checkTenantIdUnique(duplicateTenant));
-
-        SysApplicationBo duplicateAppId = new SysApplicationBo();
-        duplicateAppId.setAppId(testTenantId);
-        Assertions.assertFalse(applicationService.checkAppIdUnique(duplicateAppId));
+        // 4. 应用编码唯一性校验
+        SysApplicationBo duplicateApp = new SysApplicationBo();
+        duplicateApp.setAppId(generatedAppId);
+        Assertions.assertFalse(applicationService.checkAppIdUnique(duplicateApp));
     }
 
     @Tag("dev")
@@ -83,12 +90,16 @@ public class ApplicationAndMenuUnitTest {
     @Transactional
     public void testPortalProtection() {
         // 先确保有 000000 门户应用记录
-        SysApplicationVo portal = applicationService.queryByTenantId(TenantConstants.DEFAULT_TENANT_ID);
+        SysApplicationVo portal = applicationService.queryByAppId(TenantConstants.DEFAULT_TENANT_ID);
         if (portal == null) {
             SysApplicationBo bo = new SysApplicationBo();
-            bo.setTenantId(TenantConstants.DEFAULT_TENANT_ID);
             bo.setAppId(TenantConstants.DEFAULT_TENANT_ID);
             bo.setAppName("集成平台门户");
+            bo.setCategory("系统");
+            bo.setDescription("集成平台门户系统");
+            bo.setIcon("https://example.com/portal.png");
+            bo.setEntryUrl("/");
+            bo.setRedirectUris("https://localhost:81/sso/callback");
             portal = applicationService.insertByBo(bo);
         }
 
@@ -116,7 +127,7 @@ public class ApplicationAndMenuUnitTest {
         menuC.setParentId(0L);
         menuC.setOrderNum(999);
         menuC.setPath("testAppEntry");
-        menuC.setComponent("system/tenant/index");
+        menuC.setComponent("system/application/index");
         menuC.setMenuType(SystemConstants.TYPE_MENU); // 'C'
         menuC.setAppId("app_test_123");
         menuC.setVisible("0");
