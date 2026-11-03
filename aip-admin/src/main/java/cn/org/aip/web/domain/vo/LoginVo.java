@@ -44,11 +44,25 @@ public class LoginVo {
     /**
      * 令牌权限
      */
+    @JsonProperty("scope")
     private String scope;
 
     /**
      * 用户 openid
      */
+    @JsonProperty("openid")
     private String openid;
+
+    /**
+     * 首次登录是否需要修改密码
+     */
+    @JsonProperty("password_reset_required")
+    private Boolean passwordResetRequired;
+
+    /**
+     * 首次改密临时凭据
+     */
+    @JsonProperty("reset_ticket")
+    private String resetTicket;
 
 }

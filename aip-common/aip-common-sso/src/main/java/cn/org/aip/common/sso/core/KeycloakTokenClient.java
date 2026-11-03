@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import cn.org.aip.common.core.exception.ServiceException;
+import cn.org.aip.common.core.utils.MessageUtils;
 import cn.org.aip.common.core.utils.StringUtils;
 import cn.org.aip.common.json.utils.JsonUtils;
 import cn.org.aip.common.sso.config.KeycloakProperties;
@@ -63,9 +64,11 @@ public class KeycloakTokenClient {
                 .body(String.class);
 
             return JsonUtils.parseObject(responseBody, OidcTokenResponse.class);
+        } catch (ServiceException se) {
+            throw se;
         } catch (Exception e) {
             log.error("Failed to exchange code at {}: {}", tokenUrl, e.getMessage(), e);
-            throw new ServiceException("Keycloak 授权码换取令牌失败: " + e.getMessage());
+            throw new ServiceException(MessageUtils.message("sso.token.client.exchange.error", e.getMessage()));
         }
     }
 
@@ -93,12 +96,37 @@ public class KeycloakTokenClient {
 
             OidcTokenResponse response = JsonUtils.parseObject(responseBody, OidcTokenResponse.class);
             if (response == null || StringUtils.isBlank(response.getAccessToken())) {
-                throw new ServiceException("获取 Keycloak 管理员令牌为空");
+                throw new ServiceException(MessageUtils.message("sso.token.client.admin.token.empty"));
             }
             return response.getAccessToken();
+        } catch (ServiceException se) {
+            throw se;
         } catch (Exception e) {
             log.error("Failed to get client_credentials token at {}: {}", tokenUrl, e.getMessage(), e);
-            throw new ServiceException("获取 Keycloak 管理员凭证失败: " + e.getMessage());
+            throw new ServiceException(MessageUtils.message("sso.token.client.admin.token.error", e.getMessage()));
+        }
+    }
+
+    /**
+     * 调用 Keycloak Admin API 删除指定会话 (彻底销毁 Keycloak 服务端用户会话)
+     *
+     * @param sessionId Keycloak 用户会话 ID (sid)
+     */
+    public void deleteSession(String sessionId) {
+        if (StringUtils.isBlank(sessionId)) {
+            return;
+        }
+        try {
+            String adminToken = getClientCredentialsToken(properties.getAdminClientId(), properties.getAdminClientSecret());
+            String adminUrl = properties.getAdminApiBaseUrl() + "/sessions/" + sessionId;
+            restClient.delete()
+                .uri(adminUrl)
+                .header("Authorization", "Bearer " + adminToken)
+                .retrieve()
+                .toBodilessEntity();
+            log.info("Successfully terminated Keycloak session {} via Admin API", sessionId);
+        } catch (Exception e) {
+            log.warn("Failed to terminate Keycloak session {} via Admin API: {}", sessionId, e.getMessage());
         }
     }
 

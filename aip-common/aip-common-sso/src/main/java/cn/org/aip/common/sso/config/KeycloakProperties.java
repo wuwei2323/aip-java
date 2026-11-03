@@ -33,6 +33,11 @@ public class KeycloakProperties {
     private String clientId = "000000";
 
     /**
+     * 默认平台终端客户端 ID (对应 sys_client 中的 client_id，用于会话超时与防重放策略)
+     */
+    private String defaultClientId = "e5cd7e4891bf95d1d19206ce24a7b32e";
+
+    /**
      * 门户应用 OIDC 客户端密钥
      */
     private String clientSecret;

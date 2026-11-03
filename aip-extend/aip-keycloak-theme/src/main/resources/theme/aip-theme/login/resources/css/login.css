@@ -23,25 +23,116 @@ body, html {
   position: absolute;
   top: 24px;
   right: 36px;
-  z-index: 10;
+  z-index: 100;
+  user-select: none;
 }
 
-.login-lang-select {
-  height: 32px;
-  padding: 0 12px;
+.el-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
   font-size: 13px;
+  font-weight: 500;
   color: #606266;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid #dcdfe6;
   border-radius: 6px;
-  outline: none;
   cursor: pointer;
-  backdrop-filter: blur(4px);
-  transition: all 0.2s;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.2s cubic-bezier(0.645, 0.045, 0.355, 1);
 }
 
-.login-lang-select:hover {
+.el-dropdown-trigger:hover {
+  color: #007cbf;
   border-color: #007cbf;
+  background-color: #ffffff;
+}
+
+.el-dropdown-icon {
+  color: inherit;
+  flex-shrink: 0;
+}
+
+.el-dropdown-label {
+  line-height: 1;
+}
+
+.el-dropdown-arrow {
+  color: #909399;
+  transition: transform 0.2s cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+
+.login-lang-container.is-open .el-dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.login-lang-container.is-open .el-dropdown-trigger {
+  border-color: #007cbf;
+  color: #007cbf;
+  background-color: #ffffff;
+}
+
+.el-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 125px;
+  padding: 4px 0;
+  background-color: #ffffff;
+  border: 1px solid #e4e7ed;
+  border-radius: 6px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08), 0 3px 6px -4px rgba(0, 0, 0, 0.12);
+  display: none;
+  animation: elDropdownFadeIn 0.15s ease-out;
+  z-index: 101;
+}
+
+.login-lang-container.is-open .el-dropdown-menu {
+  display: block;
+}
+
+@keyframes elDropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.el-dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  padding: 0 16px;
+  font-size: 13px;
+  color: #606266;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.el-dropdown-item:hover {
+  background-color: #f0f7ff;
+  color: #007cbf;
+}
+
+.el-dropdown-item.is-active {
+  color: #007cbf;
+  font-weight: 600;
+  background-color: #e6f1fc;
+}
+
+.el-dropdown-check {
+  color: #007cbf;
+  margin-left: 8px;
 }
 
 .login-page__bg {

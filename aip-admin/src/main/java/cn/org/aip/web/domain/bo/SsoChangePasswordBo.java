@@ -31,14 +31,14 @@ public class SsoChangePasswordBo implements Serializable {
     /**
      * 新密码
      */
-    @NotBlank(message = "新密码不能为空")
-    @Size(min = 6, max = 32, message = "新密码长度必须在 6 到 32 个字符之间")
+    @NotBlank(message = "{sso.new.password.not.blank}")
+    @Size(min = 6, max = 32, message = "{sso.new.password.length.valid}")
     private String newPassword;
 
     /**
      * 确认新密码
      */
-    @NotBlank(message = "确认密码不能为空")
+    @NotBlank(message = "{sso.confirm.password.not.blank}")
     private String confirmPassword;
 
 }

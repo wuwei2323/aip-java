@@ -19,7 +19,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * SSO 状态与会话存储组件（基于 Redis）
+ * SSO 会话与强制改密凭证存储组件（基于 Redis）
  *
  * @author Michelle.Chung
  */
@@ -27,67 +27,13 @@ import java.util.Set;
 @Component
 public class SsoStateStore {
 
-    private static final String STATE_PREFIX = GlobalConstants.GLOBAL_REDIS_KEY + "sso:state:";
-    private static final String TICKET_PREFIX = GlobalConstants.GLOBAL_REDIS_KEY + "sso:ticket:";
     private static final String SID_PREFIX = GlobalConstants.GLOBAL_REDIS_KEY + "sso:sid:";
     private static final String SUB_PREFIX = GlobalConstants.GLOBAL_REDIS_KEY + "sso:sub:";
     private static final String TOKEN_PREFIX = GlobalConstants.GLOBAL_REDIS_KEY + "sso:token:";
     private static final String PWD_RESET_PREFIX = GlobalConstants.GLOBAL_REDIS_KEY + "sso:pwd_reset:";
 
-    private static final Duration STATE_TTL = Duration.ofMinutes(5);
-    private static final Duration TICKET_TTL = Duration.ofSeconds(60);
     private static final Duration SESSION_TTL = Duration.ofDays(7);
     private static final Duration PWD_RESET_TTL = Duration.ofMinutes(10);
-
-    /**
-     * 保存授权发起状态 (state -> StateData)
-     */
-    public void saveState(String state, StateData data) {
-        if (StringUtils.isBlank(state) || data == null) {
-            return;
-        }
-        RedisUtils.setCacheObject(STATE_PREFIX + state, data, STATE_TTL);
-    }
-
-    /**
-     * 消费授权状态（单次有效，读取后立即删除）
-     */
-    public StateData consumeState(String state) {
-        if (StringUtils.isBlank(state)) {
-            return null;
-        }
-        String key = STATE_PREFIX + state;
-        StateData data = RedisUtils.getCacheObject(key);
-        if (data != null) {
-            RedisUtils.deleteObject(key);
-        }
-        return data;
-    }
-
-    /**
-     * 保存前端换票 Ticket (ticket -> TicketData)
-     */
-    public void saveTicket(String ticket, TicketData data) {
-        if (StringUtils.isBlank(ticket) || data == null) {
-            return;
-        }
-        RedisUtils.setCacheObject(TICKET_PREFIX + ticket, data, TICKET_TTL);
-    }
-
-    /**
-     * 消费换票 Ticket（单次有效，读取后立即删除）
-     */
-    public TicketData consumeTicket(String ticket) {
-        if (StringUtils.isBlank(ticket)) {
-            return null;
-        }
-        String key = TICKET_PREFIX + ticket;
-        TicketData data = RedisUtils.getCacheObject(key);
-        if (data != null) {
-            RedisUtils.deleteObject(key);
-        }
-        return data;
-    }
 
     /**
      * 保存首次强制改密 Ticket
@@ -205,47 +151,6 @@ public class SsoStateStore {
     }
 
     /**
-     * 授权中继状态数据
-     */
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class StateData implements Serializable {
-        @Serial
-        private static final long serialVersionUID = 1L;
-
-        private String tenantId;
-        private String oidcClientId;
-        private String redirect;
-        private String nonce;
-        private String codeVerifier;
-        private String callbackUrl;
-        private String frontendBaseUrl;
-        private Long createTime;
-    }
-
-    /**
-     * 前端换票数据
-     */
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class TicketData implements Serializable {
-        @Serial
-        private static final long serialVersionUID = 1L;
-
-        private String tokenValue;
-        private String loginId;
-        private String redirect;
-        private Long userId;
-        private String tenantId;
-        private String clientId;
-        private Long expireIn;
-    }
-
-    /**
      * 强制改密中继数据
      */
     @Data
@@ -259,7 +164,6 @@ public class SsoStateStore {
         private Long userId;
         private String username;
         private String tenantId;
-        private String redirect;
     }
 
 }

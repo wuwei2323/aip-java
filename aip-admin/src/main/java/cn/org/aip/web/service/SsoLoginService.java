@@ -2,24 +2,18 @@ package cn.org.aip.web.service;
 
 import cn.dev33.satoken.stp.StpUtil;
 import cn.dev33.satoken.stp.parameter.SaLoginParameter;
-import cn.hutool.core.codec.Base64;
 import cn.hutool.core.util.IdUtil;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.URLUtil;
-import cn.hutool.crypto.SecureUtil;
 import cn.hutool.crypto.digest.BCrypt;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.nimbusds.jwt.JWTClaimsSet;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import cn.org.aip.common.core.constant.Constants;
 import cn.org.aip.common.core.constant.SystemConstants;
-import cn.org.aip.common.core.constant.TenantConstants;
 import cn.org.aip.common.core.domain.model.LoginUser;
 import cn.org.aip.common.core.exception.ServiceException;
+import cn.org.aip.common.core.utils.MessageUtils;
 import cn.org.aip.common.core.utils.ServletUtils;
 import cn.org.aip.common.core.utils.StringUtils;
 import cn.org.aip.common.satoken.utils.LoginHelper;
@@ -34,21 +28,17 @@ import cn.org.aip.system.domain.vo.SysUserVo;
 import cn.org.aip.system.mapper.SysUserMapper;
 import cn.org.aip.system.service.ISysClientService;
 import cn.org.aip.web.domain.bo.SsoChangePasswordBo;
+import cn.org.aip.web.domain.bo.SsoExchangeBo;
 import cn.org.aip.web.domain.vo.LoginVo;
-import cn.org.aip.web.domain.vo.SsoAuthorizeVo;
 import cn.org.aip.web.domain.vo.SsoLogoutVo;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.stream.Collectors;
 
 /**
- * SSO 登录与 OIDC 流程业务处理
+ * SSO 登录与 OIDC 流程业务处理 (纯 SPA 前端路由落地 + 后端 JSON 换票)
  *
  * @author Michelle.Chung
  */
@@ -56,8 +46,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class SsoLoginService {
-
-    public static final String DEFAULT_PC_CLIENT_ID = "e5cd7e4891bf95d1d19206ce24a7b32e";
 
     private final KeycloakProperties keycloakProperties;
     private final KeycloakJwtVerifier keycloakJwtVerifier;
@@ -69,126 +57,47 @@ public class SsoLoginService {
     private final SysUserMapper userMapper;
 
     /**
-     * 生成 Keycloak 授权登录 URL (支持 PKCE)
-     * 固定使用门户 tenant 000000 的配置
+     * 前端凭 Keycloak 授权码 code 兑换平台 Sa-Token 令牌 (强制校验 PKCE 与 Nonce)
      *
-     * @param redirect 登录成功后的前端重定向相对路径
-     * @return 授权地址响应
+     * @param bo 换票请求对象
+     * @return 平台登录令牌结果或强制改密响应
      */
-    public SsoAuthorizeVo getAuthorizeUrl(String redirect) {
-        String safeRedirect = sanitizeRedirect(redirect);
+    public LoginVo exchangeCode(SsoExchangeBo bo) {
         PortalAppProvider.PortalAppConfig portalConfig = portalAppProvider.getPortalAppConfig();
 
-        // 1. 生成 PKCE code_verifier (32 字节随机数) 与 code_challenge (S256)
-        byte[] verifierBytes = RandomUtil.randomBytes(32);
-        String codeVerifier = Base64.encodeUrlSafe(verifierBytes);
-        byte[] digest = SecureUtil.sha256().digest(codeVerifier.getBytes(StandardCharsets.US_ASCII));
-        String codeChallenge = Base64.encodeUrlSafe(digest);
-
-        // 2. 生成 state 与 nonce
-        String state = IdUtil.fastSimpleUUID();
-        String nonce = IdUtil.fastSimpleUUID();
-
-        // 3. 构建回调地址与前端地址
-        String callbackUrl = resolveCallbackUrl();
-        String frontendBaseUrl = resolveFrontendBaseUrl();
-
-        // 存入 Redis (TTL 5分钟)
-        SsoStateStore.StateData stateData = SsoStateStore.StateData.builder()
-            .tenantId(portalConfig.getTenantId())
-            .oidcClientId(portalConfig.getAppId())
-            .redirect(safeRedirect)
-            .nonce(nonce)
-            .codeVerifier(codeVerifier)
-            .callbackUrl(callbackUrl)
-            .frontendBaseUrl(frontendBaseUrl)
-            .createTime(System.currentTimeMillis())
-            .build();
-        ssoStateStore.saveState(state, stateData);
-
-        // 4. 构建 Keycloak 授权 URL
-        String normalizedScopes = normalizeScopes(portalConfig.getScopes());
-        StringBuilder sb = new StringBuilder(keycloakProperties.getAuthUrl());
-        sb.append("?response_type=code")
-            .append("&client_id=").append(portalConfig.getAppId())
-            .append("&redirect_uri=").append(URLUtil.encode(callbackUrl))
-            .append("&scope=").append(URLUtil.encode(normalizedScopes))
-            .append("&state=").append(state)
-            .append("&nonce=").append(nonce)
-            .append("&code_challenge=").append(codeChallenge)
-            .append("&code_challenge_method=S256");
-
-        return new SsoAuthorizeVo(sb.toString());
-    }
-
-    /**
-     * 处理 Keycloak 回调
-     */
-    public void handleCallback(String code, String state, String error, String errorDescription, HttpServletResponse response) throws IOException {
-        // 1. 优先尝试消费 state 获取当时发起授权的前端与回调地址
-        SsoStateStore.StateData stateData = StringUtils.isNotBlank(state) ? ssoStateStore.consumeState(state) : null;
-        String frontendBase = stateData != null && StringUtils.isNotBlank(stateData.getFrontendBaseUrl())
-            ? stateData.getFrontendBaseUrl()
-            : resolveFrontendBaseUrl();
-
-        if (StringUtils.isNotBlank(error)) {
-            log.warn("SSO callback received error from Keycloak: {} - {}", error, errorDescription);
-            String target = frontendBase + "/login?error=" + URLUtil.encode(error);
-            if (StringUtils.isNotBlank(errorDescription)) {
-                target += "&error_description=" + URLUtil.encode(errorDescription);
-            }
-            response.sendRedirect(target);
-            return;
-        }
-
-        if (StringUtils.isBlank(code) || StringUtils.isBlank(state)) {
-            log.warn("SSO callback missing code or state");
-            response.sendRedirect(frontendBase + "/login?error=invalid_request");
-            return;
-        }
-
-        if (stateData == null) {
-            log.warn("SSO state expired or invalid: {}", state);
-            response.sendRedirect(frontendBase + "/login?error=state_expired");
-            return;
-        }
-
-        PortalAppProvider.PortalAppConfig portalConfig = portalAppProvider.getPortalAppConfig();
-        String callbackUrl = StringUtils.isNotBlank(stateData.getCallbackUrl())
-            ? stateData.getCallbackUrl()
-            : resolveCallbackUrl();
-
-        // 2. 用 code + code_verifier 向 Keycloak 兑换 Token
+        // 1. 直连 Keycloak 换取 Token (透传 code, codeVerifier, redirectUri)
         KeycloakTokenClient.OidcTokenResponse tokenResponse;
         try {
             tokenResponse = keycloakTokenClient.exchangeCode(
-                code,
-                stateData.getCodeVerifier(),
-                callbackUrl,
+                bo.getCode(),
+                bo.getCodeVerifier(),
+                bo.getRedirectUri(),
                 portalConfig.getAppId(),
                 portalConfig.getClientSecret()
             );
+        } catch (ServiceException se) {
+            throw se;
         } catch (Exception e) {
             log.error("Failed to exchange code at Keycloak: {}", e.getMessage(), e);
-            response.sendRedirect(frontendBase + "/login?error=token_exchange_failed");
-            return;
+            throw new ServiceException(MessageUtils.message("sso.code.exchange.error", e.getMessage()));
         }
 
-        // 3. 验签 ID Token
+        // 2. 验签 ID Token (防重放 Nonce 严格校验)
         JWTClaimsSet claims;
         try {
             claims = keycloakJwtVerifier.verifyToken(
                 tokenResponse.getIdToken(),
                 portalConfig.getAppId(),
-                stateData.getNonce()
+                bo.getNonce()
             );
+        } catch (ServiceException se) {
+            throw se;
         } catch (Exception e) {
             log.error("Failed to verify ID token: {}", e.getMessage(), e);
-            response.sendRedirect(frontendBase + "/login?error=token_verification_failed");
-            return;
+            throw new ServiceException(MessageUtils.message("sso.token.verify.error", e.getMessage()));
         }
 
-        // 4. 解析用户标识 (sub, employee_no, preferred_username, aip_user_id) 与会话标识 (sid)
+        // 3. 解析用户身份
         String sub = claims.getSubject();
         String preferredUsername = (String) claims.getClaim("preferred_username");
         String employeeNo = (String) claims.getClaim("employee_no");
@@ -198,90 +107,73 @@ public class SsoLoginService {
         SysUserVo user = findPlatformUser(sub, employeeNo, preferredUsername, aipUserId);
         if (user == null) {
             log.warn("Platform user not found for sub={}, employeeNo={}, username={}", sub, employeeNo, preferredUsername);
-            response.sendRedirect(frontendBase + "/login?error=user_not_found");
-            return;
+            throw new ServiceException(MessageUtils.message("sso.user.not.found"));
         }
 
         if (SystemConstants.DISABLE.equals(user.getStatus())) {
             log.warn("Platform user is blocked: {}", user.getUserName());
-            response.sendRedirect(frontendBase + "/login?error=user_blocked");
-            return;
+            throw new ServiceException(MessageUtils.message("sso.user.blocked"));
         }
 
-        // 5. 检查首次登录强制改密
+        String userTenantId = StringUtils.isNotBlank(user.getTenantId()) ? user.getTenantId() : portalConfig.getTenantId();
+
+        // 4. 首次登录强制改密判断 (平滑返回改密凭据，不签发会话，销毁刚才建立的 Keycloak Session 防止死锁免密直通)
         if (Boolean.TRUE.equals(user.getPasswordResetRequired())) {
+            if (StringUtils.isNotBlank(sid)) {
+                try {
+                    keycloakTokenClient.deleteSession(sid);
+                } catch (Exception e) {
+                    log.warn("Failed to terminate Keycloak session {} during mandatory password reset: {}", sid, e.getMessage());
+                }
+            }
             String resetTicket = IdUtil.fastSimpleUUID();
             ssoStateStore.savePasswordResetTicket(
                 resetTicket,
-                new SsoStateStore.PasswordResetData(user.getUserId(), user.getUserName(), stateData.getTenantId(), stateData.getRedirect())
+                new SsoStateStore.PasswordResetData(user.getUserId(), user.getUserName(), userTenantId)
             );
-            String resetPath = keycloakProperties.getFrontendChangePasswordPath();
-            String redirectUrl = frontendBase + resetPath + "?ticket=" + resetTicket
-                + "&redirect=" + URLUtil.encode(stateData.getRedirect());
-            response.sendRedirect(redirectUrl);
-            return;
+            LoginVo loginVo = new LoginVo();
+            loginVo.setPasswordResetRequired(true);
+            loginVo.setResetTicket(resetTicket);
+            return loginVo;
         }
 
-        // 6. 在 TenantHelper.dynamic 中构建 LoginUser 并签发 Sa-Token 会话
-        LoginUser loginUser = TenantHelper.dynamic(stateData.getTenantId(), () -> sysLoginService.buildLoginUser(user));
+        // 5. 构建 LoginUser 并签发 Sa-Token 会话
+        LoginUser loginUser = TenantHelper.dynamic(userTenantId, () -> sysLoginService.buildLoginUser(user));
         loginUser.setSsoSid(sid);
         loginUser.setSsoSub(sub);
         loginUser.setEmployeeNo(user.getEmployeeNo());
         loginUser.setKeycloakUserId(sub);
 
-        SysClientVo client = sysClientService.queryByClientId(DEFAULT_PC_CLIENT_ID);
-        SaLoginParameter model = new SaLoginParameter();
-        if (client != null) {
-            loginUser.setClientKey(client.getClientKey());
-            loginUser.setDeviceType(client.getDeviceType());
-            model.setDeviceType(client.getDeviceType());
-            model.setTimeout(client.getTimeout());
-            model.setActiveTimeout(client.getActiveTimeout());
-            model.setExtra(LoginHelper.CLIENT_KEY, client.getClientId());
-        } else {
-            loginUser.setDeviceType("pc");
-            model.setDeviceType("pc");
-            model.setExtra(LoginHelper.CLIENT_KEY, DEFAULT_PC_CLIENT_ID);
+        SysClientVo client = loginWithClient(loginUser);
+        String tokenValue = StpUtil.getTokenValue();
+        String effectiveClientId = client != null ? client.getClientId() : resolveClientId();
+
+        // 暂存 Keycloak id_token，供退出登录时向 Keycloak 传递 id_token_hint 完成免交互静默登出
+        try {
+            StpUtil.getTokenSession().set("sso_id_token", tokenResponse.getIdToken());
+        } catch (Exception ignored) {
         }
 
-        LoginHelper.login(loginUser, model);
-        String tokenValue = StpUtil.getTokenValue();
-
-        // 7. 绑定 SSO 会话映射
+        // 6. 绑定 SSO 会话映射 (用于 Back-Channel Logout 与焦点探活)
         ssoStateStore.bindSession(sid, sub, tokenValue);
 
-        // 8. 生成一次性换票 ticket (Redis 60秒) 并 302 到前端
-        String ticket = IdUtil.fastSimpleUUID();
-        ssoStateStore.saveTicket(ticket, SsoStateStore.TicketData.builder()
-            .tokenValue(tokenValue)
-            .loginId(loginUser.getLoginId())
-            .redirect(stateData.getRedirect())
-            .userId(user.getUserId())
-            .tenantId(stateData.getTenantId())
-            .clientId(client != null ? client.getClientId() : DEFAULT_PC_CLIENT_ID)
-            .expireIn(StpUtil.getTokenTimeout())
-            .build());
-
-        String callbackPage = keycloakProperties.getFrontendCallbackPath();
-        String targetUrl = frontendBase + callbackPage + "?ticket=" + ticket
-            + "&redirect=" + URLUtil.encode(stateData.getRedirect());
-        response.sendRedirect(targetUrl);
+        LoginVo loginVo = new LoginVo();
+        loginVo.setAccessToken(tokenValue);
+        loginVo.setExpireIn(StpUtil.getTokenTimeout());
+        loginVo.setClientId(effectiveClientId);
+        return loginVo;
     }
 
     /**
-     * 前端凭 ticket 兑换平台 Token (单次有效)
+     * 兼容旧版换票重载方法
      */
-    public LoginVo exchangeTicket(String ticket) {
-        SsoStateStore.TicketData ticketData = ssoStateStore.consumeTicket(ticket);
-        if (ticketData == null) {
-            throw new ServiceException("兑换凭据已失效或不存在");
-        }
-
-        LoginVo loginVo = new LoginVo();
-        loginVo.setAccessToken(ticketData.getTokenValue());
-        loginVo.setExpireIn(ticketData.getExpireIn());
-        loginVo.setClientId(ticketData.getClientId());
-        return loginVo;
+    public LoginVo exchangeCode(String code, String redirectUri) {
+        SsoExchangeBo bo = new SsoExchangeBo();
+        bo.setCode(code);
+        bo.setRedirectUri(redirectUri);
+        bo.setCodeVerifier("");
+        bo.setNonce("");
+        return exchangeCode(bo);
     }
 
     /**
@@ -305,29 +197,67 @@ public class SsoLoginService {
     }
 
     /**
-     * 平台登出并获取 Keycloak 登出 URL
+     * 平台登出并获取 Keycloak 登出 URL (服务端精准销毁会话 + 客户端免确认登出)
+     *
+     * @param redirectUri 登录注销后的前端回调页面地址 (支持前端动态指定)
+     * @return 登出结果
      */
-    public SsoLogoutVo logout() {
-        String tokenValue = null;
+    public SsoLogoutVo logout(String redirectUri) {
+        String sid = LoginHelper.getSsoSid();
+        String idToken = null;
         try {
-            tokenValue = StpUtil.getTokenValue();
+            idToken = (String) StpUtil.getTokenSession().get("sso_id_token");
         } catch (Exception ignored) {
         }
 
-        String sid = LoginHelper.getSsoSid();
+        // 1. 先清理本地该 sid 绑定的所有关联 Token 并清理映射
         if (StringUtils.isNotBlank(sid)) {
+            Collection<String> tokens = ssoStateStore.getTokensBySid(sid);
+            for (String token : tokens) {
+                try {
+                    StpUtil.logoutByTokenValue(token);
+                } catch (Exception ignored) {
+                }
+            }
             ssoStateStore.removeSid(sid);
+
+            // 2. 调用 Keycloak Admin API 销毁服务端会话 (容错隔离，绝不阻断本地登出主流程)
+            try {
+                keycloakTokenClient.deleteSession(sid);
+            } catch (Exception e) {
+                log.warn("Failed to delete Keycloak session {}: {}", sid, e.getMessage());
+            }
         }
 
+        // 3. 注销本地平台当前 Sa-Token 会话
         sysLoginService.logout();
 
-        PortalAppProvider.PortalAppConfig portalConfig = portalAppProvider.getPortalAppConfig();
-        String frontendBase = keycloakProperties.getFrontendBaseUrl();
-        String logoutUrl = keycloakProperties.getEndSessionUrl()
-            + "?post_logout_redirect_uri=" + URLUtil.encode(frontendBase + "/login")
-            + "&client_id=" + portalConfig.getAppId();
+        // 4. 安全过滤并校验 post_logout_redirect_uri (防范开放重定向攻击)
+        String targetRedirect = sanitizeLogoutRedirect(redirectUri);
 
-        return new SsoLogoutVo(logoutUrl);
+        // 5. 构建标准 OIDC RP-Initiated Logout URL (带 id_token_hint 清除浏览器端 Keycloak Cookie)
+        PortalAppProvider.PortalAppConfig portalConfig = portalAppProvider.getPortalAppConfig();
+        StringBuilder sb = new StringBuilder(keycloakProperties.getEndSessionUrl());
+        boolean hasParam = false;
+        if (StringUtils.isNotBlank(idToken)) {
+            sb.append("?id_token_hint=").append(URLUtil.encode(idToken));
+            hasParam = true;
+        } else {
+            sb.append("?client_id=").append(portalConfig.getAppId());
+            hasParam = true;
+        }
+        if (StringUtils.isNotBlank(targetRedirect)) {
+            sb.append(hasParam ? "&" : "?").append("post_logout_redirect_uri=").append(URLUtil.encode(targetRedirect));
+        }
+
+        return new SsoLogoutVo(sb.toString());
+    }
+
+    /**
+     * 默认无参登出
+     */
+    public SsoLogoutVo logout() {
+        return logout(null);
     }
 
     /**
@@ -335,7 +265,7 @@ public class SsoLoginService {
      */
     public void handleBackChannelLogout(String logoutToken) {
         if (StringUtils.isBlank(logoutToken)) {
-            throw new ServiceException("logout_token 不能为空");
+            throw new ServiceException(MessageUtils.message("sso.logout.token.not.blank"));
         }
 
         PortalAppProvider.PortalAppConfig portalConfig = portalAppProvider.getPortalAppConfig();
@@ -377,21 +307,21 @@ public class SsoLoginService {
     @Transactional(rollbackFor = Exception.class)
     public void changePassword(SsoChangePasswordBo bo) {
         if (!StringUtils.equals(bo.getNewPassword(), bo.getConfirmPassword())) {
-            throw new ServiceException("两次输入的密码不一致");
+            throw new ServiceException(MessageUtils.message("sso.password.confirm.mismatch"));
         }
 
         if (StringUtils.isNotBlank(bo.getTicket())) {
-            // 首次登录强制改密流程
+            // 首次登录强制改密流程 (sys_user 表全局排除租户隔离，直接读写)
             SsoStateStore.PasswordResetData data = ssoStateStore.getPasswordResetTicket(bo.getTicket());
             if (data == null) {
-                throw new ServiceException("改密凭据已失效，请重新登录");
+                throw new ServiceException(MessageUtils.message("sso.ticket.expired"));
             }
             SysUser user = userMapper.selectById(data.getUserId());
             if (user == null) {
-                throw new ServiceException("用户不存在");
+                throw new ServiceException(MessageUtils.message("sso.user.not.found"));
             }
             if (BCrypt.checkpw(bo.getNewPassword(), user.getPassword())) {
-                throw new ServiceException("新密码不能与原密码相同");
+                throw new ServiceException(MessageUtils.message("sso.password.same.as.old"));
             }
 
             SysUser update = new SysUser();
@@ -406,20 +336,20 @@ public class SsoLoginService {
             // 登录状态下普通修改密码
             Long userId = LoginHelper.getUserId();
             if (userId == null) {
-                throw new ServiceException("未登录或登录已失效");
+                throw new ServiceException(MessageUtils.message("sso.session.invalid"));
             }
             if (StringUtils.isBlank(bo.getOldPassword())) {
-                throw new ServiceException("旧密码不能为空");
+                throw new ServiceException(MessageUtils.message("sso.old.password.not.blank"));
             }
             SysUser user = userMapper.selectById(userId);
             if (user == null) {
-                throw new ServiceException("用户不存在");
+                throw new ServiceException(MessageUtils.message("sso.user.not.found"));
             }
             if (!BCrypt.checkpw(bo.getOldPassword(), user.getPassword())) {
-                throw new ServiceException("原密码错误");
+                throw new ServiceException(MessageUtils.message("sso.old.password.error"));
             }
             if (BCrypt.checkpw(bo.getNewPassword(), user.getPassword())) {
-                throw new ServiceException("新密码不能与原密码相同");
+                throw new ServiceException(MessageUtils.message("sso.password.same.as.old"));
             }
 
             SysUser update = new SysUser();
@@ -489,43 +419,69 @@ public class SsoLoginService {
         return user;
     }
 
-    public void handleCallback(String code, String state, HttpServletResponse response) throws IOException {
-        handleCallback(code, state, null, null, response);
-    }
-
-    private String normalizeScopes(String scopes) {
-        if (StringUtils.isBlank(scopes)) {
-            return "openid profile email";
-        }
-        return Arrays.stream(scopes.split("[,\\s]+"))
-            .filter(StringUtils::isNotBlank)
-            .collect(Collectors.joining(" "));
-    }
-
-    private String resolveFrontendBaseUrl() {
+    /**
+     * 解析当前调用的客户端标识（优先取请求头/请求参数中的 clientid，未提供时平滑回退至配置中的 defaultClientId）
+     */
+    private String resolveClientId() {
         try {
             HttpServletRequest request = ServletUtils.getRequest();
             if (request != null) {
-                String origin = request.getHeader("Origin");
-                if (StringUtils.isNotBlank(origin) && (origin.startsWith("http://") || origin.startsWith("https://"))) {
-                    return origin;
+                String headerCid = request.getHeader(LoginHelper.CLIENT_KEY);
+                if (StringUtils.isNotBlank(headerCid)) {
+                    return headerCid.trim();
                 }
-                String referer = request.getHeader("Referer");
-                if (StringUtils.isNotBlank(referer) && (referer.startsWith("http://") || referer.startsWith("https://"))) {
-                    URI uri = URI.create(referer);
-                    String portStr = uri.getPort() != -1 ? ":" + uri.getPort() : "";
-                    return uri.getScheme() + "://" + uri.getHost() + portStr;
+                String paramCid = ServletUtils.getParameter(LoginHelper.CLIENT_KEY);
+                if (StringUtils.isNotBlank(paramCid)) {
+                    return paramCid.trim();
                 }
             }
         } catch (Exception ignored) {
         }
-        return keycloakProperties.getFrontendBaseUrl();
+        return keycloakProperties.getDefaultClientId();
     }
 
-    private String resolveCallbackUrl() {
-        if (StringUtils.isNotBlank(keycloakProperties.getCallbackUrl())) {
-            return keycloakProperties.getCallbackUrl();
+    /**
+     * 根据客户端配置建立 Sa-Token 登录会话
+     */
+    private SysClientVo loginWithClient(LoginUser loginUser) {
+        String clientId = resolveClientId();
+        SysClientVo client = StringUtils.isNotBlank(clientId) ? sysClientService.queryByClientId(clientId) : null;
+        SaLoginParameter model = new SaLoginParameter();
+        if (client != null) {
+            loginUser.setClientKey(client.getClientKey());
+            loginUser.setDeviceType(client.getDeviceType());
+            model.setDeviceType(client.getDeviceType());
+            model.setTimeout(client.getTimeout());
+            model.setActiveTimeout(client.getActiveTimeout());
+            model.setExtra(LoginHelper.CLIENT_KEY, client.getClientId());
+        } else {
+            String fallbackId = StringUtils.isNotBlank(clientId) ? clientId : "default";
+            loginUser.setDeviceType("pc");
+            model.setDeviceType("pc");
+            model.setExtra(LoginHelper.CLIENT_KEY, fallbackId);
         }
+
+        LoginHelper.login(loginUser, model);
+        return client;
+    }
+
+    /**
+     * 安全过滤并校验 post_logout_redirect_uri (防范开放重定向攻击)
+     */
+    private String sanitizeLogoutRedirect(String redirectUri) {
+        if (StringUtils.isBlank(redirectUri)) {
+            return resolveFrontendLogoutUrl();
+        }
+        String frontendBase = normalizeBaseUrl(keycloakProperties.getFrontendBaseUrl());
+        // 允许相对路径
+        if (redirectUri.startsWith("/") && !redirectUri.startsWith("//")) {
+            return frontendBase + redirectUri;
+        }
+        // 允许配置的 frontendBaseUrl
+        if (redirectUri.startsWith(frontendBase + "/") || redirectUri.equals(frontendBase)) {
+            return redirectUri;
+        }
+        // 允许当前请求同源 Origin
         try {
             HttpServletRequest request = ServletUtils.getRequest();
             if (request != null) {
@@ -535,22 +491,47 @@ public class SsoLoginService {
                 }
                 if (StringUtils.isNotBlank(origin) && (origin.startsWith("http://") || origin.startsWith("https://"))) {
                     URI uri = URI.create(origin);
-                    String host = uri.getHost();
-                    if (StringUtils.isNotBlank(host) && !"localhost".equalsIgnoreCase(host) && !"127.0.0.1".equals(host)) {
-                        return uri.getScheme() + "://" + host + ":8080/auth/sso/callback";
+                    String portStr = uri.getPort() != -1 ? ":" + uri.getPort() : "";
+                    String originBase = uri.getScheme() + "://" + uri.getHost() + portStr;
+                    if (redirectUri.startsWith(originBase + "/") || redirectUri.equals(originBase)) {
+                        return redirectUri;
                     }
                 }
             }
         } catch (Exception ignored) {
         }
-        return keycloakProperties.getBackendBaseUrl() + "/auth/sso/callback";
+        log.warn("Invalid post_logout_redirect_uri: {}, fallback to default", redirectUri);
+        return resolveFrontendLogoutUrl();
     }
 
-    private String sanitizeRedirect(String redirect) {
-        if (StringUtils.isBlank(redirect) || !redirect.startsWith("/") || redirect.startsWith("//")) {
-            return "/";
+    /**
+     * 动态根据当前发起请求的前端 Origin / Referer 补齐登出回调地址
+     */
+    private String resolveFrontendLogoutUrl() {
+        try {
+            HttpServletRequest request = ServletUtils.getRequest();
+            if (request != null) {
+                String origin = request.getHeader("Origin");
+                if (StringUtils.isBlank(origin)) {
+                    origin = request.getHeader("Referer");
+                }
+                if (StringUtils.isNotBlank(origin) && (origin.startsWith("http://") || origin.startsWith("https://"))) {
+                    URI uri = URI.create(origin);
+                    String portStr = uri.getPort() != -1 ? ":" + uri.getPort() : "";
+                    return uri.getScheme() + "://" + uri.getHost() + portStr + "/login?logout=true";
+                }
+            }
+        } catch (Exception ignored) {
         }
-        return redirect;
+        return normalizeBaseUrl(keycloakProperties.getFrontendBaseUrl()) + "/login?logout=true";
+    }
+
+    private String normalizeBaseUrl(String url) {
+        if (StringUtils.isBlank(url)) {
+            return "";
+        }
+        String trimmed = url.trim();
+        return trimmed.endsWith("/") ? trimmed.substring(0, trimmed.length() - 1) : trimmed;
     }
 
 }

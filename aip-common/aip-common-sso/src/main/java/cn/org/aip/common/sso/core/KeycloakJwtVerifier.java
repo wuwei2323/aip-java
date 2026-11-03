@@ -13,6 +13,7 @@ import com.nimbusds.jwt.proc.ConfigurableJWTProcessor;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
 import lombok.extern.slf4j.Slf4j;
 import cn.org.aip.common.core.exception.ServiceException;
+import cn.org.aip.common.core.utils.MessageUtils;
 import cn.org.aip.common.core.utils.StringUtils;
 import cn.org.aip.common.sso.config.KeycloakProperties;
 
@@ -53,7 +54,7 @@ public class KeycloakJwtVerifier {
                 .build();
         } catch (MalformedURLException e) {
             log.error("Invalid Keycloak JWKS URL: {}", jwksUrl, e);
-            throw new ServiceException("Keycloak JWKS URL 配置错误");
+            throw new ServiceException(MessageUtils.message("sso.jwt.jwks.url.error"));
         }
     }
 
@@ -67,7 +68,7 @@ public class KeycloakJwtVerifier {
      */
     public JWTClaimsSet verifyToken(String tokenString, String expectedAud, String expectedNonce) {
         if (StringUtils.isBlank(tokenString)) {
-            throw new ServiceException("Token 不能为空");
+            throw new ServiceException(MessageUtils.message("sso.jwt.token.not.blank"));
         }
 
         try {
@@ -82,9 +83,12 @@ public class KeycloakJwtVerifier {
             // 1. 校验发行者 (iss)
             String issuer = claims.getIssuer();
             String expectedIssuer = properties.getIssuer();
-            if (!StringUtils.equals(issuer, expectedIssuer)) {
+            String expectedRealmSuffix = "/realms/" + properties.getRealm();
+            boolean issuerMatches = StringUtils.equals(issuer, expectedIssuer)
+                || (StringUtils.isNotBlank(issuer) && issuer.endsWith(expectedRealmSuffix));
+            if (!issuerMatches) {
                 log.warn("JWT issuer mismatch: expected={}, actual={}", expectedIssuer, issuer);
-                throw new ServiceException("Token 发行方不匹配");
+                throw new ServiceException(MessageUtils.message("sso.jwt.issuer.mismatch"));
             }
 
             // 2. 校验过期时间 (exp) 允许时钟偏差
@@ -93,14 +97,14 @@ public class KeycloakJwtVerifier {
             long now = System.currentTimeMillis();
             if (expirationTime != null && (now - clockSkew) > expirationTime.getTime()) {
                 log.warn("JWT expired: exp={}, now={}", expirationTime, new Date(now));
-                throw new ServiceException("Token 已过期");
+                throw new ServiceException(MessageUtils.message("sso.jwt.token.expired"));
             }
 
             // 3. 校验生效时间 (nbf)
             Date notBeforeTime = claims.getNotBeforeTime();
             if (notBeforeTime != null && (now + clockSkew) < notBeforeTime.getTime()) {
                 log.warn("JWT not yet valid: nbf={}, now={}", notBeforeTime, new Date(now));
-                throw new ServiceException("Token 尚未生效");
+                throw new ServiceException(MessageUtils.message("sso.jwt.token.not.active"));
             }
 
             // 4. 校验受众 (aud) 或 azp
@@ -111,7 +115,7 @@ public class KeycloakJwtVerifier {
                 boolean azpMatch = StringUtils.equals(azp, expectedAud);
                 if (!audMatch && !azpMatch) {
                     log.warn("JWT audience mismatch: expectedAud={}, actualAud={}, azp={}", expectedAud, audience, azp);
-                    throw new ServiceException("Token 受众不匹配");
+                    throw new ServiceException(MessageUtils.message("sso.jwt.audience.mismatch"));
                 }
             }
 
@@ -120,7 +124,7 @@ public class KeycloakJwtVerifier {
                 String nonce = (String) claims.getClaim("nonce");
                 if (!StringUtils.equals(nonce, expectedNonce)) {
                     log.warn("JWT nonce mismatch: expected={}, actual={}", expectedNonce, nonce);
-                    throw new ServiceException("Token nonce 校验失败");
+                    throw new ServiceException(MessageUtils.message("sso.jwt.nonce.mismatch"));
                 }
             }
 
@@ -129,7 +133,7 @@ public class KeycloakJwtVerifier {
             throw se;
         } catch (Exception e) {
             log.error("JWT verification failed: {}", e.getMessage(), e);
-            throw new ServiceException("Token 验签失败: " + e.getMessage());
+            throw new ServiceException(MessageUtils.message("sso.jwt.verify.error", e.getMessage()));
         }
     }
 
@@ -142,7 +146,7 @@ public class KeycloakJwtVerifier {
      */
     public JWTClaimsSet verifyLogoutToken(String logoutTokenString, String expectedAud) {
         if (StringUtils.isBlank(logoutTokenString)) {
-            throw new ServiceException("Logout Token 不能为空");
+            throw new ServiceException(MessageUtils.message("sso.jwt.logout.token.not.blank"));
         }
 
         try {
@@ -158,38 +162,38 @@ public class KeycloakJwtVerifier {
             // 1. 校验发行者
             String issuer = claims.getIssuer();
             if (!StringUtils.equals(issuer, properties.getIssuer())) {
-                throw new ServiceException("Logout Token 发行方不匹配");
+                throw new ServiceException(MessageUtils.message("sso.jwt.logout.issuer.mismatch"));
             }
 
             // 2. 校验受众
             if (StringUtils.isNotBlank(expectedAud)) {
                 List<String> audience = claims.getAudience();
                 if (audience == null || !audience.contains(expectedAud)) {
-                    throw new ServiceException("Logout Token 受众不匹配");
+                    throw new ServiceException(MessageUtils.message("sso.jwt.logout.audience.mismatch"));
                 }
             }
 
             // 3. 规范要求：logout_token 严禁包含 nonce
             if (claims.getClaim("nonce") != null) {
-                throw new ServiceException("Logout Token 违背规范包含 nonce");
+                throw new ServiceException(MessageUtils.message("sso.jwt.logout.contains.nonce"));
             }
 
             // 4. 规范要求：必须包含 events 且含有 http://schemas.openid.net/event/backchannel-logout
             Object eventsObj = claims.getClaim("events");
             if (!(eventsObj instanceof Map)) {
-                throw new ServiceException("Logout Token 缺少 events 声明");
+                throw new ServiceException(MessageUtils.message("sso.jwt.logout.missing.events"));
             }
             @SuppressWarnings("unchecked")
             Map<String, Object> events = (Map<String, Object>) eventsObj;
             if (!events.containsKey(BACKCHANNEL_LOGOUT_EVENT)) {
-                throw new ServiceException("Logout Token events 缺少 backchannel-logout 声明");
+                throw new ServiceException(MessageUtils.message("sso.jwt.logout.missing.backchannel.event"));
             }
 
             // 5. 规范要求：必须包含 sub 或 sid (至少一个)
             String sub = claims.getSubject();
             String sid = (String) claims.getClaim("sid");
             if (StringUtils.isBlank(sub) && StringUtils.isBlank(sid)) {
-                throw new ServiceException("Logout Token 缺少 sub 与 sid 标识");
+                throw new ServiceException(MessageUtils.message("sso.jwt.logout.missing.sub.or.sid"));
             }
 
             // 6. 校验 iat (防止重放历史旧登出)
@@ -197,7 +201,7 @@ public class KeycloakJwtVerifier {
             long clockSkew = properties.getClockSkewSeconds() * 1000;
             long now = System.currentTimeMillis();
             if (issueTime != null && (issueTime.getTime() - clockSkew) > now) {
-                throw new ServiceException("Logout Token 签发时间异常");
+                throw new ServiceException(MessageUtils.message("sso.jwt.logout.iat.invalid"));
             }
 
             return claims;
@@ -205,7 +209,7 @@ public class KeycloakJwtVerifier {
             throw se;
         } catch (Exception e) {
             log.error("Logout Token verification failed: {}", e.getMessage(), e);
-            throw new ServiceException("Logout Token 验签失败: " + e.getMessage());
+            throw new ServiceException(MessageUtils.message("sso.jwt.logout.verify.error", e.getMessage()));
         }
     }
 

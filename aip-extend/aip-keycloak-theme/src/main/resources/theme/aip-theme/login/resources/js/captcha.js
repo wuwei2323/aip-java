@@ -7,26 +7,53 @@ let clickedPoints = [];
 
 /**
  * 智能解析平台后端服务基地址 (aip-admin)
+ * 严格只根据回调地址 (redirect_uri / client_data.ru) 的协议、地址与端口动态定位，严禁硬编码
  */
 function getBackendBaseUrl() {
-  // 1. 优先从当前页面地址栏中的 redirect_uri 提取 (即平台后端回调地址)
+  // 1. 尝试从当前页面 URL 参数中获取 redirect_uri 或 client_data
   const urlParams = new URLSearchParams(window.location.search);
-  const redirectUri = urlParams.get('redirect_uri');
-  if (redirectUri) {
-    try {
-      const u = new URL(redirectUri);
-      return u.origin;
-    } catch (e) {
-      console.warn('解析 redirect_uri 异常:', e);
+  let callbackUrl = urlParams.get('redirect_uri');
+  let clientDataStr = urlParams.get('client_data');
+
+  // 2. 若页面 URL 中无明文参数，尝试从登录表单 action URL 中提取
+  if (!callbackUrl && !clientDataStr) {
+    const form = document.getElementById('kc-form-login');
+    if (form && form.action) {
+      try {
+        const actionUrl = new URL(form.action, window.location.href);
+        callbackUrl = actionUrl.searchParams.get('redirect_uri');
+        clientDataStr = actionUrl.searchParams.get('client_data');
+      } catch (e) {
+        console.warn('解析 form action 失败:', e);
+      }
     }
   }
 
-  // 2. 局域网访问默认直连后端 IP
-  if (window.location.hostname === '192.168.43.100') {
-    return 'http://192.168.3.82:8080';
+  // 3. 优先解析 client_data 中的 ru (即原始 redirect_uri 回调地址)
+  if (clientDataStr) {
+    try {
+      let b = clientDataStr.replace(/-/g, '+').replace(/_/g, '/');
+      while (b.length % 4) b += '=';
+      const parsed = JSON.parse(atob(b));
+      if (parsed && parsed.ru) {
+        return new URL(parsed.ru).origin;
+      }
+    } catch (e) {
+      console.warn('解码 client_data 失败:', e);
+    }
   }
 
-  return window.location.origin;
+  // 4. 解析明文 redirect_uri 回调地址的 origin (协议 + 域名/IP + 端口)
+  if (callbackUrl) {
+    try {
+      return new URL(callbackUrl).origin;
+    } catch (e) {
+      console.warn('解析 redirect_uri 失败:', e);
+    }
+  }
+
+  console.error('未在认证上下文或登录表单中找到有效回调地址(redirect_uri/client_data)，无法定位后端服务基地址');
+  return '';
 }
 
 /**

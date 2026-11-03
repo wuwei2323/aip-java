@@ -19,8 +19,8 @@ import cn.org.aip.common.sso.config.KeycloakProperties;
 import cn.org.aip.common.sso.core.KeycloakJwtVerifier;
 import cn.org.aip.common.sso.core.SsoStateStore;
 import cn.org.aip.web.controller.AuthController;
+import cn.org.aip.web.domain.bo.SsoExchangeBo;
 import cn.org.aip.web.domain.vo.LoginVo;
-import cn.org.aip.web.domain.vo.SsoAuthorizeVo;
 import cn.org.aip.web.service.SsoLoginService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
@@ -181,48 +181,27 @@ public class SsoBackendUnitTest {
     }
 
     @Tag("dev")
-    @DisplayName("测试 SsoStateStore 单次有效性、过期与会话映射绑定")
+    @DisplayName("测试 SsoStateStore 改密凭据与会话映射绑定")
     @Test
     public void testSsoStateStoreLifecycle() {
-        String state = "test_state_" + System.currentTimeMillis();
-        SsoStateStore.StateData stateData = SsoStateStore.StateData.builder()
-            .tenantId("000000")
-            .oidcClientId("000000")
-            .redirect("/system/menu")
-            .nonce("nonce-123")
-            .codeVerifier("verifier-abc")
-            .createTime(System.currentTimeMillis())
-            .build();
-
-        // 1. 保存 state 并消费
-        ssoStateStore.saveState(state, stateData);
-        SsoStateStore.StateData consumed = ssoStateStore.consumeState(state);
-        Assertions.assertNotNull(consumed);
-        Assertions.assertEquals("/system/menu", consumed.getRedirect());
-
-        // 单次有效：再次读取应为空
-        Assertions.assertNull(ssoStateStore.consumeState(state));
-
-        // 2. Ticket 换票数据单次有效测试
-        String ticket = "test_ticket_" + System.currentTimeMillis();
-        SsoStateStore.TicketData ticketData = SsoStateStore.TicketData.builder()
-            .tokenValue("token-val-123")
-            .loginId("sys_user:1")
+        // 1. 改密凭据保存、读取与删除测试
+        String ticket = "test_pwd_ticket_" + System.currentTimeMillis();
+        SsoStateStore.PasswordResetData resetData = SsoStateStore.PasswordResetData.builder()
             .userId(1L)
+            .username("admin")
             .tenantId("000000")
-            .clientId("e5cd7e4891bf95d1d19206ce24a7b32e")
-            .expireIn(1800L)
             .build();
 
-        ssoStateStore.saveTicket(ticket, ticketData);
-        SsoStateStore.TicketData consumedTicket = ssoStateStore.consumeTicket(ticket);
-        Assertions.assertNotNull(consumedTicket);
-        Assertions.assertEquals("token-val-123", consumedTicket.getTokenValue());
+        ssoStateStore.savePasswordResetTicket(ticket, resetData);
+        SsoStateStore.PasswordResetData loaded = ssoStateStore.getPasswordResetTicket(ticket);
+        Assertions.assertNotNull(loaded);
+        Assertions.assertEquals(1L, loaded.getUserId());
+        Assertions.assertEquals("admin", loaded.getUsername());
 
-        // 再次兑换为空
-        Assertions.assertNull(ssoStateStore.consumeTicket(ticket));
+        ssoStateStore.removePasswordResetTicket(ticket);
+        Assertions.assertNull(ssoStateStore.getPasswordResetTicket(ticket));
 
-        // 3. Session 绑定与反查测试
+        // 2. Session 绑定与反查测试
         String sid = "sid-test-" + System.currentTimeMillis();
         String sub = "sub-test-" + System.currentTimeMillis();
         String token = "satoken-val-" + System.currentTimeMillis();
@@ -235,24 +214,6 @@ public class SsoBackendUnitTest {
         // 清理 sid
         ssoStateStore.removeSid(sid);
         Assertions.assertFalse(ssoStateStore.hasSidMapping(token));
-    }
-
-    @Tag("dev")
-    @DisplayName("测试 SSO 发起登录 URL 生成与 PKCE 参数")
-    @Test
-    public void testAuthorizeUrlGeneration() {
-        SsoAuthorizeVo vo = ssoLoginService.getAuthorizeUrl("/system/user?id=1");
-        Assertions.assertNotNull(vo);
-        Assertions.assertNotNull(vo.getAuthorizeUrl());
-
-        String url = vo.getAuthorizeUrl();
-        // 校验包含 OIDC 必要参数
-        Assertions.assertTrue(url.contains("response_type=code"));
-        Assertions.assertTrue(url.contains("client_id=" + keycloakProperties.getClientId()));
-        Assertions.assertTrue(url.contains("code_challenge="));
-        Assertions.assertTrue(url.contains("code_challenge_method=S256"));
-        Assertions.assertTrue(url.contains("state="));
-        Assertions.assertTrue(url.contains("nonce="));
     }
 
     @Tag("dev")
