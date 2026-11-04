@@ -34,6 +34,11 @@ public class SysApplication extends BaseEntity {
     private String appId;
 
     /**
+     * 租户编号 (默认为集成平台 000000)
+     */
+    private String tenantId;
+
+    /**
      * 应用名称
      */
     private String appName;

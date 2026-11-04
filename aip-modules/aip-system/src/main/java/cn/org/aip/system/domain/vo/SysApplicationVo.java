@@ -4,6 +4,8 @@ import cn.idev.excel.annotation.ExcelIgnoreUnannotated;
 import cn.idev.excel.annotation.ExcelProperty;
 import cn.org.aip.common.excel.annotation.ExcelDictFormat;
 import cn.org.aip.common.excel.convert.ExcelDictConvert;
+import cn.org.aip.common.translation.annotation.Translation;
+import cn.org.aip.common.translation.constant.TransConstant;
 import cn.org.aip.system.domain.SysApplication;
 import io.github.linpeilie.annotations.AutoMapper;
 import lombok.Data;
@@ -38,6 +40,12 @@ public class SysApplicationVo implements Serializable {
     private String appId;
 
     /**
+     * 租户编号 (默认为集成平台 000000)
+     */
+    @ExcelProperty(value = "租户编号")
+    private String tenantId;
+
+    /**
      * 应用名称
      */
     @ExcelProperty(value = "应用名称")
@@ -60,6 +68,12 @@ public class SysApplicationVo implements Serializable {
      */
     @ExcelProperty(value = "应用图标")
     private String icon;
+
+    /**
+     * 应用图标Url
+     */
+    @Translation(type = TransConstant.OSS_ID_TO_URL, mapper = "icon")
+    private String iconUrl;
 
     /**
      * 访问地址 (入口地址)

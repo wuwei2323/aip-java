@@ -2,9 +2,12 @@ package cn.org.aip.common.web.config;
 
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
+import cn.org.aip.common.core.config.properties.FileProperties;
 import cn.org.aip.common.core.utils.ObjectUtils;
+import cn.org.aip.common.core.utils.StringUtils;
 import cn.org.aip.common.web.handler.GlobalExceptionHandler;
 import cn.org.aip.common.web.interceptor.PlusWebInvokeTimeInterceptor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.format.FormatterRegistry;
@@ -22,8 +25,11 @@ import java.util.Date;
  *
  * @author Lion Li
  */
+@RequiredArgsConstructor
 @AutoConfiguration
 public class ResourcesConfig implements WebMvcConfigurer {
+
+    private final FileProperties fileProperties;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -45,6 +51,15 @@ public class ResourcesConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // 本地文件上传路径映射
+        String path = fileProperties.getPath();
+        if (StringUtils.isNotBlank(path)) {
+            if (!path.endsWith("/") && !path.endsWith("\\")) {
+                path = path + "/";
+            }
+            registry.addResourceHandler(fileProperties.getPrefix() + "/**")
+                    .addResourceLocations("file:" + path);
+        }
     }
 
     /**

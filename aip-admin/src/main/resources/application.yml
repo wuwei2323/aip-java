@@ -137,6 +137,12 @@ security:
     - /warm-flow-ui/config
     - /auth/sso/**
     - /internal/keycloak/**
+    - /static/**
+
+# 本地文件存储与静态资源映射
+file:
+  # 本地文件存储物理根目录 (支持绝对路径、相对路径或环境变量 FILE_PATH)
+  path: ${FILE_PATH:../static}
 
 # 本地传统登录开关
 auth:
@@ -157,8 +163,8 @@ keycloak:
 
 # 多应用配置
 tenant:
-  # 是否开启
-  enable: true
+  # 是否开启 (集成平台不是严格意义上的多租户应用)
+  enable: false
   # 排除表
   excludes:
     - sys_user

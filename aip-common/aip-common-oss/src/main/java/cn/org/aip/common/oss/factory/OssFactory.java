@@ -5,7 +5,9 @@ import cn.org.aip.common.core.constant.CacheNames;
 import cn.org.aip.common.core.utils.StringUtils;
 import cn.org.aip.common.json.utils.JsonUtils;
 import cn.org.aip.common.oss.constant.OssConstant;
+import cn.org.aip.common.oss.core.LocalOssClient;
 import cn.org.aip.common.oss.core.OssClient;
+import cn.org.aip.common.oss.core.S3OssClient;
 import cn.org.aip.common.oss.exception.OssException;
 import cn.org.aip.common.oss.properties.OssProperties;
 import cn.org.aip.common.redis.utils.CacheUtils;
@@ -18,7 +20,7 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * 文件上传Factory
  *
- * @author Lion Li
+ * @author Lion Li / AIP
  */
 @Slf4j
 public class OssFactory {
@@ -33,7 +35,13 @@ public class OssFactory {
         // 获取redis 默认类型
         String configKey = RedisUtils.getCacheObject(OssConstant.DEFAULT_CONFIG_KEY);
         if (StringUtils.isEmpty(configKey)) {
-            throw new OssException("文件存储服务类型无法找到!");
+            // 尝试检查是否有 local 配置兜底
+            String localJson = CacheUtils.get(CacheNames.SYS_OSS_CONFIG, "local");
+            if (localJson != null) {
+                configKey = "local";
+            } else {
+                throw new OssException("文件存储服务类型无法找到!");
+            }
         }
         return instance(configKey);
     }
@@ -44,6 +52,12 @@ public class OssFactory {
     public static OssClient instance(String configKey) {
         String json = CacheUtils.get(CacheNames.SYS_OSS_CONFIG, configKey);
         if (json == null) {
+            if ("local".equalsIgnoreCase(configKey)) {
+                OssProperties defaultLocalProps = new OssProperties();
+                defaultLocalProps.setEndpoint("local");
+                defaultLocalProps.setPrefix("upload");
+                return new LocalOssClient(configKey, defaultLocalProps);
+            }
             throw new OssException("系统异常, '" + configKey + "'配置信息不存在!");
         }
         OssProperties properties = JsonUtils.parseObject(json, OssProperties.class);
@@ -59,7 +73,7 @@ public class OssFactory {
             try {
                 client = CLIENT_CACHE.get(key);
                 if (client == null || !client.checkPropertiesSame(properties)) {
-                    CLIENT_CACHE.put(key, new OssClient(configKey, properties));
+                    CLIENT_CACHE.put(key, createClient(configKey, properties));
                     log.info("创建OSS实例 key => {}", configKey);
                     return CLIENT_CACHE.get(key);
                 }
@@ -68,6 +82,16 @@ public class OssFactory {
             }
         }
         return client;
+    }
+
+    /**
+     * 根据配置创建对应的存储客户端
+     */
+    private static OssClient createClient(String configKey, OssProperties properties) {
+        if ("local".equalsIgnoreCase(configKey) || "local".equalsIgnoreCase(properties.getEndpoint())) {
+            return new LocalOssClient(configKey, properties);
+        }
+        return new S3OssClient(configKey, properties);
     }
 
 }

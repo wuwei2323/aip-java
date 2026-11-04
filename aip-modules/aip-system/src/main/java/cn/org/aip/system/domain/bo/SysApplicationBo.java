@@ -34,6 +34,12 @@ public class SysApplicationBo extends BaseEntity {
     private String appId;
 
     /**
+     * 租户编号 (默认为集成平台 000000)
+     */
+    @Size(max = 64, message = "租户编号长度不能超过{max}个字符")
+    private String tenantId;
+
+    /**
      * 应用名称
      */
     @NotBlank(message = "应用名称不能为空", groups = { AddGroup.class, EditGroup.class })

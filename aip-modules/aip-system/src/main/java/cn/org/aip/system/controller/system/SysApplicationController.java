@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import cn.org.aip.common.core.constant.TenantConstants;
 import cn.org.aip.common.core.domain.R;
 import cn.org.aip.common.core.utils.MessageUtils;
+import cn.org.aip.common.core.utils.StringUtils;
 import cn.org.aip.common.core.validate.AddGroup;
 import cn.org.aip.common.core.validate.EditGroup;
 import cn.org.aip.common.idempotent.annotation.RepeatSubmit;
@@ -68,7 +69,7 @@ public class SysApplicationController extends BaseController {
     @RepeatSubmit()
     @PostMapping
     public R<SysApplicationVo> add(@Validated(AddGroup.class) @RequestBody SysApplicationBo bo) {
-        if (bo.getAppId() != null && !applicationService.checkAppIdUnique(bo)) {
+        if (StringUtils.isNotBlank(bo.getAppId()) && !applicationService.checkAppIdUnique(bo)) {
             return R.fail(MessageUtils.message("application.appId.exists", bo.getAppName()));
         }
         return R.ok(applicationService.insertByBo(bo));

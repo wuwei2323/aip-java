@@ -4,7 +4,6 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.convert.Convert;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.RandomUtil;
 import cn.hutool.crypto.SecureUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -34,7 +33,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * 应用管理 Service 业务层处理
@@ -45,6 +49,9 @@ import java.util.List;
 @RequiredArgsConstructor
 @Service
 public class SysApplicationServiceImpl implements ISysApplicationService {
+
+    private static final Pattern APP_ID_PATTERN = Pattern.compile("^APP-(\\d+)$");
+    private static final String APP_ID_PREFIX = "APP-";
 
     private final SysApplicationMapper baseMapper;
     private final KeycloakProperties keycloakProperties;
@@ -80,6 +87,7 @@ public class SysApplicationServiceImpl implements ISysApplicationService {
         LambdaQueryWrapper<SysApplication> lqw = Wrappers.lambdaQuery();
         lqw.like(StringUtils.isNotBlank(bo.getAppId()), SysApplication::getAppId, bo.getAppId());
         lqw.like(StringUtils.isNotBlank(bo.getAppName()), SysApplication::getAppName, bo.getAppName());
+        lqw.eq(StringUtils.isNotBlank(bo.getTenantId()), SysApplication::getTenantId, bo.getTenantId());
         lqw.eq(StringUtils.isNotBlank(bo.getCategory()), SysApplication::getCategory, bo.getCategory());
         lqw.eq(StringUtils.isNotBlank(bo.getStatus()), SysApplication::getStatus, bo.getStatus());
         lqw.orderByDesc(SysApplication::getCreateTime);
@@ -93,6 +101,9 @@ public class SysApplicationServiceImpl implements ISysApplicationService {
         if (StringUtils.isBlank(bo.getAppId())) {
             bo.setAppId(generateAppId());
         }
+        if (StringUtils.isBlank(bo.getTenantId())) {
+            bo.setTenantId(TenantConstants.DEFAULT_TENANT_ID);
+        }
         if (!checkAppIdUnique(bo)) {
             throw new ServiceException(MessageUtils.message("application.appId.exists", bo.getAppName()));
         }
@@ -101,6 +112,9 @@ public class SysApplicationServiceImpl implements ISysApplicationService {
         // 统一自动生成高强度客户端密钥
         String plainSecret = IdUtil.fastSimpleUUID();
         SysApplication add = MapstructUtils.convert(bo, SysApplication.class);
+        if (StringUtils.isBlank(add.getTenantId())) {
+            add.setTenantId(TenantConstants.DEFAULT_TENANT_ID);
+        }
         add.setClientSecretEnc(encryptSecret(plainSecret));
 
         boolean flag = baseMapper.insert(add) > 0;
@@ -124,11 +138,13 @@ public class SysApplicationServiceImpl implements ISysApplicationService {
         if (existing == null) {
             throw new ServiceException(MessageUtils.message("application.not.exists"));
         }
-        // 应用编码创建后不可修改
+        // 应用编码与租户编号创建后不可修改
         bo.setAppId(existing.getAppId());
+        bo.setTenantId(existing.getTenantId() != null ? existing.getTenantId() : TenantConstants.DEFAULT_TENANT_ID);
         bo.setRedirectUris(normalizeRedirectUris(bo.getRedirectUris()));
 
         SysApplication update = MapstructUtils.convert(bo, SysApplication.class);
+        update.setTenantId(existing.getTenantId() != null ? existing.getTenantId() : TenantConstants.DEFAULT_TENANT_ID);
         update.setClientSecretEnc(existing.getClientSecretEnc());
 
         boolean success = baseMapper.updateById(update) > 0;
@@ -209,26 +225,43 @@ public class SysApplicationServiceImpl implements ISysApplicationService {
 
     @Override
     public boolean checkAppIdUnique(SysApplicationBo bo) {
-        boolean exist = baseMapper.exists(new LambdaQueryWrapper<SysApplication>()
-            .eq(SysApplication::getAppId, bo.getAppId())
-            .ne(ObjectUtil.isNotNull(bo.getId()), SysApplication::getId, bo.getId()));
-        return !exist;
+        Long count = baseMapper.countByAppId(bo.getAppId(), bo.getId());
+        return count == null || count == 0;
     }
 
     /**
-     * 自动生成6位全局唯一应用编码 (排除门户 000000)
+     * 自动生成规律递增的应用编码 (格式: APP-001, APP-002, ...)
      */
-    private String generateAppId() {
-        List<String> appIds = baseMapper.selectList(
-            new LambdaQueryWrapper<SysApplication>().select(SysApplication::getAppId)
-        ).stream().map(SysApplication::getAppId).filter(StringUtils::isNotBlank).toList();
-        for (int i = 0; i < 50; i++) {
-            String numbers = RandomUtil.randomNumbers(6);
-            if (!appIds.contains(numbers) && !TenantConstants.DEFAULT_TENANT_ID.equals(numbers)) {
-                return numbers;
+    private synchronized String generateAppId() {
+        List<String> appIds = baseMapper.selectAllAppIds();
+        if (appIds == null) {
+            appIds = Collections.emptyList();
+        }
+        Set<String> appIdSet = new HashSet<>(appIds);
+        long maxNum = 0;
+        for (String id : appIds) {
+            if (StringUtils.isBlank(id)) {
+                continue;
+            }
+            Matcher matcher = APP_ID_PATTERN.matcher(id.trim());
+            if (matcher.matches()) {
+                try {
+                    long num = Long.parseLong(matcher.group(1));
+                    if (num > maxNum) {
+                        maxNum = num;
+                    }
+                } catch (NumberFormatException ignored) {
+                }
             }
         }
-        throw new ServiceException(MessageUtils.message("application.code.generate.error"));
+
+        long nextNum = maxNum + 1;
+        String candidate = String.format("%s%03d", APP_ID_PREFIX, nextNum);
+        while (appIdSet.contains(candidate)) {
+            nextNum++;
+            candidate = String.format("%s%03d", APP_ID_PREFIX, nextNum);
+        }
+        return candidate;
     }
 
     /**
@@ -286,7 +319,14 @@ public class SysApplicationServiceImpl implements ISysApplicationService {
             if (StringUtils.isNotBlank(app.getRedirectUris())) {
                 representation.setRedirectUris(JsonUtils.parseArray(app.getRedirectUris(), String.class));
             }
-            keycloakAdminClient.createClient(representation);
+
+            KeycloakAdminClient.ClientRepresentation existing = keycloakAdminClient.findClientByClientId(app.getAppId());
+            if (existing != null) {
+                representation.setId(existing.getId());
+                keycloakAdminClient.updateClient(existing.getId(), representation);
+            } else {
+                keycloakAdminClient.createClient(representation);
+            }
         } catch (Exception e) {
             log.error("Failed to sync client creation to Keycloak: {}", e.getMessage(), e);
             throw new ServiceException(MessageUtils.message("application.sync.keycloak.create.error", e.getMessage()));

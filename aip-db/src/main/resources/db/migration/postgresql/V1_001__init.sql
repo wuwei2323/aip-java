@@ -69,10 +69,58 @@ comment on column sys_social.update_by is '更新者';
 comment on column sys_social.update_time is '更新时间';
 comment on column sys_social.del_flag is '删除标志（0代表存在 1代表删除）';
 
--- 应用注册表（合并 V1_006 与 V1_007，替代原 sys_tenant 与 sys_tenant_package）
+-- 租户表
+create table if not exists sys_tenant
+(
+    id                int8,
+    tenant_id         varchar(20)   not null,
+    contact_user_name varchar(20)   default null::varchar,
+    contact_phone     varchar(20)   default null::varchar,
+    company_name      varchar(30)   default null::varchar,
+    license_number    varchar(30)   default null::varchar,
+    address           varchar(200)  default null::varchar,
+    intro             varchar(200)  default null::varchar,
+    domain            varchar(200)  default null::varchar,
+    remark            varchar(200)  default null::varchar,
+    package_id        int8,
+    expire_time       timestamp,
+    account_count     int4          default -1,
+    status            char          default '0'::bpchar,
+    del_flag          char          default '0'::bpchar,
+    create_dept       int8,
+    create_by         int8,
+    create_time       timestamp,
+    update_by         int8,
+    update_time       timestamp,
+    constraint "pk_sys_tenant" primary key (id)
+);
+
+comment on table   sys_tenant                    is '租户表';
+comment on column  sys_tenant.tenant_id          is '租户编号';
+comment on column  sys_tenant.contact_phone      is '联系电话';
+comment on column  sys_tenant.company_name       is '企业/租户名称';
+comment on column  sys_tenant.contact_user_name  is '联系人';
+comment on column  sys_tenant.license_number     is '统一社会信用代码';
+comment on column  sys_tenant.address            is '地址';
+comment on column  sys_tenant.intro              is '企业简介';
+comment on column  sys_tenant.domain             is '域名';
+comment on column  sys_tenant.remark             is '备注';
+comment on column  sys_tenant.package_id         is '应用套餐编号';
+comment on column  sys_tenant.expire_time        is '过期时间';
+comment on column  sys_tenant.account_count      is '用户数量（-1不限制）';
+comment on column  sys_tenant.status             is '租户状态（0正常 1停用）';
+comment on column  sys_tenant.del_flag           is '删除标志（0代表存在 1代表删除）';
+
+-- 初始化默认唯一租户数据（集成平台）
+insert into sys_tenant (id, tenant_id, contact_user_name, contact_phone, company_name, license_number, address, intro, domain, remark, package_id, expire_time, account_count, status, del_flag, create_dept, create_by, create_time, update_by, update_time)
+values (1, '000000', '超级管理员', '18888888888', '集成平台', null, null, '集成平台管理系统', null, null, null, null, -1, '0', '0', 103, 1, now(), null, null)
+on conflict (id) do nothing;
+
+-- 应用注册表
 CREATE TABLE IF NOT EXISTS sys_application (
     id                int8 PRIMARY KEY,
     app_id            varchar(64)  NOT NULL,
+    tenant_id         varchar(64)  DEFAULT '000000',
     app_name          varchar(100) NOT NULL,
     category          varchar(64)  DEFAULT 'system',
     description       varchar(500),
@@ -94,6 +142,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS sys_application_app_id_uk ON sys_application (
 COMMENT ON TABLE sys_application IS '应用注册表';
 COMMENT ON COLUMN sys_application.id IS '主键';
 COMMENT ON COLUMN sys_application.app_id IS 'OIDC客户端ID(client_id)';
+COMMENT ON COLUMN sys_application.tenant_id IS '租户编号(默认为集成平台000000)';
 COMMENT ON COLUMN sys_application.app_name IS '应用名称';
 COMMENT ON COLUMN sys_application.category IS '应用分类';
 COMMENT ON COLUMN sys_application.description IS '应用简介';
@@ -104,10 +153,10 @@ COMMENT ON COLUMN sys_application.icon IS '应用图标';
 COMMENT ON COLUMN sys_application.status IS '状态（0正常 1停用）';
 COMMENT ON COLUMN sys_application.del_flag IS '删除标志（0代表存在 1代表删除）';
 
--- 初始化门户应用数据（融合原 sys_tenant 简介信息）
-INSERT INTO sys_application (id, app_id, app_name, category, description, entry_url,
+-- 初始化门户应用数据
+INSERT INTO sys_application (id, app_id, tenant_id, app_name, category, description, entry_url,
                              status, del_flag, create_by, create_time)
-VALUES (1, '000000', '集成平台门户', 'system', '多应用通用后台管理管理系统', '/',
+VALUES (1, '000000', '000000', '集成平台门户', 'system', '多应用通用后台管理管理系统', '/',
         '0', '0', 1, now());
 
 -- 1、部门表（已移除 tenant_id）
@@ -1113,13 +1162,13 @@ values (37, 0, 'iOS', 'ios', 'sys_device_type', '', 'default', 'N', 103, 1, now(
 insert into sys_dict_data
 values (38, 0, '小程序', 'xcx', 'sys_device_type', '', 'default', 'N', 103, 1, now(), null, null, '小程序', '0');
 insert into sys_dict_data
-values (39, 1, '系统', 'system', 'app_category', null, 'primary', 'Y', 103, 1, now(), null, null, '系统应用', '0');
+values (39, 1, '系统', 'system', 'app_category', null, 'default', 'Y', 103, 1, now(), null, null, '系统应用', '0');
 insert into sys_dict_data
-values (40, 2, '业务', 'business', 'app_category', null, 'success', 'N', 103, 1, now(), null, null, '业务应用', '0');
+values (40, 2, '业务', 'business', 'app_category', null, 'default', 'N', 103, 1, now(), null, null, '业务应用', '0');
 insert into sys_dict_data
-values (41, 3, '工具', 'tool', 'app_category', null, 'info', 'N', 103, 1, now(), null, null, '工具应用', '0');
+values (41, 3, '工具', 'tool', 'app_category', null, 'default', 'N', 103, 1, now(), null, null, '工具应用', '0');
 insert into sys_dict_data
-values (42, 4, '第三方', 'third_party', 'app_category', null, 'warning', 'N', 103, 1, now(), null, null, '第三方应用', '0');
+values (42, 4, '第三方', 'third_party', 'app_category', null, 'default', 'N', 103, 1, now(), null, null, '第三方应用', '0');
 
 -- 13、参数配置表
 create table if not exists sys_config
@@ -1430,7 +1479,7 @@ comment on column sys_oss_config.update_time is '更新时间';
 comment on column sys_oss_config.remark is '备注';
 
 insert into sys_oss_config
-values (1, '000000', 'minio', 'ruoyi', 'ruoyi123', 'ruoyi', '', '127.0.0.1:9000', '', 'N', '', '1', '0', '', 103, 1,
+values (1, '000000', 'minio', 'ruoyi', 'ruoyi123', 'ruoyi', '', '127.0.0.1:9000', '', 'N', '', '1', '1', '', 103, 1,
         now(), 1, now(), null);
 insert into sys_oss_config
 values (2, '000000', 'qiniu', 'XXXXXXXXXXXXXXX', 'XXXXXXXXXXXXXXX', 'ruoyi', '', 's3-cn-north-1.qiniucs.com', '', 'N',
@@ -1444,6 +1493,9 @@ values (4, '000000', 'qcloud', 'XXXXXXXXXXXXXXX', 'XXXXXXXXXXXXXXX', 'ruoyi-1240
 insert into sys_oss_config
 values (5, '000000', 'image', 'ruoyi', 'ruoyi123', 'ruoyi', 'image', '127.0.0.1:9000', '', 'N', '', '1', '1', '', 103,
         1, now(), 1, now(), NULL);
+insert into sys_oss_config
+values (6, '000000', 'local', '', '', '', 'upload', 'local', '', 'N', '', '1', '0', '', 103,
+        1, now(), 1, now(), '本地文件存储');
 
 -- 系统授权表
 create table sys_client (
@@ -2366,3 +2418,4 @@ COMMENT ON COLUMN sj_job_executor.executor_type IS '1:java 2:python 3:go';
 COMMENT ON COLUMN sj_job_executor.create_dt IS '创建时间';
 COMMENT ON COLUMN sj_job_executor.update_dt IS '修改时间';
 COMMENT ON TABLE sj_job_executor IS '任务执行器信息';
+
