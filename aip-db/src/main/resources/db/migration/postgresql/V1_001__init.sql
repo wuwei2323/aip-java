@@ -474,14 +474,6 @@ values ('131', '分配角色', '1', '1', 'user-auth/role/:userId', 'system/user/
 insert into sys_menu
 values ('132', '字典数据', '1', '6', 'dict-data/index/:dictId', 'system/dict/data', '', '1', '1', 'C', '1', '0',
         'system:dict:list', '#', 103, 1, now(), null, null, '/system/dict');
-insert into sys_menu
-values ('133', '文件配置管理', '1', '10', 'oss-config/index', 'system/oss/config', '', '1', '1', 'C', '1', '0',
-        'system:ossConfig:list', '#', 103, 1, now(), null, null, '/system/oss');
-
--- oss菜单
-insert into sys_menu
-values ('118', '文件管理', '1', '10', 'oss', 'system/oss/index', '', '1', '0', 'C', '0', '0', 'system:oss:list',
-        'upload', 103, 1, now(), null, null, '文件管理菜单');
 
 -- 三级菜单
 insert into sys_menu
@@ -632,32 +624,6 @@ insert into sys_menu
 values ('1050', '账户解锁', '501', '4', '#', '', '', '1', '0', 'F', '0', '0', 'monitor:logininfor:unlock', '#', 103, 1,
         now(), null, null, '');
 
--- oss相关按钮
-insert into sys_menu
-values ('1600', '文件查询', '118', '1', '#', '', '', '1', '0', 'F', '0', '0', 'system:oss:query', '#', 103, 1, now(),
-        null, null, '');
-insert into sys_menu
-values ('1601', '文件上传', '118', '2', '#', '', '', '1', '0', 'F', '0', '0', 'system:oss:upload', '#', 103, 1, now(),
-        null, null, '');
-insert into sys_menu
-values ('1602', '文件下载', '118', '3', '#', '', '', '1', '0', 'F', '0', '0', 'system:oss:download', '#', 103, 1, now(),
-        null, null, '');
-insert into sys_menu
-values ('1603', '文件删除', '118', '4', '#', '', '', '1', '0', 'F', '0', '0', 'system:oss:remove', '#', 103, 1, now(),
-        null, null, '');
-insert into sys_menu
-values ('1620', '配置列表', '118', '5', '#', '', '', '1', '0', 'F', '0', '0', 'system:ossConfig:list', '#', 103, 1,
-        now(), null, null, '');
-insert into sys_menu
-values ('1621', '配置添加', '118', '6', '#', '', '', '1', '0', 'F', '0', '0', 'system:ossConfig:add', '#', 103, 1,
-        now(), null, null, '');
-insert into sys_menu
-values ('1622', '配置编辑', '118', '6', '#', '', '', '1', '0', 'F', '0', '0', 'system:ossConfig:edit', '#', 103, 1,
-        now(), null, null, '');
-insert into sys_menu
-values ('1623', '配置删除', '118', '6', '#', '', '', '1', '0', 'F', '0', '0', 'system:ossConfig:remove', '#', 103, 1,
-        now(), null, null, '');
-
 -- 应用管理按钮（来自 V1_006）
 insert into sys_menu
 values ('1630', '应用查询', '124', '1', '#', '', '', '1', '0', 'F', '0', '0', 'system:application:query', '#', 103, 1,
@@ -741,8 +707,6 @@ insert into sys_role_menu
 values ('3', '107', '000000');
 insert into sys_role_menu
 values ('3', '108', '000000');
-insert into sys_role_menu
-values ('3', '118', '000000');
 
 insert into sys_role_menu
 values ('3', '130', '000000');
@@ -750,8 +714,7 @@ insert into sys_role_menu
 values ('3', '131', '000000');
 insert into sys_role_menu
 values ('3', '132', '000000');
-insert into sys_role_menu
-values ('3', '133', '000000');
+
 insert into sys_role_menu
 values ('3', '500', '000000');
 insert into sys_role_menu
@@ -839,42 +802,6 @@ insert into sys_role_menu
 values ('3', '1045', '000000');
 insert into sys_role_menu
 values ('3', '1050', '000000');
-
-insert into sys_role_menu
-values ('3', '1600', '000000');
-insert into sys_role_menu
-values ('3', '1601', '000000');
-insert into sys_role_menu
-values ('3', '1602', '000000');
-insert into sys_role_menu
-values ('3', '1603', '000000');
-insert into sys_role_menu
-values ('3', '1620', '000000');
-insert into sys_role_menu
-values ('3', '1621', '000000');
-insert into sys_role_menu
-values ('3', '1622', '000000');
-insert into sys_role_menu
-values ('3', '1623', '000000');
-insert into sys_role_menu
-values ('3', '11616', '000000');
-insert into sys_role_menu
-values ('3', '11618', '000000');
-insert into sys_role_menu
-values ('3', '11619', '000000');
-insert into sys_role_menu
-values ('3', '11622', '000000');
-insert into sys_role_menu
-values ('3', '11623', '000000');
-insert into sys_role_menu
-values ('3', '11629', '000000');
-insert into sys_role_menu
-values ('3', '11632', '000000');
-insert into sys_role_menu
-values ('3', '11633', '000000');
-
-insert into sys_role_menu
-values ('3', '11701', '000000');
 
 -- 8、角色和部门关联表  角色1-N部门（按应用独立配置，来自 V1_005）
 create table if not exists sys_role_dept
@@ -1561,126 +1488,6 @@ values (1, 'e5cd7e4891bf95d1d19206ce24a7b32e', 'pc', 'pc123', 'password,social',
 insert into sys_client
 values (2, '428a8310cd442757ae699df5d894f051', 'app', 'app123', 'password,sms,social', 'android', 1800, 604800, 0, 0,
         103, 1, now(), 1, now());
-
--- 测试表：test_demo & test_tree
-create table if not exists test_demo
-(
-    id int8,
-    tenant_id varchar (20) default '000000',
-    dept_id int8,
-    user_id int8,
-    order_num int4 default 0,
-    test_key varchar (255),
-    value varchar (255),
-    version int4 default 0,
-    create_dept int8,
-    create_time timestamp,
-    create_by int8,
-    update_time timestamp,
-    update_by int8,
-    del_flag int4 default 0
-);
-
-comment on table test_demo is '测试单表';
-comment on column test_demo.id is '主键';
-comment on column test_demo.tenant_id is '应用编号';
-comment on column test_demo.dept_id is '部门id';
-comment on column test_demo.user_id is '用户id';
-comment on column test_demo.order_num is '排序号';
-comment on column test_demo.test_key is 'key键';
-comment on column test_demo.value is '值';
-comment on column test_demo.version is '版本';
-comment on column test_demo.create_dept is '创建部门';
-comment on column test_demo.create_time is '创建时间';
-comment on column test_demo.create_by is '创建人';
-comment on column test_demo.update_time is '更新时间';
-comment on column test_demo.update_by is '更新人';
-comment on column test_demo.del_flag is '删除标志';
-
-create table if not exists test_tree
-(
-    id          int8,
-    tenant_id   varchar(20) default '000000',
-    parent_id   int8        default 0,
-    dept_id     int8,
-    user_id     int8,
-    tree_name   varchar(255),
-    version     int4        default 0,
-    create_dept int8,
-    create_time timestamp,
-    create_by   int8,
-    update_time timestamp,
-    update_by   int8,
-    del_flag    integer     default 0
-);
-
-comment on table test_tree is '测试树表';
-comment on column test_tree.id is '主键';
-comment on column test_tree.tenant_id is '应用编号';
-comment on column test_tree.parent_id is '父id';
-comment on column test_tree.dept_id is '部门id';
-comment on column test_tree.user_id is '用户id';
-comment on column test_tree.tree_name is '值';
-comment on column test_tree.version is '版本';
-comment on column test_tree.create_dept is '创建部门';
-comment on column test_tree.create_time is '创建时间';
-comment on column test_tree.create_by is '创建人';
-comment on column test_tree.update_time is '更新时间';
-comment on column test_tree.update_by is '更新人';
-comment on column test_tree.del_flag is '删除标志';
-
-INSERT INTO test_demo
-VALUES (1, '000000', 102, 4, 1, '测试数据权限', '测试', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_demo
-VALUES (2, '000000', 102, 3, 2, '子节点1', '111', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_demo
-VALUES (3, '000000', 102, 3, 3, '子节点2', '222', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_demo
-VALUES (4, '000000', 108, 4, 4, '测试数据', 'demo', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_demo
-VALUES (5, '000000', 108, 3, 13, '子节点11', '1111', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_demo
-VALUES (6, '000000', 108, 3, 12, '子节点22', '2222', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_demo
-VALUES (7, '000000', 108, 3, 11, '子节点33', '3333', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_demo
-VALUES (8, '000000', 108, 3, 10, '子节点44', '4444', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_demo
-VALUES (9, '000000', 108, 3, 9, '子节点55', '5555', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_demo
-VALUES (10, '000000', 108, 3, 8, '子节点66', '6666', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_demo
-VALUES (11, '000000', 108, 3, 7, '子节点77', '7777', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_demo
-VALUES (12, '000000', 108, 3, 6, '子节点88', '8888', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_demo
-VALUES (13, '000000', 108, 3, 5, '子节点99', '9999', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_tree
-VALUES (1, '000000', 0, 102, 4, '测试数据权限', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_tree
-VALUES (2, '000000', 1, 102, 3, '子节点1', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_tree
-VALUES (3, '000000', 2, 102, 3, '子节点2', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_tree
-VALUES (4, '000000', 0, 108, 4, '测试树1', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_tree
-VALUES (5, '000000', 4, 108, 3, '子节点11', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_tree
-VALUES (6, '000000', 4, 108, 3, '子节点22', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_tree
-VALUES (7, '000000', 4, 108, 3, '子节点33', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_tree
-VALUES (8, '000000', 5, 108, 3, '子节点44', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_tree
-VALUES (9, '000000', 6, 108, 3, '子节点55', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_tree
-VALUES (10, '000000', 7, 108, 3, '子节点66', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_tree
-VALUES (11, '000000', 7, 108, 3, '子节点77', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_tree
-VALUES (12, '000000', 10, 108, 3, '子节点88', 0, 103, now(), 1, NULL, NULL, 0);
-INSERT INTO test_tree
-VALUES (13, '000000', 10, 108, 3, '子节点99', 0, 103, now(), 1, NULL, NULL, 0);
 
 -- 字符串自动转时间 避免框架时间查询报错问题
 create or replace function cast_varchar_to_timestamp(varchar) returns timestamptz as $$
@@ -2559,113 +2366,3 @@ COMMENT ON COLUMN sj_job_executor.executor_type IS '1:java 2:python 3:go';
 COMMENT ON COLUMN sj_job_executor.create_dt IS '创建时间';
 COMMENT ON COLUMN sj_job_executor.update_dt IS '修改时间';
 COMMENT ON TABLE sj_job_executor IS '任务执行器信息';
-
--- 请假单信息
-CREATE TABLE test_leave
-(
-    id int8 NOT NULL,
-    tenant_id VARCHAR (20) DEFAULT '000000':: varchar,
-    apply_code VARCHAR (50) NOT NULL,
-    leave_type VARCHAR (255) NOT NULL,
-    start_date TIMESTAMP NOT NULL,
-    end_date TIMESTAMP NOT NULL,
-    leave_days int2 NOT NULL,
-    remark VARCHAR (255),
-    status VARCHAR (255),
-    create_dept int8,
-    create_by int8,
-    create_time TIMESTAMP,
-    update_by int8,
-    update_time TIMESTAMP,
-    PRIMARY KEY (id)
-);
-
-COMMENT ON TABLE test_leave IS '请假申请表';
-COMMENT ON COLUMN test_leave.id IS 'id';
-COMMENT ON COLUMN test_leave.tenant_id IS '应用编号';
-COMMENT ON COLUMN test_leave.apply_code IS '申请编号';
-COMMENT ON COLUMN test_leave.leave_type IS '请假类型';
-COMMENT ON COLUMN test_leave.start_date IS '开始时间';
-COMMENT ON COLUMN test_leave.end_date IS '结束时间';
-COMMENT ON COLUMN test_leave.leave_days IS '请假天数';
-COMMENT ON COLUMN test_leave.remark IS '请假原因';
-COMMENT ON COLUMN test_leave.status IS '状态';
-COMMENT ON COLUMN test_leave.create_dept IS '创建部门';
-COMMENT ON COLUMN test_leave.create_by IS '创建者';
-COMMENT ON COLUMN test_leave.create_time IS '创建时间';
-COMMENT ON COLUMN test_leave.update_by IS '更新者';
-COMMENT ON COLUMN test_leave.update_time IS '更新时间';
-
--- 工作流菜单初始化
-INSERT INTO sys_menu
-VALUES ('11616', '工作流', '0', '6', 'workflow', '', '', '1', '0', 'M', '0', '0', '', 'workflow', 103, 1, now(), NULL,
-        NULL, '');
-INSERT INTO sys_menu
-VALUES ('11618', '我的任务', '0', '7', 'task', '', '', '1', '0', 'M', '0', '0', '', 'my-task', 103, 1, now(), NULL,
-        NULL, '');
-INSERT INTO sys_menu
-VALUES ('11619', '我的待办', '11618', '2', 'taskWaiting', 'workflow/task/taskWaiting', '', '1', '1', 'C', '0', '0', '',
-        'waiting', 103, 1, now(), NULL, NULL, '');
-INSERT INTO sys_menu
-VALUES ('11632', '我的已办', '11618', '3', 'taskFinish', 'workflow/task/taskFinish', '', '1', '1', 'C', '0', '0', '',
-        'finish', 103, 1, now(), NULL, NULL, '');
-INSERT INTO sys_menu
-VALUES ('11633', '我的抄送', '11618', '4', 'taskCopyList', 'workflow/task/taskCopyList', '', '1', '1', 'C', '0', '0',
-        '', 'my-copy', 103, 1, now(), NULL, NULL, '');
-INSERT INTO sys_menu
-VALUES ('11620', '流程定义', '11616', '3', 'processDefinition', 'workflow/processDefinition/index', '', '1', '1', 'C',
-        '0', '0', '', 'process-definition', 103, 1, now(), NULL, NULL, '');
-INSERT INTO sys_menu
-VALUES ('11621', '流程实例', '11630', '1', 'processInstance', 'workflow/processInstance/index', '', '1', '1', 'C', '0',
-        '0', '', 'tree-table', 103, 1, now(), NULL, NULL, '');
-INSERT INTO sys_menu
-VALUES ('11622', '流程分类', '11616', '1', 'category', 'workflow/category/index', '', '1', '0', 'C', '0', '0',
-        'workflow:category:list', 'category', 103, 1, now(), NULL, NULL, '');
-INSERT INTO sys_menu
-VALUES ('11629', '我发起的', '11618', '1', 'myDocument', 'workflow/task/myDocument', '', '1', '1', 'C', '0', '0', '',
-        'guide', 103, 1, now(), NULL, NULL, '');
-INSERT INTO sys_menu
-VALUES ('11630', '流程监控', '11616', '4', 'monitor', '', '', '1', '0', 'M', '0', '0', '', 'monitor', 103, 1, now(),
-        NULL, NULL, '');
-INSERT INTO sys_menu
-VALUES ('11631', '待办任务', '11630', '2', 'allTaskWaiting', 'workflow/task/allTaskWaiting', '', '1', '1', 'C', '0',
-        '0', '', 'waiting', 103, 1, now(), NULL, NULL, '');
-INSERT INTO sys_menu
-VALUES ('11700', '流程设计', '11616', '5', 'design/index', 'workflow/processDefinition/design', '', '1', '1', 'C', '1',
-        '0', 'workflow:leave:edit', '#', 103, 1, now(), NULL, NULL, '/workflow/processDefinition');
-INSERT INTO sys_menu
-VALUES ('11701', '请假申请', '11616', '6', 'leaveEdit/index', 'workflow/leave/leaveEdit', '', '1', '1', 'C', '1', '0',
-        'workflow:leave:edit', '#', 103, 1, now(), NULL, NULL, '');
-INSERT INTO sys_menu
-VALUES ('11623', '流程分类查询', '11622', '1', '#', '', '', '1', '0', 'F', '0', '0', 'workflow:category:query', '#',
-        103, 1, now(), NULL, NULL, '');
-INSERT INTO sys_menu
-VALUES ('11624', '流程分类新增', '11622', '2', '#', '', '', '1', '0', 'F', '0', '0', 'workflow:category:add', '#', 103,
-        1, now(), NULL, NULL, '');
-INSERT INTO sys_menu
-VALUES ('11625', '流程分类修改', '11622', '3', '#', '', '', '1', '0', 'F', '0', '0', 'workflow:category:edit', '#', 103,
-        1, now(), NULL, NULL, '');
-INSERT INTO sys_menu
-VALUES ('11626', '流程分类删除', '11622', '4', '#', '', '', '1', '0', 'F', '0', '0', 'workflow:category:remove', '#',
-        103, 1, now(), NULL, NULL, '');
-INSERT INTO sys_menu
-VALUES ('11627', '流程分类导出', '11622', '5', '#', '', '', '1', '0', 'F', '0', '0', 'workflow:category:export', '#',
-        103, 1, now(), NULL, NULL, '');
-INSERT INTO sys_menu
-VALUES ('11801', '流程表达式', '11616', 2, 'spel', 'workflow/spel/index', '', 1, 0, 'C', '0', '0', 'workflow:spel:list',
-        'input', 103, 1, now(), 1, now(), '流程达式定义菜单');
-INSERT INTO sys_menu
-VALUES ('11802', '流程spel表达式定义查询', '11801', 1, '#', '', NULL, 1, 0, 'F', '0', '0', 'workflow:spel:query', '#',
-        103, 1, now(), NULL, NULL, '');
-INSERT INTO sys_menu
-VALUES ('11803', '流程spel表达式定义新增', '11801', 2, '#', '', NULL, 1, 0, 'F', '0', '0', 'workflow:spel:add', '#',
-        103, 1, now(), NULL, NULL, '');
-INSERT INTO sys_menu
-VALUES ('11804', '流程spel表达式定义修改', '11801', 3, '#', '', NULL, 1, 0, 'F', '0', '0', 'workflow:spel:edit', '#',
-        103, 1, now(), NULL, NULL, '');
-INSERT INTO sys_menu
-VALUES ('11805', '流程spel表达式定义删除', '11801', 4, '#', '', NULL, 1, 0, 'F', '0', '0', 'workflow:spel:remove', '#',
-        103, 1, now(), NULL, NULL, '');
-INSERT INTO sys_menu
-VALUES ('11806', '流程spel表达式定义导出', '11801', 5, '#', '', NULL, 1, 0, 'F', '0', '0', 'workflow:spel:export', '#',
-        103, 1, now(), NULL, NULL, '');
