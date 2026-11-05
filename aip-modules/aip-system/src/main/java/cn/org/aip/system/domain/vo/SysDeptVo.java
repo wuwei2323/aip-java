@@ -34,6 +34,11 @@ public class SysDeptVo implements Serializable {
     private Long deptId;
 
     /**
+     * 租户编号
+     */
+    private String tenantId;
+
+    /**
      * 父部门id
      */
     private Long parentId;

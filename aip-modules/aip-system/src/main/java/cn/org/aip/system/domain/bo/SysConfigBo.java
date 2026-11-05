@@ -55,5 +55,11 @@ public class SysConfigBo extends BaseEntity {
      */
     private String remark;
 
+    /**
+     * 应用ID
+     */
+    @Size(min = 0, max = 64, message = "应用ID长度不能超过{max}个字符")
+    private String appId;
+
 
 }

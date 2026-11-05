@@ -29,7 +29,7 @@ import cn.org.aip.system.domain.SysApplication;
 import cn.org.aip.system.domain.SysDictData;
 import cn.org.aip.system.domain.SysDictType;
 import cn.org.aip.system.domain.SysDictTypeRole;
-import cn.org.aip.system.domain.SysDictTypeTenant;
+import cn.org.aip.system.domain.SysDictTypeApp;
 import cn.org.aip.system.domain.SysRole;
 import cn.org.aip.system.domain.bo.SysDictTypeBo;
 import cn.org.aip.system.domain.dto.DictComponentDTO;
@@ -39,7 +39,7 @@ import cn.org.aip.system.mapper.SysApplicationMapper;
 import cn.org.aip.system.mapper.SysDictDataMapper;
 import cn.org.aip.system.mapper.SysDictTypeMapper;
 import cn.org.aip.system.mapper.SysDictTypeRoleMapper;
-import cn.org.aip.system.mapper.SysDictTypeTenantMapper;
+import cn.org.aip.system.mapper.SysDictTypeAppMapper;
 import cn.org.aip.system.mapper.SysRoleMapper;
 import cn.org.aip.system.service.ISysDictTypeService;
 import cn.org.aip.system.service.ISysRoleDictService;
@@ -62,7 +62,7 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
 
     private final SysDictTypeMapper baseMapper;
     private final SysDictDataMapper dictDataMapper;
-    private final SysDictTypeTenantMapper dictTypeTenantMapper;
+    private final SysDictTypeAppMapper dictTypeAppMapper;
     private final SysApplicationMapper applicationMapper;
     private final ISysRoleDictService roleDictService;
 
@@ -101,8 +101,8 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
         lqw.like(StringUtils.isNotBlank(bo.getDictName()), SysDictType::getDictName, bo.getDictName());
         lqw.like(StringUtils.isNotBlank(bo.getDictType()), SysDictType::getDictType, bo.getDictType());
         lqw.eq(StringUtils.isNotBlank(bo.getCategoryType()), SysDictType::getCategoryType, bo.getCategoryType());
-        lqw.apply(StringUtils.isNotBlank(bo.getTenantId()),
-            "dict_id IN (SELECT dict_id FROM sys_dict_type_tenant WHERE tenant_id = {0})", bo.getTenantId());
+        lqw.apply(StringUtils.isNotBlank(bo.getAppId()),
+            "dict_id IN (SELECT dict_id FROM sys_dict_type_app WHERE app_id = {0})", bo.getAppId());
         lqw.between(params.get("beginTime") != null && params.get("endTime") != null,
             SysDictType::getCreateTime, params.get("beginTime"), params.get("endTime"));
         lqw.orderByAsc(SysDictType::getDictId);
@@ -119,31 +119,31 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
             return;
         }
         List<Long> dictIds = StreamUtils.toList(list, SysDictTypeVo::getDictId);
-        List<SysDictTypeTenant> relations = dictTypeTenantMapper.selectList(
-            new LambdaQueryWrapper<SysDictTypeTenant>().in(SysDictTypeTenant::getDictId, dictIds));
+        List<SysDictTypeApp> relations = dictTypeAppMapper.selectList(
+            new LambdaQueryWrapper<SysDictTypeApp>().in(SysDictTypeApp::getDictId, dictIds));
         if (CollUtil.isEmpty(relations)) {
             list.forEach(vo -> {
-                vo.setTenantIds(new ArrayList<>());
-                vo.setTenantNames(new ArrayList<>());
+                vo.setAppIds(new ArrayList<>());
+                vo.setAppNames(new ArrayList<>());
             });
             return;
         }
-        Set<String> tenantIds = new HashSet<>(StreamUtils.toList(relations, SysDictTypeTenant::getTenantId));
+        Set<String> appIds = new HashSet<>(StreamUtils.toList(relations, SysDictTypeApp::getAppId));
         List<SysApplication> apps = applicationMapper.selectList(new LambdaQueryWrapper<SysApplication>()
             .select(SysApplication::getAppId, SysApplication::getAppName)
-            .in(SysApplication::getAppId, tenantIds));
-        Map<String, String> tenantNameMap = StreamUtils.toMap(apps, SysApplication::getAppId, SysApplication::getAppName);
-        Map<Long, List<SysDictTypeTenant>> relationMap = StreamUtils.groupByKey(relations, SysDictTypeTenant::getDictId);
+            .in(SysApplication::getAppId, appIds));
+        Map<String, String> appNameMap = StreamUtils.toMap(apps, SysApplication::getAppId, SysApplication::getAppName);
+        Map<Long, List<SysDictTypeApp>> relationMap = StreamUtils.groupByKey(relations, SysDictTypeApp::getDictId);
         for (SysDictTypeVo vo : list) {
-            List<SysDictTypeTenant> dictRelations = relationMap.get(vo.getDictId());
+            List<SysDictTypeApp> dictRelations = relationMap.get(vo.getDictId());
             if (CollUtil.isEmpty(dictRelations)) {
-                vo.setTenantIds(new ArrayList<>());
-                vo.setTenantNames(new ArrayList<>());
+                vo.setAppIds(new ArrayList<>());
+                vo.setAppNames(new ArrayList<>());
                 continue;
             }
-            List<String> ids = StreamUtils.toList(dictRelations, SysDictTypeTenant::getTenantId);
-            vo.setTenantIds(ids);
-            vo.setTenantNames(StreamUtils.toList(ids, id -> tenantNameMap.getOrDefault(id, id)));
+            List<String> ids = StreamUtils.toList(dictRelations, SysDictTypeApp::getAppId);
+            vo.setAppIds(ids);
+            vo.setAppNames(StreamUtils.toList(ids, id -> appNameMap.getOrDefault(id, id)));
         }
     }
 
@@ -214,8 +214,8 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
             }
         });
         baseMapper.deleteByIds(dictIds);
-        dictTypeTenantMapper.delete(new LambdaQueryWrapper<SysDictTypeTenant>()
-            .in(SysDictTypeTenant::getDictId, dictIds));
+        dictTypeAppMapper.delete(new LambdaQueryWrapper<SysDictTypeApp>()
+            .in(SysDictTypeApp::getDictId, dictIds));
         // 清理角色关联与角色配置值
         roleDictService.deleteByDictIds(dictIds);
         list.forEach(x -> evictDictCache(x.getDictType()));
@@ -280,7 +280,7 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
         SysDictType dict = MapstructUtils.convert(bo, SysDictType.class);
         int row = baseMapper.insert(dict);
         if (row > 0) {
-            saveDictTypeTenants(dict.getDictId(), bo.getTenantIds());
+            saveDictTypeApps(dict.getDictId(), bo.getAppIds());
             // 清除其他应用可能存在的缓存穿透数据
             evictDictCache(dict.getDictType());
             // 新增 type 下无 data 数据 返回空防止缓存穿透
@@ -303,10 +303,10 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
         if (ObjectUtil.isNull(oldDict)) {
             throw new ServiceException("字典类型不存在");
         }
-        List<String> oldTenantIds = dictTypeTenantMapper.selectList(new LambdaQueryWrapper<SysDictTypeTenant>()
-                .select(SysDictTypeTenant::getTenantId)
-                .eq(SysDictTypeTenant::getDictId, bo.getDictId()))
-            .stream().map(SysDictTypeTenant::getTenantId).collect(Collectors.toList());
+        List<String> oldAppIds = dictTypeAppMapper.selectList(new LambdaQueryWrapper<SysDictTypeApp>()
+                .select(SysDictTypeApp::getAppId)
+                .eq(SysDictTypeApp::getDictId, bo.getDictId()))
+            .stream().map(SysDictTypeApp::getAppId).collect(Collectors.toList());
         validateAndNormalizeComponent(bo, oldDict);
 
         SysDictType dict = MapstructUtils.convert(bo, SysDictType.class);
@@ -321,8 +321,8 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
                     .set(SysDictType::getComponentInfo, null)
                     .eq(SysDictType::getDictId, dict.getDictId()));
             }
-            saveDictTypeTenants(dict.getDictId(), bo.getTenantIds());
-            cleanRoleDictAfterUpdate(dict.getDictId(), oldDict, bo, oldTenantIds);
+            saveDictTypeApps(dict.getDictId(), bo.getAppIds());
+            cleanRoleDictAfterUpdate(dict.getDictId(), oldDict, bo, oldAppIds);
             evictDictCache(oldDict.getDictType());
             evictDictCache(dict.getDictType());
             return dictDataMapper.selectDictDataByType(dict.getDictType());
@@ -336,9 +336,9 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
      * @param dictId       字典ID
      * @param oldDict      修改前的字典
      * @param bo           本次提交的数据
-     * @param oldTenantIds 修改前关联的应用
+     * @param oldAppIds    修改前关联的应用
      */
-    private void cleanRoleDictAfterUpdate(Long dictId, SysDictType oldDict, SysDictTypeBo bo, List<String> oldTenantIds) {
+    private void cleanRoleDictAfterUpdate(Long dictId, SysDictType oldDict, SysDictTypeBo bo, List<String> oldAppIds) {
         // 字典分类改为系统字典（或组件字段变更）时，原有配置值失效
         if (!DictConstants.CATEGORY_ROLE.equals(bo.getCategoryType())) {
             roleDictService.deleteByDictIds(Collections.singletonList(dictId));
@@ -351,11 +351,11 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
             return;
         }
         // 字典解除部分应用关联时，清理这些应用下的配置值
-        List<String> removedTenantIds = oldTenantIds.stream()
-            .filter(id -> !CollUtil.contains(bo.getTenantIds(), id))
+        List<String> removedAppIds = oldAppIds.stream()
+            .filter(id -> !CollUtil.contains(bo.getAppIds(), id))
             .collect(Collectors.toList());
-        if (CollUtil.isNotEmpty(removedTenantIds)) {
-            roleDictService.deleteByDictIdAndTenantIds(dictId, removedTenantIds);
+        if (CollUtil.isNotEmpty(removedAppIds)) {
+            roleDictService.deleteByDictIdAndTenantIds(dictId, removedAppIds);
         }
     }
 
@@ -421,27 +421,27 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
     /**
      * 保存字典类型与应用关联关系
      *
-     * @param dictId    字典主键
-     * @param tenantIds 应用编号列表
+     * @param dictId 字典主键
+     * @param appIds 应用编号列表
      */
-    private void saveDictTypeTenants(Long dictId, List<String> tenantIds) {
-        dictTypeTenantMapper.delete(new LambdaQueryWrapper<SysDictTypeTenant>()
-            .eq(SysDictTypeTenant::getDictId, dictId));
-        if (CollUtil.isEmpty(tenantIds)) {
+    private void saveDictTypeApps(Long dictId, List<String> appIds) {
+        dictTypeAppMapper.delete(new LambdaQueryWrapper<SysDictTypeApp>()
+            .eq(SysDictTypeApp::getDictId, dictId));
+        if (CollUtil.isEmpty(appIds)) {
             return;
         }
-        List<SysDictTypeTenant> list = tenantIds.stream()
+        List<SysDictTypeApp> list = appIds.stream()
             .filter(StringUtils::isNotBlank)
             .distinct()
-            .map(tenantId -> {
-                SysDictTypeTenant relation = new SysDictTypeTenant();
+            .map(appId -> {
+                SysDictTypeApp relation = new SysDictTypeApp();
                 relation.setDictId(dictId);
-                relation.setTenantId(tenantId);
+                relation.setAppId(appId);
                 return relation;
             })
             .collect(Collectors.toList());
         if (CollUtil.isNotEmpty(list)) {
-            dictTypeTenantMapper.insertBatch(list);
+            dictTypeAppMapper.insertBatch(list);
         }
     }
 

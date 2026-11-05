@@ -7,6 +7,8 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import cn.hutool.core.collection.CollUtil;
+import cn.org.aip.common.core.utils.StringUtils;
 import cn.org.aip.common.core.constant.RegexConstants;
 import cn.org.aip.common.mybatis.core.domain.BaseEntity;
 import cn.org.aip.system.domain.SysDictType;
@@ -58,11 +60,20 @@ public class SysDictTypeBo extends BaseEntity {
     /**
      * 关联应用编号列表
      */
-    @NotEmpty(message = "关联应用不能为空")
+    private List<String> appIds;
+
+    /**
+     * 关联应用编号列表（兼容字段）
+     */
     private List<String> tenantIds;
 
     /**
      * 应用编号（查询条件）
+     */
+    private String appId;
+
+    /**
+     * 应用编号（查询条件，兼容字段）
      */
     private String tenantId;
 
@@ -71,5 +82,20 @@ public class SysDictTypeBo extends BaseEntity {
      */
     private String remark;
 
+    public List<String> getAppIds() {
+        return CollUtil.isNotEmpty(appIds) ? appIds : tenantIds;
+    }
+
+    public List<String> getTenantIds() {
+        return CollUtil.isNotEmpty(tenantIds) ? tenantIds : appIds;
+    }
+
+    public String getAppId() {
+        return StringUtils.isNotBlank(appId) ? appId : tenantId;
+    }
+
+    public String getTenantId() {
+        return StringUtils.isNotBlank(tenantId) ? tenantId : appId;
+    }
 
 }

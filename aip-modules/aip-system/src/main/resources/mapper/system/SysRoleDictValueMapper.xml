@@ -9,50 +9,43 @@
                t.dict_type,
                t.dict_name,
                t.component_info,
-               r.tenant_id,
-               tn.company_name as tenant_name
+               r.app_id,
+               r.app_id as tenant_id,
+               tn.company_name as tenant_name,
+               tn.company_name as app_name
         from sys_dict_type t
-                 join sys_dict_type_tenant r on r.dict_id = t.dict_id
+                 join sys_dict_type_app r on r.dict_id = t.dict_id
                  join (
                      select app_id as tenant_id, max(app_name) as company_name
                      from sys_application
                      where del_flag = '0'
                      group by app_id
-                 ) tn on tn.tenant_id = r.tenant_id
+                 ) tn on tn.tenant_id = r.app_id
         where t.category_type = 'role'
         <if test="tenantId != null and tenantId != ''">
-            and r.tenant_id = #{tenantId}
+            and r.app_id = #{tenantId}
         </if>
-        order by r.tenant_id, t.dict_id
+        order by r.app_id, t.dict_id
     </select>
 
     <select id="selectRoleDictConfig" resultType="cn.org.aip.system.domain.vo.RoleDictConfigItemVo">
-        select distinct t.dict_id,
+        select v.dict_id,
                t.dict_type,
                t.dict_name,
                t.component_info,
-               r.tenant_id,
-               tn.company_name as tenant_name,
+               v.app_id,
+               v.app_id as tenant_id,
                v.field_key,
                v.field_value
-        from sys_dict_type t
-                 join sys_dict_type_tenant r on r.dict_id = t.dict_id
-                 join sys_dict_type_role dr on dr.dict_id = t.dict_id and dr.role_id = #{roleId}
-                 join (
-                     select app_id as tenant_id, max(app_name) as company_name
-                     from sys_application
-                     where del_flag = '0'
-                     group by app_id
-                 ) tn on tn.tenant_id = r.tenant_id
-                 left join sys_role_dict_value v
-                           on v.dict_id = t.dict_id
-                               and v.role_id = #{roleId}
-                               and v.tenant_id = r.tenant_id
-        where t.category_type = 'role'
+        from sys_role_dict_value v
+                 join sys_dict_type t on t.dict_id = v.dict_id
+        where v.role_id = #{roleId}
+          and v.field_value is not null
+          and v.field_value != ''
         <if test="tenantId != null and tenantId != ''">
-            and r.tenant_id = #{tenantId}
+            and v.app_id = #{tenantId}
         </if>
-        order by r.tenant_id, t.dict_id
+        order by v.dict_id
     </select>
 
 </mapper>

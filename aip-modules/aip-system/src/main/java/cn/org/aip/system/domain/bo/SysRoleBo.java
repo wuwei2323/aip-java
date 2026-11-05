@@ -105,10 +105,52 @@ public class SysRoleBo extends BaseEntity {
     /**
      * 当前操作针对的应用编号（单个应用操作时使用）
      */
+    private String appId;
+
+    /**
+     * 当前操作针对的应用编号（兼容字段）
+     */
     private String tenantId;
+
+    public String getAppId() {
+        return cn.org.aip.common.core.utils.StringUtils.isNotBlank(appId) ? appId : tenantId;
+    }
+
+    public String getTenantId() {
+        return cn.org.aip.common.core.utils.StringUtils.isNotBlank(tenantId) ? tenantId : appId;
+    }
+
+    public void setAppId(String appId) {
+        this.appId = appId;
+        if (this.tenantId == null) {
+            this.tenantId = appId;
+        }
+    }
+
+    public void setTenantId(String tenantId) {
+        this.tenantId = tenantId;
+        if (this.appId == null) {
+            this.appId = tenantId;
+        }
+    }
 
     public SysRoleBo(Long roleId) {
         this.roleId = roleId;
+    }
+
+    public List<Long> getRoleDictIds() {
+        if (roleDictIds != null) {
+            return roleDictIds;
+        }
+        if (dictValues != null) {
+            return dictValues.stream()
+                .filter(java.util.Objects::nonNull)
+                .map(RoleDictValueBo::getDictId)
+                .filter(cn.hutool.core.util.ObjectUtil::isNotNull)
+                .distinct()
+                .collect(java.util.stream.Collectors.toList());
+        }
+        return null;
     }
 
     public boolean isSuperAdmin() {

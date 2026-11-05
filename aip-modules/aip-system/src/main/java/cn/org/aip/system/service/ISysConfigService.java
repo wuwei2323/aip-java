@@ -40,6 +40,15 @@ public interface ISysConfigService {
     String selectConfigByKey(String configKey);
 
     /**
+     * 根据键名与应用ID查询参数配置信息
+     *
+     * @param configKey 参数键名
+     * @param appId     应用ID
+     * @return 参数键值
+     */
+    String selectConfigByKey(String configKey, String appId);
+
+    /**
      * 获取注册开关
      * @param tenantId 应用id
      * @return true开启，false关闭

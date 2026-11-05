@@ -27,8 +27,13 @@ public class SysRoleMenu {
     private Long menuId;
 
     /**
-     * 应用编号
+     * 租户编号 (固定000000)
      */
     private String tenantId;
+
+    /**
+     * 应用编号
+     */
+    private String appId;
 
 }

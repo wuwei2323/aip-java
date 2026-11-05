@@ -26,6 +26,11 @@ public class RoleDictValueBo implements Serializable {
     private String tenantId;
 
     /**
+     * 应用编号（兼容字段）
+     */
+    private String appId;
+
+    /**
      * 字典主键
      */
     @NotNull(message = "字典ID不能为空")
@@ -41,5 +46,27 @@ public class RoleDictValueBo implements Serializable {
      * 字段值（多选为JSON数组字符串）
      */
     private String fieldValue;
+
+    public String getTenantId() {
+        return cn.org.aip.common.core.utils.StringUtils.isNotBlank(tenantId) ? tenantId : appId;
+    }
+
+    public String getAppId() {
+        return cn.org.aip.common.core.utils.StringUtils.isNotBlank(appId) ? appId : tenantId;
+    }
+
+    public void setAppId(String appId) {
+        this.appId = appId;
+        if (this.tenantId == null) {
+            this.tenantId = appId;
+        }
+    }
+
+    public void setTenantId(String tenantId) {
+        this.tenantId = tenantId;
+        if (this.appId == null) {
+            this.appId = tenantId;
+        }
+    }
 
 }

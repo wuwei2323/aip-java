@@ -83,6 +83,24 @@ public class SysConfigServiceImpl implements ISysConfigService, ConfigService {
     }
 
     /**
+     * 根据键名与应用ID查询参数配置信息
+     *
+     * @param configKey 参数key
+     * @param appId     应用id
+     * @return 参数键值
+     */
+    @Override
+    public String selectConfigByKey(String configKey, String appId) {
+        if (StringUtils.isBlank(appId)) {
+            return selectConfigByKey(configKey);
+        }
+        SysConfig retConfig = baseMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
+            .eq(SysConfig::getConfigKey, configKey)
+            .eq(SysConfig::getAppId, appId));
+        return ObjectUtils.notNullGetter(retConfig, SysConfig::getConfigValue, StringUtils.EMPTY);
+    }
+
+    /**
      * 获取注册开关
      *
      * @param tenantId 应用id
@@ -114,6 +132,7 @@ public class SysConfigServiceImpl implements ISysConfigService, ConfigService {
         lqw.like(StringUtils.isNotBlank(bo.getConfigName()), SysConfig::getConfigName, bo.getConfigName());
         lqw.eq(StringUtils.isNotBlank(bo.getConfigType()), SysConfig::getConfigType, bo.getConfigType());
         lqw.like(StringUtils.isNotBlank(bo.getConfigKey()), SysConfig::getConfigKey, bo.getConfigKey());
+        lqw.eq(StringUtils.isNotBlank(bo.getAppId()), SysConfig::getAppId, bo.getAppId());
         lqw.between(params.get("beginTime") != null && params.get("endTime") != null,
             SysConfig::getCreateTime, params.get("beginTime"), params.get("endTime"));
         lqw.orderByAsc(SysConfig::getConfigId);
@@ -198,9 +217,13 @@ public class SysConfigServiceImpl implements ISysConfigService, ConfigService {
      */
     @Override
     public boolean checkConfigKeyUnique(SysConfigBo config) {
-        boolean exist = baseMapper.exists(new LambdaQueryWrapper<SysConfig>()
+        LambdaQueryWrapper<SysConfig> lqw = new LambdaQueryWrapper<SysConfig>()
             .eq(SysConfig::getConfigKey, config.getConfigKey())
-            .ne(ObjectUtil.isNotNull(config.getConfigId()), SysConfig::getConfigId, config.getConfigId()));
+            .ne(ObjectUtil.isNotNull(config.getConfigId()), SysConfig::getConfigId, config.getConfigId());
+        if (StringUtils.isNotBlank(config.getAppId())) {
+            lqw.eq(SysConfig::getAppId, config.getAppId());
+        }
+        boolean exist = baseMapper.exists(lqw);
         return !exist;
     }
 

@@ -48,4 +48,9 @@ public class SysConfig extends TenantEntity {
      */
     private String remark;
 
+    /**
+     * 应用ID
+     */
+    private String appId;
+
 }

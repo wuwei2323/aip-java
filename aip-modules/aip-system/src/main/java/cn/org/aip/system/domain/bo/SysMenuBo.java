@@ -31,6 +31,11 @@ public class SysMenuBo extends BaseEntity {
     private Long menuId;
 
     /**
+     * 租户编号
+     */
+    private String tenantId;
+
+    /**
      * 父菜单ID
      */
     private Long parentId;

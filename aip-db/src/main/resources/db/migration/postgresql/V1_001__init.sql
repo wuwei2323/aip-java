@@ -159,10 +159,11 @@ INSERT INTO sys_application (id, app_id, tenant_id, app_name, category, descript
 VALUES (1, '000000', '000000', '集成平台门户', 'system', '多应用通用后台管理管理系统', '/',
         '0', '0', 1, now());
 
--- 1、部门表（已移除 tenant_id）
+-- 1、部门表
 create table if not exists sys_dept
 (
     dept_id int8,
+    tenant_id varchar (20) default '000000':: varchar,
     parent_id int8 default 0,
     ancestors varchar (500) default '':: varchar,
     dept_name varchar (30) default '':: varchar,
@@ -183,6 +184,7 @@ create table if not exists sys_dept
 
 comment on table sys_dept is '部门表';
 comment on column sys_dept.dept_id is '部门ID';
+comment on column sys_dept.tenant_id is '租户编号';
 comment on column sys_dept.parent_id is '父部门ID';
 comment on column sys_dept.ancestors is '祖级列表';
 comment on column sys_dept.dept_name is '部门名称';
@@ -200,39 +202,40 @@ comment on column sys_dept.update_by is '更新者';
 comment on column sys_dept.update_time is '更新时间';
 
 -- 初始化-部门表数据
-insert into sys_dept values(100, 0,   '0',          'XXX科技',   null, 0, null, '15888888888', 'xxx@qq.com', '0', '0', 103, 1, now(), null, null);
+insert into sys_dept values(100, '000000', 0,   '0',          'XXX科技',   null, 0, null, '15888888888', 'xxx@qq.com', '0', '0', 103, 1, now(), null, null);
 insert into sys_dept
-values (101, 100, '0,100', '深圳总公司', null, 1, null, '15888888888', 'xxx@qq.com', '0', '0', 103, 1, now(), null,
+values (101, '000000', 100, '0,100', '深圳总公司', null, 1, null, '15888888888', 'xxx@qq.com', '0', '0', 103, 1, now(), null,
         null);
 insert into sys_dept
-values (102, 100, '0,100', '长沙分公司', null, 2, null, '15888888888', 'xxx@qq.com', '0', '0', 103, 1, now(), null,
+values (102, '000000', 100, '0,100', '长沙分公司', null, 2, null, '15888888888', 'xxx@qq.com', '0', '0', 103, 1, now(), null,
         null);
 insert into sys_dept
-values (103, 101, '0,100,101', '研发部门', null, 1, 1, '15888888888', 'xxx@qq.com', '0', '0', 103, 1, now(), null,
+values (103, '000000', 101, '0,100,101', '研发部门', null, 1, 1, '15888888888', 'xxx@qq.com', '0', '0', 103, 1, now(), null,
         null);
 insert into sys_dept
-values (104, 101, '0,100,101', '市场部门', null, 2, null, '15888888888', 'xxx@qq.com', '0', '0', 103, 1, now(), null,
+values (104, '000000', 101, '0,100,101', '市场部门', null, 2, null, '15888888888', 'xxx@qq.com', '0', '0', 103, 1, now(), null,
         null);
 insert into sys_dept
-values (105, 101, '0,100,101', '测试部门', null, 3, null, '15888888888', 'xxx@qq.com', '0', '0', 103, 1, now(), null,
+values (105, '000000', 101, '0,100,101', '测试部门', null, 3, null, '15888888888', 'xxx@qq.com', '0', '0', 103, 1, now(), null,
         null);
 insert into sys_dept
-values (106, 101, '0,100,101', '财务部门', null, 4, null, '15888888888', 'xxx@qq.com', '0', '0', 103, 1, now(), null,
+values (106, '000000', 101, '0,100,101', '财务部门', null, 4, null, '15888888888', 'xxx@qq.com', '0', '0', 103, 1, now(), null,
         null);
 insert into sys_dept
-values (107, 101, '0,100,101', '运维部门', null, 5, null, '15888888888', 'xxx@qq.com', '0', '0', 103, 1, now(), null,
+values (107, '000000', 101, '0,100,101', '运维部门', null, 5, null, '15888888888', 'xxx@qq.com', '0', '0', 103, 1, now(), null,
         null);
 insert into sys_dept
-values (108, 102, '0,100,102', '市场部门', null, 1, null, '15888888888', 'xxx@qq.com', '0', '0', 103, 1, now(), null,
+values (108, '000000', 102, '0,100,102', '市场部门', null, 1, null, '15888888888', 'xxx@qq.com', '0', '0', 103, 1, now(), null,
         null);
 insert into sys_dept
-values (109, 102, '0,100,102', '财务部门', null, 2, null, '15888888888', 'xxx@qq.com', '0', '0', 103, 1, now(), null,
+values (109, '000000', 102, '0,100,102', '财务部门', null, 2, null, '15888888888', 'xxx@qq.com', '0', '0', 103, 1, now(), null,
         null);
 
--- 2、用户信息表（已移除 tenant_id，包含 SSO 与认证扩展字段）
+-- 2、用户信息表（包含 SSO 与认证扩展字段）
 create table if not exists sys_user
 (
     user_id int8,
+    tenant_id varchar (20) default '000000':: varchar,
     dept_id int8,
     user_name varchar (30) not null,
     nick_name varchar (30) not null,
@@ -267,6 +270,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS sys_user_keycloak_id_uk
 
 comment on table sys_user is '用户信息表';
 comment on column sys_user.user_id is '用户ID';
+comment on column sys_user.tenant_id is '租户编号';
 comment on column sys_user.dept_id is '部门ID';
 comment on column sys_user.user_name is '用户账号';
 comment on column sys_user.nick_name is '用户昵称';
@@ -292,20 +296,21 @@ comment on column sys_user.auth_source is '认证来源(PLATFORM/LOCAL/LDAP)';
 comment on column sys_user.password_reset_required is '是否需要重置密码(首次登录强制改密)';
 
 -- 初始化-用户信息表数据
-insert into sys_user values(1, 103, 'admin', '疯狂的狮子Li', 'sys_user', 'crazyLionLi@163.com', '15888888888', '1', null, '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', '0', '0', '127.0.0.1', now(), 103, 1, now(), null, null, '管理员', null, null, 'PLATFORM', false);
+insert into sys_user values(1, '000000', 103, 'admin', '疯狂的狮子Li', 'sys_user', 'crazyLionLi@163.com', '15888888888', '1', null, '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', '0', '0', '127.0.0.1', now(), 103, 1, now(), null, null, '管理员', null, null, 'PLATFORM', false);
 insert into sys_user
-values (3, 108, 'test', '本部门及以下 密码666666', 'sys_user', '', '', '0', null,
+values (3, '000000', 108, 'test', '本部门及以下 密码666666', 'sys_user', '', '', '0', null,
         '$2a$10$b8yUzN0C71sbz.PhNOCgJe.Tu1yWC3RNrTyjSQ8p1W0.aaUXUJ.Ne', '0', '0', '127.0.0.1', now(), 103, 1, now(), 3,
         now(), NULL, null, null, 'PLATFORM', false);
 insert into sys_user
-values (4, 102, 'test1', '仅本人 密码666666', 'sys_user', '', '', '0', null,
+values (4, '000000', 102, 'test1', '仅本人 密码666666', 'sys_user', '', '', '0', null,
         '$2a$10$b8yUzN0C71sbz.PhNOCgJe.Tu1yWC3RNrTyjSQ8p1W0.aaUXUJ.Ne', '0', '0', '127.0.0.1', now(), 103, 1, now(), 4,
         now(), NULL, null, null, 'PLATFORM', false);
 
--- 3、岗位信息表（已移除 tenant_id）
+-- 3、岗位信息表
 create table if not exists sys_post
 (
     post_id int8,
+    tenant_id varchar (20) default '000000':: varchar,
     dept_id int8,
     post_code varchar (64) not null,
     post_category varchar (100) default null,
@@ -323,6 +328,7 @@ create table if not exists sys_post
 
 comment on table sys_post is '岗位信息表';
 comment on column sys_post.post_id is '岗位ID';
+comment on column sys_post.tenant_id is '租户编号';
 comment on column sys_post.dept_id is '部门id';
 comment on column sys_post.post_code is '岗位编码';
 comment on column sys_post.post_category is '岗位类别编码';
@@ -337,18 +343,19 @@ comment on column sys_post.update_time is '更新时间';
 comment on column sys_post.remark is '备注';
 
 -- 初始化-岗位信息表数据
-insert into sys_post values(1, 103, 'ceo',  null, '董事长',   1, '0', 103, 1, now(), null, null, '');
+insert into sys_post values(1, '000000', 103, 'ceo',  null, '董事长',   1, '0', 103, 1, now(), null, null, '');
 insert into sys_post
-values (2, 100, 'se', null, '项目经理', 2, '0', 103, 1, now(), null, null, '');
+values (2, '000000', 100, 'se', null, '项目经理', 2, '0', 103, 1, now(), null, null, '');
 insert into sys_post
-values (3, 100, 'hr', null, '人力资源', 3, '0', 103, 1, now(), null, null, '');
+values (3, '000000', 100, 'hr', null, '人力资源', 3, '0', 103, 1, now(), null, null, '');
 insert into sys_post
-values (4, 100, 'user', null, '普通员工', 4, '0', 103, 1, now(), null, null, '');
+values (4, '000000', 100, 'user', null, '普通员工', 4, '0', 103, 1, now(), null, null, '');
 
--- 4、角色信息表（已移除 tenant_id）
+-- 4、角色信息表
 create table if not exists sys_role
 (
     role_id int8,
+    tenant_id varchar (20) default '000000':: varchar,
     role_name varchar (30) not null,
     role_key varchar (100) not null,
     role_sort int4 not null,
@@ -368,6 +375,7 @@ create table if not exists sys_role
 
 comment on table sys_role is '角色信息表';
 comment on column sys_role.role_id is '角色ID';
+comment on column sys_role.tenant_id is '租户编号';
 comment on column sys_role.role_name is '角色名称';
 comment on column sys_role.role_key is '角色权限字符串';
 comment on column sys_role.role_sort is '显示顺序';
@@ -384,18 +392,19 @@ comment on column sys_role.update_time is '更新时间';
 comment on column sys_role.remark is '备注';
 
 -- 初始化-角色信息表数据
-insert into sys_role values('1', '超级管理员',   'superadmin', 1, '1', 't', 't', '0', '0', 103, 1, now(), null, null, '超级管理员');
+insert into sys_role values('1', '000000', '超级管理员',   'superadmin', 1, '1', 't', 't', '0', '0', 103, 1, now(), null, null, '超级管理员');
 insert into sys_role
-values ('3', '本部门及以下', 'test1', 3, '4', 't', 't', '0', '0', 103, 1, now(), NULL, NULL, '');
+values ('3', '000000', '本部门及以下', 'test1', 3, '4', 't', 't', '0', '0', 103, 1, now(), NULL, NULL, '');
 insert into sys_role
-values ('4', '仅本人', 'test2', 4, '5', 't', 't', '0', '0', 103, 1, now(), NULL, NULL, '');
+values ('4', '000000', '仅本人', 'test2', 4, '5', 't', 't', '0', '0', 103, 1, now(), NULL, NULL, '');
 
 -- 角色在各应用下的数据权限与联动配置表（来自 V1_005）
 CREATE TABLE IF NOT EXISTS sys_role_data_scope
 (
     id int8 NOT NULL,
     role_id int8 NOT NULL,
-    tenant_id varchar (20) NOT NULL,
+    tenant_id varchar (20) DEFAULT '000000' NOT NULL,
+    app_id varchar (20) DEFAULT '000000' NOT NULL,
     data_scope char (1) DEFAULT '1'::bpchar,
     menu_check_strictly bool DEFAULT true,
     dept_check_strictly bool DEFAULT true,
@@ -407,28 +416,31 @@ CREATE TABLE IF NOT EXISTS sys_role_data_scope
     CONSTRAINT sys_role_data_scope_pk PRIMARY KEY (id)
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS sys_role_data_scope_uk ON sys_role_data_scope (role_id, tenant_id);
+CREATE UNIQUE INDEX IF NOT EXISTS sys_role_data_scope_uk ON sys_role_data_scope (role_id, app_id);
 CREATE INDEX IF NOT EXISTS sys_role_data_scope_role_id_index ON sys_role_data_scope (role_id);
+CREATE INDEX IF NOT EXISTS sys_role_data_scope_app_id_index ON sys_role_data_scope (app_id);
 CREATE INDEX IF NOT EXISTS sys_role_data_scope_tenant_id_index ON sys_role_data_scope (tenant_id);
 
 COMMENT ON TABLE sys_role_data_scope IS '角色在应用下的数据权限与联动配置表';
 COMMENT ON COLUMN sys_role_data_scope.id IS '主键';
 COMMENT ON COLUMN sys_role_data_scope.role_id IS '角色ID';
-COMMENT ON COLUMN sys_role_data_scope.tenant_id IS '应用编号';
+COMMENT ON COLUMN sys_role_data_scope.tenant_id IS '租户编号(固定000000)';
+COMMENT ON COLUMN sys_role_data_scope.app_id IS '应用编号';
 COMMENT ON COLUMN sys_role_data_scope.data_scope IS '数据范围（1：全部数据权限 2：自定数据权限 3：本部门数据权限 4：本部门及以下数据权限 5：仅本人数据权限 6：部门及以下或本人数据权限）';
 COMMENT ON COLUMN sys_role_data_scope.menu_check_strictly IS '菜单树选择项是否关联显示';
 COMMENT ON COLUMN sys_role_data_scope.dept_check_strictly IS '部门树选择项是否关联显示';
 
-INSERT INTO sys_role_data_scope (id, role_id, tenant_id, data_scope, menu_check_strictly, dept_check_strictly,
+INSERT INTO sys_role_data_scope (id, role_id, tenant_id, app_id, data_scope, menu_check_strictly, dept_check_strictly,
                                  create_time)
-VALUES (1, 1, '000000', '1', true, true, now()),
-       (3, 3, '000000', '4', true, true, now()),
-       (4, 4, '000000', '5', true, true, now());
+VALUES (1, 1, '000000', '000000', '1', true, true, now()),
+       (3, 3, '000000', '000000', '4', true, true, now()),
+       (4, 4, '000000', '000000', '5', true, true, now());
 
 -- 5、菜单权限表（包含 app_id 字段，并已完成 V1_006/V1_007 菜单收敛）
 create table if not exists sys_menu
 (
     menu_id int8,
+    tenant_id varchar (20) default '000000':: varchar,
     menu_name varchar (50) not null,
     parent_id int8 default 0,
     order_num int4 default 0,
@@ -456,6 +468,7 @@ CREATE INDEX IF NOT EXISTS sys_menu_app_id_idx ON sys_menu (app_id);
 
 comment on table sys_menu is '菜单权限表';
 comment on column sys_menu.menu_id is '菜单ID';
+comment on column sys_menu.tenant_id is '租户编号';
 comment on column sys_menu.menu_name is '菜单名称';
 comment on column sys_menu.parent_id is '父菜单ID';
 comment on column sys_menu.order_num is '显示顺序';
@@ -480,214 +493,214 @@ comment on column sys_menu.app_id is '关联应用ID(仅menu_type=C可配置，�
 -- 初始化-菜单信息表数据（已剔除废弃菜单 6, 121, 122 及其按钮，保留收敛后的 124 应用管理）
 -- 一级菜单
 insert into sys_menu
-values ('1', '系统管理', '0', '1', 'system', null, '', '1', '0', 'M', '0', '0', '', 'system', 103, 1, now(), null, null,
+values ('1', '000000', '系统管理', '0', '1', 'system', null, '', '1', '0', 'M', '0', '0', '', 'system', 103, 1, now(), null, null,
         '系统管理目录');
 
 -- 二级菜单
 insert into sys_menu
-values ('100', '用户管理', '1', '1', 'user', 'system/user/index', '', '1', '0', 'C', '0', '0', 'system:user:list',
+values ('100', '000000', '用户管理', '1', '1', 'user', 'system/user/index', '', '1', '0', 'C', '0', '0', 'system:user:list',
         'user', 103, 1, now(), null, null, '用户管理菜单');
 insert into sys_menu
-values ('101', '角色管理', '1', '2', 'role', 'system/role/index', '', '1', '0', 'C', '0', '0', 'system:role:list',
+values ('101', '000000', '角色管理', '1', '2', 'role', 'system/role/index', '', '1', '0', 'C', '0', '0', 'system:role:list',
         'peoples', 103, 1, now(), null, null, '角色管理菜单');
 insert into sys_menu
-values ('102', '菜单管理', '1', '3', 'menu', 'system/menu/index', '', '1', '0', 'C', '0', '0', 'system:menu:list',
+values ('102', '000000', '菜单管理', '1', '3', 'menu', 'system/menu/index', '', '1', '0', 'C', '0', '0', 'system:menu:list',
         'tree-table', 103, 1, now(), null, null, '菜单管理菜单');
 insert into sys_menu
-values ('103', '部门管理', '1', '4', 'dept', 'system/dept/index', '', '1', '0', 'C', '0', '0', 'system:dept:list',
+values ('103', '000000', '部门管理', '1', '4', 'dept', 'system/dept/index', '', '1', '0', 'C', '0', '0', 'system:dept:list',
         'tree', 103, 1, now(), null, null, '部门管理菜单');
 
 insert into sys_menu
-values ('105', '字典管理', '1', '6', 'dict', 'system/dict/index', '', '1', '0', 'C', '0', '0', 'system:dict:list',
+values ('105', '000000', '字典管理', '1', '6', 'dict', 'system/dict/index', '', '1', '0', 'C', '0', '0', 'system:dict:list',
         'dict', 103, 1, now(), null, null, '字典管理菜单');
 insert into sys_menu
-values ('106', '参数设置', '1', '7', 'config', 'system/config/index', '', '1', '0', 'C', '0', '0', 'system:config:list',
+values ('106', '000000', '参数设置', '1', '7', 'config', 'system/config/index', '', '1', '0', 'C', '0', '0', 'system:config:list',
         'edit', 103, 1, now(), null, null, '参数设置菜单');
 insert into sys_menu
-values ('107', '通知公告', '1', '8', 'notice', 'system/notice/index', '', '1', '0', 'C', '0', '0', 'system:notice:list',
+values ('107', '000000', '通知公告', '1', '8', 'notice', 'system/notice/index', '', '1', '0', 'C', '0', '0', 'system:notice:list',
         'message', 103, 1, now(), null, null, '通知公告菜单');
 insert into sys_menu
-values ('108', '日志管理', '1', '9', 'log', '', '', '1', '0', 'M', '0', '0', '', 'log', 103, 1, now(), null, null,
+values ('108', '000000', '日志管理', '1', '9', 'log', '', '', '1', '0', 'M', '0', '0', '', 'log', 103, 1, now(), null, null,
         '日志管理菜单');
 
 insert into sys_menu
-values ('124', '应用管理', '1', '12', 'application', 'system/application/index', '', '1', '0', 'C', '0', '0',
+values ('124', '000000', '应用管理', '1', '12', 'application', 'system/application/index', '', '1', '0', 'C', '0', '0',
         'system:application:list', 'app', 103, 1, now(), null, null, '应用管理菜单');
 
 insert into sys_menu
-values ('130', '分配用户', '1', '2', 'role-auth/user/:roleId', 'system/role/authUser', '', '1', '1', 'C', '1', '0',
+values ('130', '000000', '分配用户', '1', '2', 'role-auth/user/:roleId', 'system/role/authUser', '', '1', '1', 'C', '1', '0',
         'system:role:edit', '#', 103, 1, now(), null, null, '/system/role');
 insert into sys_menu
-values ('131', '分配角色', '1', '1', 'user-auth/role/:userId', 'system/user/authRole', '', '1', '1', 'C', '1', '0',
+values ('131', '000000', '分配角色', '1', '1', 'user-auth/role/:userId', 'system/user/authRole', '', '1', '1', 'C', '1', '0',
         'system:user:edit', '#', 103, 1, now(), null, null, '/system/user');
 insert into sys_menu
-values ('132', '字典数据', '1', '6', 'dict-data/index/:dictId', 'system/dict/data', '', '1', '1', 'C', '1', '0',
+values ('132', '000000', '字典数据', '1', '6', 'dict-data/index/:dictId', 'system/dict/data', '', '1', '1', 'C', '1', '0',
         'system:dict:list', '#', 103, 1, now(), null, null, '/system/dict');
 
 -- 三级菜单
 insert into sys_menu
-values ('500', '操作日志', '108', '1', 'operlog', 'monitor/operlog/index', '', '1', '0', 'C', '0', '0',
+values ('500', '000000', '操作日志', '108', '1', 'operlog', 'monitor/operlog/index', '', '1', '0', 'C', '0', '0',
         'monitor:operlog:list', 'form', 103, 1, now(), null, null, '操作日志菜单');
 insert into sys_menu
-values ('501', '登录日志', '108', '2', 'logininfor', 'monitor/logininfor/index', '', '1', '0', 'C', '0', '0',
+values ('501', '000000', '登录日志', '108', '2', 'logininfor', 'monitor/logininfor/index', '', '1', '0', 'C', '0', '0',
         'monitor:logininfor:list', 'logininfor', 103, 1, now(), null, null, '登录日志菜单');
 
 -- 用户管理按钮
 insert into sys_menu
-values ('1001', '用户查询', '100', '1', '', '', '', '1', '0', 'F', '0', '0', 'system:user:query', '#', 103, 1, now(),
+values ('1001', '000000', '用户查询', '100', '1', '', '', '', '1', '0', 'F', '0', '0', 'system:user:query', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1002', '用户新增', '100', '2', '', '', '', '1', '0', 'F', '0', '0', 'system:user:add', '#', 103, 1, now(),
+values ('1002', '000000', '用户新增', '100', '2', '', '', '', '1', '0', 'F', '0', '0', 'system:user:add', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1003', '用户修改', '100', '3', '', '', '', '1', '0', 'F', '0', '0', 'system:user:edit', '#', 103, 1, now(),
+values ('1003', '000000', '用户修改', '100', '3', '', '', '', '1', '0', 'F', '0', '0', 'system:user:edit', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1004', '用户删除', '100', '4', '', '', '', '1', '0', 'F', '0', '0', 'system:user:remove', '#', 103, 1, now(),
+values ('1004', '000000', '用户删除', '100', '4', '', '', '', '1', '0', 'F', '0', '0', 'system:user:remove', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1005', '用户导出', '100', '5', '', '', '', '1', '0', 'F', '0', '0', 'system:user:export', '#', 103, 1, now(),
+values ('1005', '000000', '用户导出', '100', '5', '', '', '', '1', '0', 'F', '0', '0', 'system:user:export', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1006', '用户导入', '100', '6', '', '', '', '1', '0', 'F', '0', '0', 'system:user:import', '#', 103, 1, now(),
+values ('1006', '000000', '用户导入', '100', '6', '', '', '', '1', '0', 'F', '0', '0', 'system:user:import', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1007', '重置密码', '100', '7', '', '', '', '1', '0', 'F', '0', '0', 'system:user:resetPwd', '#', 103, 1, now(),
+values ('1007', '000000', '重置密码', '100', '7', '', '', '', '1', '0', 'F', '0', '0', 'system:user:resetPwd', '#', 103, 1, now(),
         null, null, '');
 
 -- 角色管理按钮
 insert into sys_menu
-values ('1008', '角色查询', '101', '1', '', '', '', '1', '0', 'F', '0', '0', 'system:role:query', '#', 103, 1, now(),
+values ('1008', '000000', '角色查询', '101', '1', '', '', '', '1', '0', 'F', '0', '0', 'system:role:query', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1009', '角色新增', '101', '2', '', '', '', '1', '0', 'F', '0', '0', 'system:role:add', '#', 103, 1, now(),
+values ('1009', '000000', '角色新增', '101', '2', '', '', '', '1', '0', 'F', '0', '0', 'system:role:add', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1010', '角色修改', '101', '3', '', '', '', '1', '0', 'F', '0', '0', 'system:role:edit', '#', 103, 1, now(),
+values ('1010', '000000', '角色修改', '101', '3', '', '', '', '1', '0', 'F', '0', '0', 'system:role:edit', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1011', '角色删除', '101', '4', '', '', '', '1', '0', 'F', '0', '0', 'system:role:remove', '#', 103, 1, now(),
+values ('1011', '000000', '角色删除', '101', '4', '', '', '', '1', '0', 'F', '0', '0', 'system:role:remove', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1012', '角色导出', '101', '5', '', '', '', '1', '0', 'F', '0', '0', 'system:role:export', '#', 103, 1, now(),
+values ('1012', '000000', '角色导出', '101', '5', '', '', '', '1', '0', 'F', '0', '0', 'system:role:export', '#', 103, 1, now(),
         null, null, '');
 
 -- 菜单管理按钮
 insert into sys_menu
-values ('1013', '菜单查询', '102', '1', '', '', '', '1', '0', 'F', '0', '0', 'system:menu:query', '#', 103, 1, now(),
+values ('1013', '000000', '菜单查询', '102', '1', '', '', '', '1', '0', 'F', '0', '0', 'system:menu:query', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1014', '菜单新增', '102', '2', '', '', '', '1', '0', 'F', '0', '0', 'system:menu:add', '#', 103, 1, now(),
+values ('1014', '000000', '菜单新增', '102', '2', '', '', '', '1', '0', 'F', '0', '0', 'system:menu:add', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1015', '菜单修改', '102', '3', '', '', '', '1', '0', 'F', '0', '0', 'system:menu:edit', '#', 103, 1, now(),
+values ('1015', '000000', '菜单修改', '102', '3', '', '', '', '1', '0', 'F', '0', '0', 'system:menu:edit', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1016', '菜单删除', '102', '4', '', '', '', '1', '0', 'F', '0', '0', 'system:menu:remove', '#', 103, 1, now(),
+values ('1016', '000000', '菜单删除', '102', '4', '', '', '', '1', '0', 'F', '0', '0', 'system:menu:remove', '#', 103, 1, now(),
         null, null, '');
 
 -- 部门管理按钮
 insert into sys_menu
-values ('1017', '部门查询', '103', '1', '', '', '', '1', '0', 'F', '0', '0', 'system:dept:query', '#', 103, 1, now(),
+values ('1017', '000000', '部门查询', '103', '1', '', '', '', '1', '0', 'F', '0', '0', 'system:dept:query', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1018', '部门新增', '103', '2', '', '', '', '1', '0', 'F', '0', '0', 'system:dept:add', '#', 103, 1, now(),
+values ('1018', '000000', '部门新增', '103', '2', '', '', '', '1', '0', 'F', '0', '0', 'system:dept:add', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1019', '部门修改', '103', '3', '', '', '', '1', '0', 'F', '0', '0', 'system:dept:edit', '#', 103, 1, now(),
+values ('1019', '000000', '部门修改', '103', '3', '', '', '', '1', '0', 'F', '0', '0', 'system:dept:edit', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1020', '部门删除', '103', '4', '', '', '', '1', '0', 'F', '0', '0', 'system:dept:remove', '#', 103, 1, now(),
+values ('1020', '000000', '部门删除', '103', '4', '', '', '', '1', '0', 'F', '0', '0', 'system:dept:remove', '#', 103, 1, now(),
         null, null, '');
 
 -- 字典管理按钮
 insert into sys_menu
-values ('1026', '字典查询', '105', '1', '#', '', '', '1', '0', 'F', '0', '0', 'system:dict:query', '#', 103, 1, now(),
+values ('1026', '000000', '字典查询', '105', '1', '#', '', '', '1', '0', 'F', '0', '0', 'system:dict:query', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1027', '字典新增', '105', '2', '#', '', '', '1', '0', 'F', '0', '0', 'system:dict:add', '#', 103, 1, now(),
+values ('1027', '000000', '字典新增', '105', '2', '#', '', '', '1', '0', 'F', '0', '0', 'system:dict:add', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1028', '字典修改', '105', '3', '#', '', '', '1', '0', 'F', '0', '0', 'system:dict:edit', '#', 103, 1, now(),
+values ('1028', '000000', '字典修改', '105', '3', '#', '', '', '1', '0', 'F', '0', '0', 'system:dict:edit', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1029', '字典删除', '105', '4', '#', '', '', '1', '0', 'F', '0', '0', 'system:dict:remove', '#', 103, 1, now(),
+values ('1029', '000000', '字典删除', '105', '4', '#', '', '', '1', '0', 'F', '0', '0', 'system:dict:remove', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1030', '字典导出', '105', '5', '#', '', '', '1', '0', 'F', '0', '0', 'system:dict:export', '#', 103, 1, now(),
+values ('1030', '000000', '字典导出', '105', '5', '#', '', '', '1', '0', 'F', '0', '0', 'system:dict:export', '#', 103, 1, now(),
         null, null, '');
 
 -- 参数设置按钮
 insert into sys_menu
-values ('1031', '参数查询', '106', '1', '#', '', '', '1', '0', 'F', '0', '0', 'system:config:query', '#', 103, 1, now(),
+values ('1031', '000000', '参数查询', '106', '1', '#', '', '', '1', '0', 'F', '0', '0', 'system:config:query', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1032', '参数新增', '106', '2', '#', '', '', '1', '0', 'F', '0', '0', 'system:config:add', '#', 103, 1, now(),
+values ('1032', '000000', '参数新增', '106', '2', '#', '', '', '1', '0', 'F', '0', '0', 'system:config:add', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1033', '参数修改', '106', '3', '#', '', '', '1', '0', 'F', '0', '0', 'system:config:edit', '#', 103, 1, now(),
+values ('1033', '000000', '参数修改', '106', '3', '#', '', '', '1', '0', 'F', '0', '0', 'system:config:edit', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1034', '参数删除', '106', '4', '#', '', '', '1', '0', 'F', '0', '0', 'system:config:remove', '#', 103, 1,
+values ('1034', '000000', '参数删除', '106', '4', '#', '', '', '1', '0', 'F', '0', '0', 'system:config:remove', '#', 103, 1,
         now(), null, null, '');
 insert into sys_menu
-values ('1035', '参数导出', '106', '5', '#', '', '', '1', '0', 'F', '0', '0', 'system:config:export', '#', 103, 1,
+values ('1035', '000000', '参数导出', '106', '5', '#', '', '', '1', '0', 'F', '0', '0', 'system:config:export', '#', 103, 1,
         now(), null, null, '');
 
 -- 通知公告按钮
 insert into sys_menu
-values ('1036', '公告查询', '107', '1', '#', '', '', '1', '0', 'F', '0', '0', 'system:notice:query', '#', 103, 1, now(),
+values ('1036', '000000', '公告查询', '107', '1', '#', '', '', '1', '0', 'F', '0', '0', 'system:notice:query', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1037', '公告新增', '107', '2', '#', '', '', '1', '0', 'F', '0', '0', 'system:notice:add', '#', 103, 1, now(),
+values ('1037', '000000', '公告新增', '107', '2', '#', '', '', '1', '0', 'F', '0', '0', 'system:notice:add', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1038', '公告修改', '107', '3', '#', '', '', '1', '0', 'F', '0', '0', 'system:notice:edit', '#', 103, 1, now(),
+values ('1038', '000000', '公告修改', '107', '3', '#', '', '', '1', '0', 'F', '0', '0', 'system:notice:edit', '#', 103, 1, now(),
         null, null, '');
 insert into sys_menu
-values ('1039', '公告删除', '107', '4', '#', '', '', '1', '0', 'F', '0', '0', 'system:notice:remove', '#', 103, 1,
+values ('1039', '000000', '公告删除', '107', '4', '#', '', '', '1', '0', 'F', '0', '0', 'system:notice:remove', '#', 103, 1,
         now(), null, null, '');
 
 -- 操作日志按钮
 insert into sys_menu
-values ('1040', '操作查询', '500', '1', '#', '', '', '1', '0', 'F', '0', '0', 'monitor:operlog:query', '#', 103, 1,
+values ('1040', '000000', '操作查询', '500', '1', '#', '', '', '1', '0', 'F', '0', '0', 'monitor:operlog:query', '#', 103, 1,
         now(), null, null, '');
 insert into sys_menu
-values ('1041', '操作删除', '500', '2', '#', '', '', '1', '0', 'F', '0', '0', 'monitor:operlog:remove', '#', 103, 1,
+values ('1041', '000000', '操作删除', '500', '2', '#', '', '', '1', '0', 'F', '0', '0', 'monitor:operlog:remove', '#', 103, 1,
         now(), null, null, '');
 insert into sys_menu
-values ('1042', '日志导出', '500', '4', '#', '', '', '1', '0', 'F', '0', '0', 'monitor:operlog:export', '#', 103, 1,
+values ('1042', '000000', '日志导出', '500', '4', '#', '', '', '1', '0', 'F', '0', '0', 'monitor:operlog:export', '#', 103, 1,
         now(), null, null, '');
 
 -- 登录日志按钮
 insert into sys_menu
-values ('1043', '登录查询', '501', '1', '#', '', '', '1', '0', 'F', '0', '0', 'monitor:logininfor:query', '#', 103, 1,
+values ('1043', '000000', '登录查询', '501', '1', '#', '', '', '1', '0', 'F', '0', '0', 'monitor:logininfor:query', '#', 103, 1,
         now(), null, null, '');
 insert into sys_menu
-values ('1044', '登录删除', '501', '2', '#', '', '', '1', '0', 'F', '0', '0', 'monitor:logininfor:remove', '#', 103, 1,
+values ('1044', '000000', '登录删除', '501', '2', '#', '', '', '1', '0', 'F', '0', '0', 'monitor:logininfor:remove', '#', 103, 1,
         now(), null, null, '');
 insert into sys_menu
-values ('1045', '日志导出', '501', '3', '#', '', '', '1', '0', 'F', '0', '0', 'monitor:logininfor:export', '#', 103, 1,
+values ('1045', '000000', '日志导出', '501', '3', '#', '', '', '1', '0', 'F', '0', '0', 'monitor:logininfor:export', '#', 103, 1,
         now(), null, null, '');
 insert into sys_menu
-values ('1050', '账户解锁', '501', '4', '#', '', '', '1', '0', 'F', '0', '0', 'monitor:logininfor:unlock', '#', 103, 1,
+values ('1050', '000000', '账户解锁', '501', '4', '#', '', '', '1', '0', 'F', '0', '0', 'monitor:logininfor:unlock', '#', 103, 1,
         now(), null, null, '');
 
 -- 应用管理按钮（来自 V1_006）
 insert into sys_menu
-values ('1630', '应用查询', '124', '1', '#', '', '', '1', '0', 'F', '0', '0', 'system:application:query', '#', 103, 1,
+values ('1630', '000000', '应用查询', '124', '1', '#', '', '', '1', '0', 'F', '0', '0', 'system:application:query', '#', 103, 1,
         now(), null, null, '');
 insert into sys_menu
-values ('1631', '应用新增', '124', '2', '#', '', '', '1', '0', 'F', '0', '0', 'system:application:add', '#', 103, 1,
+values ('1631', '000000', '应用新增', '124', '2', '#', '', '', '1', '0', 'F', '0', '0', 'system:application:add', '#', 103, 1,
         now(), null, null, '');
 insert into sys_menu
-values ('1632', '应用修改', '124', '3', '#', '', '', '1', '0', 'F', '0', '0', 'system:application:edit', '#', 103, 1,
+values ('1632', '000000', '应用修改', '124', '3', '#', '', '', '1', '0', 'F', '0', '0', 'system:application:edit', '#', 103, 1,
         now(), null, null, '');
 insert into sys_menu
-values ('1633', '应用删除', '124', '4', '#', '', '', '1', '0', 'F', '0', '0', 'system:application:remove', '#', 103, 1,
+values ('1633', '000000', '应用删除', '124', '4', '#', '', '', '1', '0', 'F', '0', '0', 'system:application:remove', '#', 103, 1,
         now(), null, null, '');
 insert into sys_menu
-values ('1634', '重置密钥', '124', '5', '#', '', '', '1', '0', 'F', '0', '0', 'system:application:resetSecret', '#',
+values ('1634', '000000', '重置密钥', '124', '5', '#', '', '', '1', '0', 'F', '0', '0', 'system:application:resetSecret', '#',
         103, 1, now(), null, null, '');
 
 -- 6、用户和角色关联表  用户N-1角色
@@ -715,142 +728,146 @@ create table if not exists sys_role_menu
     role_id int8 not null,
     menu_id int8 not null,
     tenant_id varchar (20) default '000000' not null,
-    constraint sys_role_menu_pk primary key (role_id, menu_id, tenant_id)
+    app_id varchar (20) default '000000' not null,
+    constraint sys_role_menu_pk primary key (role_id, menu_id, app_id)
 );
 
+CREATE INDEX IF NOT EXISTS sys_role_menu_app_id_index ON sys_role_menu (app_id);
 CREATE INDEX IF NOT EXISTS sys_role_menu_tenant_id_index ON sys_role_menu (tenant_id);
 
 comment on table sys_role_menu is '角色和菜单关联表';
 comment on column sys_role_menu.role_id is '角色ID';
 comment on column sys_role_menu.menu_id is '菜单ID';
+comment on column sys_role_menu.tenant_id is '租户编号(固定000000)';
+comment on column sys_role_menu.app_id is '应用编号';
 
 -- 初始化-角色和菜单关联表数据
-insert into sys_role_menu values ('1', '124',   '000000');
+insert into sys_role_menu values ('1', '124', '000000', '000000');
 insert into sys_role_menu
-values ('1', '1630', '000000');
+values ('1', '1630', '000000', '000000');
 insert into sys_role_menu
-values ('1', '1631', '000000');
+values ('1', '1631', '000000', '000000');
 insert into sys_role_menu
-values ('1', '1632', '000000');
+values ('1', '1632', '000000', '000000');
 insert into sys_role_menu
-values ('1', '1633', '000000');
+values ('1', '1633', '000000', '000000');
 insert into sys_role_menu
-values ('1', '1634', '000000');
+values ('1', '1634', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1', '000000');
+values ('3', '1', '000000', '000000');
 
 insert into sys_role_menu
-values ('3', '100', '000000');
+values ('3', '100', '000000', '000000');
 insert into sys_role_menu
-values ('3', '101', '000000');
+values ('3', '101', '000000', '000000');
 insert into sys_role_menu
-values ('3', '102', '000000');
+values ('3', '102', '000000', '000000');
 insert into sys_role_menu
-values ('3', '103', '000000');
+values ('3', '103', '000000', '000000');
 
 insert into sys_role_menu
-values ('3', '105', '000000');
+values ('3', '105', '000000', '000000');
 insert into sys_role_menu
-values ('3', '106', '000000');
+values ('3', '106', '000000', '000000');
 insert into sys_role_menu
-values ('3', '107', '000000');
+values ('3', '107', '000000', '000000');
 insert into sys_role_menu
-values ('3', '108', '000000');
+values ('3', '108', '000000', '000000');
 
 insert into sys_role_menu
-values ('3', '130', '000000');
+values ('3', '130', '000000', '000000');
 insert into sys_role_menu
-values ('3', '131', '000000');
+values ('3', '131', '000000', '000000');
 insert into sys_role_menu
-values ('3', '132', '000000');
+values ('3', '132', '000000', '000000');
 
 insert into sys_role_menu
-values ('3', '500', '000000');
+values ('3', '500', '000000', '000000');
 insert into sys_role_menu
-values ('3', '501', '000000');
+values ('3', '501', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1001', '000000');
+values ('3', '1001', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1002', '000000');
+values ('3', '1002', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1003', '000000');
+values ('3', '1003', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1004', '000000');
+values ('3', '1004', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1005', '000000');
+values ('3', '1005', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1006', '000000');
+values ('3', '1006', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1007', '000000');
+values ('3', '1007', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1008', '000000');
+values ('3', '1008', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1009', '000000');
+values ('3', '1009', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1010', '000000');
+values ('3', '1010', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1011', '000000');
+values ('3', '1011', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1012', '000000');
+values ('3', '1012', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1013', '000000');
+values ('3', '1013', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1014', '000000');
+values ('3', '1014', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1015', '000000');
+values ('3', '1015', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1016', '000000');
+values ('3', '1016', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1017', '000000');
+values ('3', '1017', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1018', '000000');
+values ('3', '1018', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1019', '000000');
+values ('3', '1019', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1020', '000000');
+values ('3', '1020', '000000', '000000');
 
 insert into sys_role_menu
-values ('3', '1026', '000000');
+values ('3', '1026', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1027', '000000');
+values ('3', '1027', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1028', '000000');
+values ('3', '1028', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1029', '000000');
+values ('3', '1029', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1030', '000000');
+values ('3', '1030', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1031', '000000');
+values ('3', '1031', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1032', '000000');
+values ('3', '1032', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1033', '000000');
+values ('3', '1033', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1034', '000000');
+values ('3', '1034', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1035', '000000');
+values ('3', '1035', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1036', '000000');
+values ('3', '1036', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1037', '000000');
+values ('3', '1037', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1038', '000000');
+values ('3', '1038', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1039', '000000');
+values ('3', '1039', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1040', '000000');
+values ('3', '1040', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1041', '000000');
+values ('3', '1041', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1042', '000000');
+values ('3', '1042', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1043', '000000');
+values ('3', '1043', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1044', '000000');
+values ('3', '1044', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1045', '000000');
+values ('3', '1045', '000000', '000000');
 insert into sys_role_menu
-values ('3', '1050', '000000');
+values ('3', '1050', '000000', '000000');
 
 -- 8、角色和部门关联表  角色1-N部门（按应用独立配置，来自 V1_005）
 create table if not exists sys_role_dept
@@ -984,31 +1001,19 @@ insert into sys_dict_type
 values (12, '设备类型', 'sys_device_type', 'system', null, 103, 1, now(), null, null, '客户端设备类型');
 INSERT INTO "public"."sys_dict_type" ("dict_id", "dict_name", "dict_type", "create_dept", "create_by", "create_time", "update_by", "update_time", "remark", "category_type", "component_info") VALUES (13, '应用分类', 'app_category', 103, 1, '2026-11-03 13:20:57.906263', NULL, NULL, '应用分类列表', 'system', NULL);
 
--- 字典类型与应用关联表（来自 V1_003）
-CREATE TABLE IF NOT EXISTS sys_dict_type_tenant
+-- 字典类型与应用关联表（来自 V1_003，重命名为 sys_dict_type_app）
+CREATE TABLE IF NOT EXISTS sys_dict_type_app
 (
     dict_id int8 NOT NULL,
-    tenant_id varchar (20) NOT NULL,
-    CONSTRAINT sys_dict_type_tenant_pk PRIMARY KEY (dict_id, tenant_id)
+    app_id varchar (64) NOT NULL,
+    CONSTRAINT sys_dict_type_app_pk PRIMARY KEY (dict_id, app_id)
 );
 
-COMMENT ON TABLE sys_dict_type_tenant IS '字典类型与应用关联表';
-COMMENT ON COLUMN sys_dict_type_tenant.dict_id IS '字典主键';
-COMMENT ON COLUMN sys_dict_type_tenant.tenant_id IS '应用编号';
+COMMENT ON TABLE sys_dict_type_app IS '字典类型与应用关联表';
+COMMENT ON COLUMN sys_dict_type_app.dict_id IS '字典主键';
+COMMENT ON COLUMN sys_dict_type_app.app_id IS '应用ID';
 
-CREATE INDEX IF NOT EXISTS sys_dict_type_tenant_tenant_id_index ON sys_dict_type_tenant (tenant_id);
-INSERT INTO sys_dict_type_tenant (dict_id, tenant_id)
-VALUES (1, '000000'),
-       (2, '000000'),
-       (3, '000000'),
-       (6, '000000'),
-       (7, '000000'),
-       (8, '000000'),
-       (9, '000000'),
-       (10, '000000'),
-       (11, '000000'),
-       (12, '000000'),
-       (13, '000000');
+CREATE INDEX IF NOT EXISTS sys_dict_type_app_app_id_index ON sys_dict_type_app (app_id);
 
 -- 字典类型与角色关联表 & 角色字典配置值表（来自 V1_004）
 CREATE TABLE IF NOT EXISTS sys_dict_type_role
@@ -1028,7 +1033,8 @@ CREATE TABLE IF NOT EXISTS sys_role_dict_value
 (
     id          int8        NOT NULL,
     role_id     int8        NOT NULL,
-    tenant_id   varchar(20) NOT NULL,
+    tenant_id   varchar(20) DEFAULT '000000' NOT NULL,
+    app_id      varchar(20) DEFAULT '000000' NOT NULL,
     dict_id     int8        NOT NULL,
     field_key   varchar(64) NOT NULL,
     field_value text,
@@ -1043,17 +1049,20 @@ CREATE TABLE IF NOT EXISTS sys_role_dict_value
 COMMENT ON TABLE sys_role_dict_value IS '角色字典配置值表';
 COMMENT ON COLUMN sys_role_dict_value.id IS '主键';
 COMMENT ON COLUMN sys_role_dict_value.role_id IS '角色ID';
-COMMENT ON COLUMN sys_role_dict_value.tenant_id IS '应用编号';
+COMMENT ON COLUMN sys_role_dict_value.tenant_id IS '租户编号(固定000000)';
+COMMENT ON COLUMN sys_role_dict_value.app_id IS '应用编号';
 COMMENT ON COLUMN sys_role_dict_value.dict_id IS '字典主键';
 COMMENT ON COLUMN sys_role_dict_value.field_key IS '组件字段标识（取 component_info.fieldKey）';
 COMMENT ON COLUMN sys_role_dict_value.field_value IS '字段值（多选为JSON数组字符串）';
 
 CREATE UNIQUE INDEX IF NOT EXISTS sys_role_dict_value_uk
-    ON sys_role_dict_value (role_id, tenant_id, dict_id, field_key);
+    ON sys_role_dict_value (role_id, app_id, dict_id, field_key);
 
+CREATE INDEX IF NOT EXISTS sys_role_dict_value_app_id_index ON sys_role_dict_value (app_id);
+CREATE INDEX IF NOT EXISTS sys_role_dict_value_tenant_id_index ON sys_role_dict_value (tenant_id);
 CREATE INDEX IF NOT EXISTS sys_role_dict_value_dict_index ON sys_role_dict_value (dict_id);
 
--- 12、字典数据表（已合并 V1_003、V1_007 变更）
+-- 12、字典数据表
 create table if not exists sys_dict_data
 (
     dict_code int8,
@@ -1185,12 +1194,15 @@ create table if not exists sys_config
     update_by int8,
     update_time timestamp,
     remark varchar (500) default null :: varchar,
+    app_id varchar (64),
     constraint sys_config_pk primary key (config_id)
 );
 
+CREATE INDEX IF NOT EXISTS sys_config_app_id_idx ON sys_config (app_id);
+
 comment on table sys_config is '参数配置表';
 comment on column sys_config.config_id is '参数主键';
-comment on column sys_config.tenant_id is '应用编号';
+comment on column sys_config.tenant_id is '租户编号';
 comment on column sys_config.config_name is '参数名称';
 comment on column sys_config.config_key is '参数键名';
 comment on column sys_config.config_value is '参数键值';
@@ -1201,22 +1213,23 @@ comment on column sys_config.create_time is '创建时间';
 comment on column sys_config.update_by is '更新者';
 comment on column sys_config.update_time is '更新时间';
 comment on column sys_config.remark is '备注';
+comment on column sys_config.app_id is '应用ID';
 
 insert into sys_config
 values (1, '000000', '主框架页-默认皮肤样式名称', 'sys.index.skinName', 'skin-blue', 'Y', 103, 1, now(), null, null,
-        '蓝色 skin-blue、绿色 skin-green、紫色 skin-purple、红色 skin-red、黄色 skin-yellow');
+        '蓝色 skin-blue、绿色 skin-green、紫色 skin-purple、红色 skin-red、黄色 skin-yellow', '000000');
 insert into sys_config
 values (2, '000000', '用户管理-账号初始密码', 'sys.user.initPassword', '123456', 'Y', 103, 1, now(), null, null,
-        '初始化密码 123456');
+        '初始化密码 123456', '000000');
 insert into sys_config
 values (3, '000000', '主框架页-侧边栏主题', 'sys.index.sideTheme', 'theme-dark', 'Y', 103, 1, now(), null, null,
-        '深色主题theme-dark，浅色主题theme-light');
+        '深色主题theme-dark，浅色主题theme-light', '000000');
 insert into sys_config
 values (5, '000000', '账号自助-是否开启用户注册功能', 'sys.account.registerUser', 'false', 'Y', 103, 1, now(), null,
-        null, '是否开启注册用户功能（true开启，false关闭）');
+        null, '是否开启注册用户功能（true开启，false关闭）', '000000');
 insert into sys_config
 values (11, '000000', 'OSS预览列表资源开关', 'sys.oss.previewListResource', 'true', 'Y', 103, 1, now(), null, null,
-        'true:开启, false:关闭');
+        'true:开启, false:关闭', '000000');
 
 -- 14、系统访问记录
 create table if not exists sys_logininfor

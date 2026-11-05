@@ -39,12 +39,42 @@ public class RoleDictConfigItemVo implements Serializable {
     /**
      * 应用编号
      */
+    private String appId;
+
+    /**
+     * 应用编号（兼容字段）
+     */
     private String tenantId;
 
     /**
      * 应用名称
      */
+    private String appName;
+
+    /**
+     * 应用名称（兼容字段）
+     */
     private String tenantName;
+
+    public void setAppId(String appId) {
+        this.appId = appId;
+        this.tenantId = appId;
+    }
+
+    public void setTenantId(String tenantId) {
+        this.tenantId = tenantId;
+        this.appId = tenantId;
+    }
+
+    public void setAppName(String appName) {
+        this.appName = appName;
+        this.tenantName = appName;
+    }
+
+    public void setTenantName(String tenantName) {
+        this.tenantName = tenantName;
+        this.appName = tenantName;
+    }
 
     /**
      * 组件字段标识

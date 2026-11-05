@@ -21,8 +21,34 @@ public class RoleAppConfigBo implements Serializable {
     /**
      * 应用编号
      */
-    @NotBlank(message = "应用编号不能为空")
+    private String appId;
+
+    /**
+     * 应用编号（兼容字段）
+     */
     private String tenantId;
+
+    public String getAppId() {
+        return cn.org.aip.common.core.utils.StringUtils.isNotBlank(appId) ? appId : tenantId;
+    }
+
+    public String getTenantId() {
+        return cn.org.aip.common.core.utils.StringUtils.isNotBlank(tenantId) ? tenantId : appId;
+    }
+
+    public void setAppId(String appId) {
+        this.appId = appId;
+        if (this.tenantId == null) {
+            this.tenantId = appId;
+        }
+    }
+
+    public void setTenantId(String tenantId) {
+        this.tenantId = tenantId;
+        if (this.appId == null) {
+            this.appId = tenantId;
+        }
+    }
 
     /**
      * 数据范围（1：全部数据权限 2：自定数据权限 3：本部门数据权限 4：本部门及以下数据权限 5：仅本人数据权限 6：部门及以下或本人数据权限）

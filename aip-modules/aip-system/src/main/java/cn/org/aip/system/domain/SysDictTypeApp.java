@@ -9,14 +9,13 @@ import java.io.Serial;
 import java.io.Serializable;
 
 /**
- * 字典类型与应用关联 sys_dict_type_tenant
+ * 字典类型与应用关联 sys_dict_type_app
  *
- * @author Lion Li
+ * @author Michelle.Chung
  */
-
 @Data
-@TableName("sys_dict_type_tenant")
-public class SysDictTypeTenant implements Serializable {
+@TableName("sys_dict_type_app")
+public class SysDictTypeApp implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -28,8 +27,8 @@ public class SysDictTypeTenant implements Serializable {
     private Long dictId;
 
     /**
-     * 应用编号
+     * 应用ID
      */
-    private String tenantId;
+    private String appId;
 
 }

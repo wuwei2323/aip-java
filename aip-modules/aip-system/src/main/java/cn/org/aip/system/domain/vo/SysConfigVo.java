@@ -64,6 +64,12 @@ public class SysConfigVo implements Serializable {
     private String remark;
 
     /**
+     * 应用ID
+     */
+    @ExcelProperty(value = "应用ID")
+    private String appId;
+
+    /**
      * 创建时间
      */
     @ExcelProperty(value = "创建时间")

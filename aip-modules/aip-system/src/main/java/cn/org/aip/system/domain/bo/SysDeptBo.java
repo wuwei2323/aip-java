@@ -27,6 +27,11 @@ public class SysDeptBo extends BaseEntity {
     private Long deptId;
 
     /**
+     * 租户编号
+     */
+    private String tenantId;
+
+    /**
      * 父部门ID
      */
     private Long parentId;

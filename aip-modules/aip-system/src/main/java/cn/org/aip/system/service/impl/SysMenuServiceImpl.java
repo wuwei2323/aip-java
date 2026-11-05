@@ -152,7 +152,7 @@ public class SysMenuServiceImpl implements ISysMenuService {
         if (StringUtils.isNotBlank(tenantId)) {
             SysRoleDataScope rds = roleDataScopeMapper.selectOne(new LambdaQueryWrapper<SysRoleDataScope>()
                 .eq(SysRoleDataScope::getRoleId, roleId)
-                .eq(SysRoleDataScope::getTenantId, tenantId));
+                .eq(SysRoleDataScope::getAppId, tenantId));
             if (rds != null && rds.getMenuCheckStrictly() != null) {
                 strictly = rds.getMenuCheckStrictly();
             }

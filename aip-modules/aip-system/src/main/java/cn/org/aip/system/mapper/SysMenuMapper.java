@@ -30,9 +30,9 @@ public interface SysMenuMapper extends BaseMapperPlus<SysMenu, SysMenuVo> {
      * @param userId 用户ID
      * @return SQL 字符串，用于 inSql 条件
      */
-    default String buildMenuByUserSql(Long userId, String tenantId) {
-        String tenantFilter = StringUtils.isNotBlank(tenantId)
-            ? " and tenant_id = '" + tenantId + "' "
+    default String buildMenuByUserSql(Long userId, String appId) {
+        String appFilter = StringUtils.isNotBlank(appId)
+            ? " and app_id = '" + appId + "' "
             : "";
         return """
                 select menu_id from sys_role_menu where role_id in (
@@ -40,31 +40,31 @@ public interface SysMenuMapper extends BaseMapperPlus<SysMenu, SysMenuVo> {
                         left join sys_role sr on sr.role_id = sur.role_id
                         where sur.user_id = %d and sr.status = '0'
                 ) %s
-            """.formatted(userId, tenantFilter);
+            """.formatted(userId, appFilter);
     }
 
     default String buildMenuByUserSql(Long userId) {
         return buildMenuByUserSql(userId, TenantHelper.getTenantId());
     }
 
-    default String buildMenuByRoleSql(Long roleId, String tenantId) {
-        String tenantFilter = StringUtils.isNotBlank(tenantId)
-            ? " and srm.tenant_id = '" + tenantId + "' "
+    default String buildMenuByRoleSql(Long roleId, String appId) {
+        String appFilter = StringUtils.isNotBlank(appId)
+            ? " and srm.app_id = '" + appId + "' "
             : "";
         return """
                 select srm.menu_id from sys_role_menu srm
                     left join sys_role sr on sr.role_id = srm.role_id
                     where srm.role_id = %d and sr.status = '0' %s
-            """.formatted(roleId, tenantFilter);
+            """.formatted(roleId, appFilter);
     }
 
     default String buildMenuByRoleSql(Long roleId) {
         return buildMenuByRoleSql(roleId, TenantHelper.getTenantId());
     }
 
-    default String buildParentMenuByRoleSql(Long roleId, String tenantId) {
-        String tenantFilter = StringUtils.isNotBlank(tenantId)
-            ? " and srm.tenant_id = '" + tenantId + "' "
+    default String buildParentMenuByRoleSql(Long roleId, String appId) {
+        String appFilter = StringUtils.isNotBlank(appId)
+            ? " and srm.app_id = '" + appId + "' "
             : "";
         return """
                 select parent_id from sys_menu where menu_id in (
@@ -72,7 +72,7 @@ public interface SysMenuMapper extends BaseMapperPlus<SysMenu, SysMenuVo> {
                         left join sys_role sr on sr.role_id = srm.role_id
                         where srm.role_id = %d and sr.status = '0' %s
                 )
-            """.formatted(roleId, tenantFilter);
+            """.formatted(roleId, appFilter);
     }
 
     default String buildParentMenuByRoleSql(Long roleId) {

@@ -9,7 +9,7 @@ import lombok.EqualsAndHashCode;
 import cn.org.aip.common.core.constant.Constants;
 import cn.org.aip.common.core.constant.SystemConstants;
 import cn.org.aip.common.core.utils.StringUtils;
-import cn.org.aip.common.mybatis.core.domain.BaseEntity;
+import cn.org.aip.common.tenant.core.TenantEntity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,7 +23,7 @@ import java.util.List;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("sys_menu")
-public class SysMenu extends BaseEntity {
+public class SysMenu extends TenantEntity {
 
     /**
      * 菜单ID

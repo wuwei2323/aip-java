@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import cn.org.aip.common.core.constant.SystemConstants;
 import cn.org.aip.common.core.constant.TenantConstants;
 import cn.org.aip.common.core.domain.R;
 import cn.org.aip.common.core.utils.MessageUtils;
@@ -144,6 +145,17 @@ public class SysApplicationController extends BaseController {
     public R<Void> dynamicClear() {
         TenantHelper.clearDynamic();
         return R.ok();
+    }
+
+    /**
+     * 获取应用选择框列表
+     */
+    @GetMapping("/optionselect")
+    public R<List<SysApplicationVo>> optionselect() {
+        SysApplicationBo bo = new SysApplicationBo();
+        bo.setStatus(SystemConstants.NORMAL);
+        List<SysApplicationVo> list = applicationService.queryList(bo);
+        return R.ok(list);
     }
 
 }

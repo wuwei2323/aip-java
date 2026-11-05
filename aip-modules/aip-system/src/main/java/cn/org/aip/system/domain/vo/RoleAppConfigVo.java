@@ -21,12 +21,42 @@ public class RoleAppConfigVo implements Serializable {
     /**
      * 应用编号
      */
+    private String appId;
+
+    /**
+     * 应用编号（兼容字段）
+     */
     private String tenantId;
 
     /**
      * 应用名称
      */
+    private String appName;
+
+    /**
+     * 应用名称（兼容字段）
+     */
     private String tenantName;
+
+    public void setAppId(String appId) {
+        this.appId = appId;
+        this.tenantId = appId;
+    }
+
+    public void setTenantId(String tenantId) {
+        this.tenantId = tenantId;
+        this.appId = tenantId;
+    }
+
+    public void setAppName(String appName) {
+        this.appName = appName;
+        this.tenantName = appName;
+    }
+
+    public void setTenantName(String tenantName) {
+        this.tenantName = tenantName;
+        this.appName = tenantName;
+    }
 
     /**
      * 数据范围（1：全部数据权限 2：自定数据权限 3：本部门数据权限 4：本部门及以下数据权限 5：仅本人数据权限 6：部门及以下或本人数据权限）

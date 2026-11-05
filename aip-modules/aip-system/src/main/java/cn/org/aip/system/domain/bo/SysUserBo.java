@@ -31,6 +31,11 @@ public class SysUserBo extends BaseEntity {
     private Long userId;
 
     /**
+     * 租户编号
+     */
+    private String tenantId;
+
+    /**
      * 部门ID
      */
     @NotNull(message = "所属部门不能为空")

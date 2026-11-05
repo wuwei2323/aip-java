@@ -167,7 +167,7 @@ public class SysDeptServiceImpl implements ISysDeptService, DeptService {
         if (StringUtils.isNotBlank(tenantId)) {
             SysRoleDataScope rds = roleDataScopeMapper.selectOne(new LambdaQueryWrapper<SysRoleDataScope>()
                 .eq(SysRoleDataScope::getRoleId, roleId)
-                .eq(SysRoleDataScope::getTenantId, tenantId));
+                .eq(SysRoleDataScope::getAppId, tenantId));
             if (rds != null && rds.getDeptCheckStrictly() != null) {
                 strictly = rds.getDeptCheckStrictly();
             }

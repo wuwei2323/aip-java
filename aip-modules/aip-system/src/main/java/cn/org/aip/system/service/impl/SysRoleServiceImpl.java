@@ -121,12 +121,12 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
     public List<SysRoleVo> selectRolesByUserId(Long userId) {
         List<SysRoleVo> roles = baseMapper.selectRolesByUserId(userId);
         if (CollUtil.isNotEmpty(roles)) {
-            String tenantId = TenantHelper.getTenantId();
-            if (StringUtils.isNotBlank(tenantId)) {
+            String appId = TenantHelper.getTenantId();
+            if (StringUtils.isNotBlank(appId)) {
                 List<Long> roleIds = StreamUtils.toList(roles, SysRoleVo::getRoleId);
                 List<SysRoleDataScope> scopes = roleDataScopeMapper.selectList(new LambdaQueryWrapper<SysRoleDataScope>()
                     .in(SysRoleDataScope::getRoleId, roleIds)
-                    .eq(SysRoleDataScope::getTenantId, tenantId));
+                    .eq(SysRoleDataScope::getAppId, appId));
                 Map<Long, String> scopeMap = StreamUtils.toMap(scopes, SysRoleDataScope::getRoleId, SysRoleDataScope::getDataScope);
                 for (SysRoleVo role : roles) {
                     if (scopeMap.containsKey(role.getRoleId()) && StringUtils.isNotBlank(scopeMap.get(role.getRoleId()))) {
@@ -357,11 +357,12 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
             return saveRoleAppConfigs(role.getRoleId(), bo.getAppConfigs(), bo.getRoleDictIds(), bo.getDictValues());
         }
 
-        String tenantId = StringUtils.defaultIfBlank(bo.getTenantId(), TenantConstants.DEFAULT_TENANT_ID);
+        String appId = StringUtils.defaultIfBlank(bo.getAppId(), StringUtils.defaultIfBlank(bo.getTenantId(), TenantConstants.DEFAULT_TENANT_ID));
         // 初始化 sys_role_data_scope
         SysRoleDataScope rds = new SysRoleDataScope();
         rds.setRoleId(role.getRoleId());
-        rds.setTenantId(tenantId);
+        rds.setTenantId(TenantConstants.DEFAULT_TENANT_ID);
+        rds.setAppId(appId);
         rds.setDataScope(StringUtils.defaultIfBlank(bo.getDataScope(), "1"));
         rds.setMenuCheckStrictly(bo.getMenuCheckStrictly() != null ? bo.getMenuCheckStrictly() : true);
         rds.setDeptCheckStrictly(bo.getDeptCheckStrictly() != null ? bo.getDeptCheckStrictly() : true);
@@ -402,10 +403,11 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
         }
 
         String tenantId = StringUtils.defaultIfBlank(bo.getTenantId(), TenantConstants.DEFAULT_TENANT_ID);
+        String appId = StringUtils.defaultIfBlank(bo.getAppId(), tenantId);
         // 删除角色与菜单关联
         roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>()
             .eq(SysRoleMenu::getRoleId, role.getRoleId())
-            .eq(SysRoleMenu::getTenantId, tenantId));
+            .eq(SysRoleMenu::getAppId, appId));
         if (bo.getDeptIds() != null) {
             roleDeptMapper.delete(new LambdaQueryWrapper<SysRoleDept>()
                 .eq(SysRoleDept::getRoleId, role.getRoleId())
@@ -454,9 +456,10 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
         baseMapper.updateById(role);
 
         String tenantId = StringUtils.defaultIfBlank(bo.getTenantId(), TenantConstants.DEFAULT_TENANT_ID);
+        String appId = StringUtils.defaultIfBlank(bo.getAppId(), tenantId);
         SysRoleDataScope existing = roleDataScopeMapper.selectOne(new LambdaQueryWrapper<SysRoleDataScope>()
             .eq(SysRoleDataScope::getRoleId, bo.getRoleId())
-            .eq(SysRoleDataScope::getTenantId, tenantId));
+            .eq(SysRoleDataScope::getAppId, appId));
         String dataScope = StringUtils.defaultIfBlank(bo.getDataScope(), "1");
         boolean deptStrictly = bo.getDeptCheckStrictly() != null ? bo.getDeptCheckStrictly() : true;
         if (existing != null) {
@@ -466,7 +469,8 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
         } else {
             SysRoleDataScope add = new SysRoleDataScope();
             add.setRoleId(bo.getRoleId());
-            add.setTenantId(tenantId);
+            add.setTenantId(TenantConstants.DEFAULT_TENANT_ID);
+            add.setAppId(appId);
             add.setDataScope(dataScope);
             add.setDeptCheckStrictly(deptStrictly);
             add.setMenuCheckStrictly(bo.getMenuCheckStrictly() != null ? bo.getMenuCheckStrictly() : true);
@@ -492,14 +496,15 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
      */
     private int insertRoleMenu(SysRoleBo role) {
         int rows = 1;
-        String tenantId = StringUtils.defaultIfBlank(role.getTenantId(), TenantConstants.DEFAULT_TENANT_ID);
+        String appId = StringUtils.defaultIfBlank(role.getAppId(), StringUtils.defaultIfBlank(role.getTenantId(), TenantConstants.DEFAULT_TENANT_ID));
         List<SysRoleMenu> list = new ArrayList<>();
         if (role.getMenuIds() != null) {
             for (Long menuId : role.getMenuIds()) {
                 SysRoleMenu rm = new SysRoleMenu();
                 rm.setRoleId(role.getRoleId());
                 rm.setMenuId(menuId);
-                rm.setTenantId(tenantId);
+                rm.setTenantId(TenantConstants.DEFAULT_TENANT_ID);
+                rm.setAppId(appId);
                 list.add(rm);
             }
         }
@@ -774,7 +779,9 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
         List<SysRoleDataScope> existingDataScopes = roleDataScopeMapper.selectList(
             new LambdaQueryWrapper<SysRoleDataScope>().eq(SysRoleDataScope::getRoleId, roleId)
         );
-        Map<String, SysRoleDataScope> dataScopeMap = StreamUtils.toMap(existingDataScopes, SysRoleDataScope::getTenantId, java.util.function.Function.identity());
+        Map<String, SysRoleDataScope> dataScopeMap = StreamUtils.toMap(existingDataScopes,
+            s -> StringUtils.isNotBlank(s.getAppId()) ? s.getAppId() : s.getTenantId(),
+            java.util.function.Function.identity());
         SysRole role = baseMapper.selectById(roleId);
 
         // 获取全量菜单
@@ -783,12 +790,14 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
 
         List<RoleAppConfigVo> result = new ArrayList<>();
         for (SysApplication app : allApps) {
-            String tenantId = app.getAppId();
+            String appId = app.getAppId();
             RoleAppConfigVo vo = new RoleAppConfigVo();
-            vo.setTenantId(tenantId);
+            vo.setAppId(appId);
+            vo.setTenantId(appId);
+            vo.setAppName(app.getAppName());
             vo.setTenantName(app.getAppName());
 
-            SysRoleDataScope rds = dataScopeMap.get(tenantId);
+            SysRoleDataScope rds = dataScopeMap.get(appId);
             String dataScope = (rds != null && StringUtils.isNotBlank(rds.getDataScope()))
                 ? rds.getDataScope()
                 : (role != null && StringUtils.isNotBlank(role.getDataScope()) ? role.getDataScope() : "1");
@@ -804,8 +813,8 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
             vo.setDeptCheckStrictly(deptStrictly);
 
             // 当前应用下的已关联菜单ID与部门ID
-            vo.setMenuIds(menuService.selectMenuListByRoleId(roleId, tenantId));
-            vo.setDeptIds(deptService.selectDeptListByRoleId(roleId, tenantId));
+            vo.setMenuIds(menuService.selectMenuListByRoleId(roleId, appId));
+            vo.setDeptIds(deptService.selectDeptListByRoleId(roleId, appId));
 
             // 当前应用下的可用菜单树 (统一使用完整菜单树，不再受旧套餐限制)
             vo.setMenuTree(fullMenuTree);
@@ -832,8 +841,8 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
         }
         if (CollUtil.isNotEmpty(appConfigs)) {
             for (RoleAppConfigBo cfg : appConfigs) {
-                String tenantId = cfg.getTenantId();
-                if (StringUtils.isBlank(tenantId)) {
+                String appId = StringUtils.defaultIfBlank(cfg.getAppId(), cfg.getTenantId());
+                if (StringUtils.isBlank(appId)) {
                     continue;
                 }
 
@@ -841,7 +850,7 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
                 SysRoleDataScope existing = roleDataScopeMapper.selectOne(
                     new LambdaQueryWrapper<SysRoleDataScope>()
                         .eq(SysRoleDataScope::getRoleId, roleId)
-                        .eq(SysRoleDataScope::getTenantId, tenantId)
+                        .eq(SysRoleDataScope::getAppId, appId)
                 );
                 String dataScope = StringUtils.defaultIfBlank(cfg.getDataScope(), "1");
                 boolean menuStrictly = cfg.getMenuCheckStrictly() != null ? cfg.getMenuCheckStrictly() : true;
@@ -854,7 +863,8 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
                 } else {
                     SysRoleDataScope add = new SysRoleDataScope();
                     add.setRoleId(roleId);
-                    add.setTenantId(tenantId);
+                    add.setTenantId(TenantConstants.DEFAULT_TENANT_ID);
+                    add.setAppId(appId);
                     add.setDataScope(dataScope);
                     add.setMenuCheckStrictly(menuStrictly);
                     add.setDeptCheckStrictly(deptStrictly);
@@ -862,7 +872,7 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
                 }
 
                 // 2. 默认应用同步更新主表 sys_role
-                if (TenantConstants.DEFAULT_TENANT_ID.equals(tenantId)) {
+                if (TenantConstants.DEFAULT_TENANT_ID.equals(appId)) {
                     role.setDataScope(dataScope);
                     role.setMenuCheckStrictly(menuStrictly);
                     role.setDeptCheckStrictly(deptStrictly);
@@ -873,13 +883,14 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
                 if (cfg.getMenuIds() != null) {
                     roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>()
                         .eq(SysRoleMenu::getRoleId, roleId)
-                        .eq(SysRoleMenu::getTenantId, tenantId));
+                        .eq(SysRoleMenu::getAppId, appId));
                     List<SysRoleMenu> menuList = new ArrayList<>();
                     for (Long menuId : cfg.getMenuIds()) {
                         SysRoleMenu rm = new SysRoleMenu();
                         rm.setRoleId(roleId);
                         rm.setMenuId(menuId);
-                        rm.setTenantId(tenantId);
+                        rm.setTenantId(TenantConstants.DEFAULT_TENANT_ID);
+                        rm.setAppId(appId);
                         menuList.add(rm);
                     }
                     if (CollUtil.isNotEmpty(menuList)) {
@@ -891,13 +902,13 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
                 if (cfg.getDeptIds() != null) {
                     roleDeptMapper.delete(new LambdaQueryWrapper<SysRoleDept>()
                         .eq(SysRoleDept::getRoleId, roleId)
-                        .eq(SysRoleDept::getTenantId, tenantId));
+                        .eq(SysRoleDept::getTenantId, appId));
                     List<SysRoleDept> deptList = new ArrayList<>();
                     for (Long deptId : cfg.getDeptIds()) {
                         SysRoleDept rd = new SysRoleDept();
                         rd.setRoleId(roleId);
                         rd.setDeptId(deptId);
-                        rd.setTenantId(tenantId);
+                        rd.setTenantId(appId);
                         deptList.add(rd);
                     }
                     if (CollUtil.isNotEmpty(deptList)) {

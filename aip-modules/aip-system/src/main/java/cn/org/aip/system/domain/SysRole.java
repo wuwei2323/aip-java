@@ -3,7 +3,7 @@ package cn.org.aip.system.domain;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
-import cn.org.aip.common.mybatis.core.domain.BaseEntity;
+import cn.org.aip.common.tenant.core.TenantEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -18,7 +18,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @TableName("sys_role")
-public class SysRole extends BaseEntity {
+public class SysRole extends TenantEntity {
 
     /**
      * 角色ID

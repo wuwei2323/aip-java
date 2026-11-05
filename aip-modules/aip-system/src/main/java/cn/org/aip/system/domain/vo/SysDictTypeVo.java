@@ -59,12 +59,42 @@ public class SysDictTypeVo implements Serializable {
     /**
      * 关联应用编号列表
      */
+    private List<String> appIds;
+
+    /**
+     * 关联应用编号列表（兼容字段）
+     */
     private List<String> tenantIds;
 
     /**
      * 关联应用名称列表
      */
+    private List<String> appNames;
+
+    /**
+     * 关联应用名称列表（兼容字段）
+     */
     private List<String> tenantNames;
+
+    public void setAppIds(List<String> appIds) {
+        this.appIds = appIds;
+        this.tenantIds = appIds;
+    }
+
+    public void setTenantIds(List<String> tenantIds) {
+        this.tenantIds = tenantIds;
+        this.appIds = tenantIds;
+    }
+
+    public void setAppNames(List<String> appNames) {
+        this.appNames = appNames;
+        this.tenantNames = appNames;
+    }
+
+    public void setTenantNames(List<String> tenantNames) {
+        this.tenantNames = tenantNames;
+        this.appNames = tenantNames;
+    }
 
     /**
      * 备注

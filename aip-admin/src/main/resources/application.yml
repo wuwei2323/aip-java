@@ -163,8 +163,8 @@ keycloak:
 
 # 多应用配置
 tenant:
-  # 是否开启 (集成平台不是严格意义上的多租户应用)
-  enable: false
+  # 是否开启
+  enable: true
   # 排除表
   excludes:
     - sys_user
@@ -181,7 +181,7 @@ tenant:
     - flow_spel
     - sys_dict_type
     - sys_dict_data
-    - sys_dict_type_tenant
+    - sys_dict_type_app
     - sys_dict_type_role
     - sys_role_dict_value
     - sys_role_data_scope
