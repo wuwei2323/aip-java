@@ -58,6 +58,16 @@ public class SysDictTypeBo extends BaseEntity {
     private String componentInfo;
 
     /**
+     * 关联角色编号列表
+     */
+    private List<Long> roleIds;
+
+    /**
+     * 角色编号（查询条件）
+     */
+    private Long roleId;
+
+    /**
      * 关联应用编号列表
      */
     private List<String> appIds;

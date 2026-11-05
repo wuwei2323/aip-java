@@ -78,8 +78,8 @@ public class SysRoleDictServiceImpl implements ISysRoleDictService, RoleDictServ
             });
         }
 
-        // 2. 查询全部可选的角色类字典（按应用、字典排序）
-        List<RoleDictConfigItemVo> items = baseMapper.selectAllRoleDicts(null);
+        // 2. 查询当前角色关联的角色类字典（按应用、字典排序）
+        List<RoleDictConfigItemVo> items = baseMapper.selectAllRoleDicts(roleId, null);
         if (CollUtil.isEmpty(items)) {
             return new ArrayList<>(grouped.values());
         }
@@ -164,7 +164,7 @@ public class SysRoleDictServiceImpl implements ISysRoleDictService, RoleDictServ
      * 保存角色关联字典与字典配置值（按角色全量替换）
      *
      * @param roleId      角色ID
-     * @param roleDictIds 角色关联的字典ID列表
+     * @param roleDictIds 角色关联的字典ID列表（可选，为null时不更改角色字典关联关系）
      * @param values      配置值列表
      */
     @Override
@@ -172,12 +172,6 @@ public class SysRoleDictServiceImpl implements ISysRoleDictService, RoleDictServ
     public void saveRoleDictConfig(Long roleId, List<Long> roleDictIds, List<RoleDictValueBo> values) {
         if (ObjectUtil.isNull(roleId)) {
             throw new ServiceException("角色ID不能为空");
-        }
-
-        // 收集本次关联的字典ID
-        Set<Long> involvedDictIds = new HashSet<>();
-        if (CollUtil.isNotEmpty(roleDictIds)) {
-            involvedDictIds.addAll(roleDictIds);
         }
 
         // 1. 全量更新角色字典配置值 (sys_role_dict_value)
@@ -197,7 +191,6 @@ public class SysRoleDictServiceImpl implements ISysRoleDictService, RoleDictServ
                     String fieldValue = StringUtils.trim(value.getFieldValue());
                     // 仅保存非空白配置值，空白值或空JSON数组视为未配置
                     if (StringUtils.isNotBlank(fieldValue) && !"[]".equals(fieldValue)) {
-                        involvedDictIds.add(value.getDictId());
                         SysRoleDictValue entity = new SysRoleDictValue();
                         entity.setRoleId(roleId);
                         entity.setTenantId(TenantConstants.DEFAULT_TENANT_ID);
@@ -214,11 +207,11 @@ public class SysRoleDictServiceImpl implements ISysRoleDictService, RoleDictServ
             }
         }
 
-        // 2. 全量同步角色与字典的关联关系 (sys_dict_type_role)
-        if (roleDictIds != null || values != null) {
+        // 2. 仅在显式指定 roleDictIds 时同步角色与字典的关联关系 (sys_dict_type_role)
+        if (roleDictIds != null) {
             dictTypeRoleMapper.delete(new LambdaQueryWrapper<SysDictTypeRole>().eq(SysDictTypeRole::getRoleId, roleId));
-            if (CollUtil.isNotEmpty(involvedDictIds)) {
-                List<SysDictTypeRole> roleDicts = StreamUtils.toList(involvedDictIds, dictId -> {
+            if (CollUtil.isNotEmpty(roleDictIds)) {
+                List<SysDictTypeRole> roleDicts = StreamUtils.toList(roleDictIds, dictId -> {
                     SysDictTypeRole r = new SysDictTypeRole();
                     r.setRoleId(roleId);
                     r.setDictId(dictId);

@@ -15,6 +15,9 @@
                tn.company_name as app_name
         from sys_dict_type t
                  join sys_dict_type_app r on r.dict_id = t.dict_id
+                 <if test="roleId != null">
+                 join sys_dict_type_role dtr on dtr.dict_id = t.dict_id and dtr.role_id = #{roleId}
+                 </if>
                  join (
                      select app_id as tenant_id, max(app_name) as company_name
                      from sys_application
@@ -39,6 +42,8 @@
                v.field_value
         from sys_role_dict_value v
                  join sys_dict_type t on t.dict_id = v.dict_id
+                 join sys_dict_type_role dtr on dtr.dict_id = t.dict_id and dtr.role_id = v.role_id
+                 join sys_dict_type_app dta on dta.dict_id = t.dict_id and dta.app_id = v.app_id
         where v.role_id = #{roleId}
           and v.field_value is not null
           and v.field_value != ''

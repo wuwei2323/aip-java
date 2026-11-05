@@ -16,6 +16,7 @@ import cn.org.aip.common.core.domain.dto.DictTypeDTO;
 import cn.org.aip.common.core.exception.ServiceException;
 import cn.org.aip.common.core.service.DictService;
 import cn.org.aip.common.core.utils.MapstructUtils;
+import cn.org.aip.common.core.utils.MessageUtils;
 import cn.org.aip.common.core.utils.SpringUtils;
 import cn.org.aip.common.core.utils.StreamUtils;
 import cn.org.aip.common.core.utils.StringUtils;
@@ -63,6 +64,8 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
     private final SysDictTypeMapper baseMapper;
     private final SysDictDataMapper dictDataMapper;
     private final SysDictTypeAppMapper dictTypeAppMapper;
+    private final SysDictTypeRoleMapper dictTypeRoleMapper;
+    private final SysRoleMapper roleMapper;
     private final SysApplicationMapper applicationMapper;
     private final ISysRoleDictService roleDictService;
 
@@ -78,6 +81,7 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
         LambdaQueryWrapper<SysDictType> lqw = buildQueryWrapper(dictType);
         Page<SysDictTypeVo> page = baseMapper.selectVoPage(pageQuery.build(), lqw);
         fillTenantInfo(page.getRecords());
+        fillRoleInfo(page.getRecords());
         return TableDataInfo.build(page);
     }
 
@@ -92,6 +96,7 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
         LambdaQueryWrapper<SysDictType> lqw = buildQueryWrapper(dictType);
         List<SysDictTypeVo> list = baseMapper.selectVoList(lqw);
         fillTenantInfo(list);
+        fillRoleInfo(list);
         return list;
     }
 
@@ -103,6 +108,8 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
         lqw.eq(StringUtils.isNotBlank(bo.getCategoryType()), SysDictType::getCategoryType, bo.getCategoryType());
         lqw.apply(StringUtils.isNotBlank(bo.getAppId()),
             "dict_id IN (SELECT dict_id FROM sys_dict_type_app WHERE app_id = {0})", bo.getAppId());
+        lqw.apply(bo.getRoleId() != null,
+            "dict_id IN (SELECT dict_id FROM sys_dict_type_role WHERE role_id = {0})", bo.getRoleId());
         lqw.between(params.get("beginTime") != null && params.get("endTime") != null,
             SysDictType::getCreateTime, params.get("beginTime"), params.get("endTime"));
         lqw.orderByAsc(SysDictType::getDictId);
@@ -148,6 +155,44 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
     }
 
     /**
+     * 批量回填字典类型关联的角色编号与角色名称
+     *
+     * @param list 字典类型列表
+     */
+    private void fillRoleInfo(List<SysDictTypeVo> list) {
+        if (CollUtil.isEmpty(list)) {
+            return;
+        }
+        List<Long> dictIds = StreamUtils.toList(list, SysDictTypeVo::getDictId);
+        List<SysDictTypeRole> relations = dictTypeRoleMapper.selectList(
+            new LambdaQueryWrapper<SysDictTypeRole>().in(SysDictTypeRole::getDictId, dictIds));
+        if (CollUtil.isEmpty(relations)) {
+            list.forEach(vo -> {
+                vo.setRoleIds(new ArrayList<>());
+                vo.setRoleNames(new ArrayList<>());
+            });
+            return;
+        }
+        Set<Long> roleIds = StreamUtils.toSet(relations, SysDictTypeRole::getRoleId);
+        List<SysRole> roles = roleMapper.selectList(new LambdaQueryWrapper<SysRole>()
+            .select(SysRole::getRoleId, SysRole::getRoleName)
+            .in(SysRole::getRoleId, roleIds));
+        Map<Long, String> roleNameMap = StreamUtils.toMap(roles, SysRole::getRoleId, SysRole::getRoleName);
+        Map<Long, List<SysDictTypeRole>> relationMap = StreamUtils.groupByKey(relations, SysDictTypeRole::getDictId);
+        for (SysDictTypeVo vo : list) {
+            List<SysDictTypeRole> dictRelations = relationMap.get(vo.getDictId());
+            if (CollUtil.isEmpty(dictRelations)) {
+                vo.setRoleIds(new ArrayList<>());
+                vo.setRoleNames(new ArrayList<>());
+                continue;
+            }
+            List<Long> ids = StreamUtils.toList(dictRelations, SysDictTypeRole::getRoleId);
+            vo.setRoleIds(ids);
+            vo.setRoleNames(StreamUtils.toList(ids, id -> roleNameMap.getOrDefault(id, String.valueOf(id))));
+        }
+    }
+
+    /**
      * 根据所有字典类型
      *
      * @return 字典类型集合信息
@@ -181,6 +226,7 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
         SysDictTypeVo vo = baseMapper.selectVoById(dictId);
         if (vo != null) {
             fillTenantInfo(Collections.singletonList(vo));
+            fillRoleInfo(Collections.singletonList(vo));
         }
         return vo;
     }
@@ -216,6 +262,8 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
         baseMapper.deleteByIds(dictIds);
         dictTypeAppMapper.delete(new LambdaQueryWrapper<SysDictTypeApp>()
             .in(SysDictTypeApp::getDictId, dictIds));
+        dictTypeRoleMapper.delete(new LambdaQueryWrapper<SysDictTypeRole>()
+            .in(SysDictTypeRole::getDictId, dictIds));
         // 清理角色关联与角色配置值
         roleDictService.deleteByDictIds(dictIds);
         list.forEach(x -> evictDictCache(x.getDictType()));
@@ -277,10 +325,18 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
     @Transactional(rollbackFor = Exception.class)
     public List<SysDictDataVo> insertDictType(SysDictTypeBo bo) {
         validateAndNormalizeComponent(bo, null);
+        if (DictConstants.CATEGORY_ROLE.equals(bo.getCategoryType())) {
+            if (CollUtil.isEmpty(bo.getRoleIds())) {
+                throw new ServiceException(MessageUtils.message("dict.type.role.empty"));
+            }
+        }
         SysDictType dict = MapstructUtils.convert(bo, SysDictType.class);
         int row = baseMapper.insert(dict);
         if (row > 0) {
             saveDictTypeApps(dict.getDictId(), bo.getAppIds());
+            if (DictConstants.CATEGORY_ROLE.equals(bo.getCategoryType())) {
+                saveDictTypeRoles(dict.getDictId(), bo.getRoleIds());
+            }
             // 清除其他应用可能存在的缓存穿透数据
             evictDictCache(dict.getDictType());
             // 新增 type 下无 data 数据 返回空防止缓存穿透
@@ -303,10 +359,19 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
         if (ObjectUtil.isNull(oldDict)) {
             throw new ServiceException("字典类型不存在");
         }
+        if (DictConstants.CATEGORY_ROLE.equals(bo.getCategoryType())) {
+            if (CollUtil.isEmpty(bo.getRoleIds())) {
+                throw new ServiceException(MessageUtils.message("dict.type.role.empty"));
+            }
+        }
         List<String> oldAppIds = dictTypeAppMapper.selectList(new LambdaQueryWrapper<SysDictTypeApp>()
                 .select(SysDictTypeApp::getAppId)
                 .eq(SysDictTypeApp::getDictId, bo.getDictId()))
             .stream().map(SysDictTypeApp::getAppId).collect(Collectors.toList());
+        List<Long> oldRoleIds = dictTypeRoleMapper.selectList(new LambdaQueryWrapper<SysDictTypeRole>()
+                .select(SysDictTypeRole::getRoleId)
+                .eq(SysDictTypeRole::getDictId, bo.getDictId()))
+            .stream().map(SysDictTypeRole::getRoleId).collect(Collectors.toList());
         validateAndNormalizeComponent(bo, oldDict);
 
         SysDictType dict = MapstructUtils.convert(bo, SysDictType.class);
@@ -320,9 +385,12 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
                 baseMapper.update(null, new LambdaUpdateWrapper<SysDictType>()
                     .set(SysDictType::getComponentInfo, null)
                     .eq(SysDictType::getDictId, dict.getDictId()));
+                saveDictTypeRoles(dict.getDictId(), Collections.emptyList());
+            } else {
+                saveDictTypeRoles(dict.getDictId(), bo.getRoleIds());
             }
             saveDictTypeApps(dict.getDictId(), bo.getAppIds());
-            cleanRoleDictAfterUpdate(dict.getDictId(), oldDict, bo, oldAppIds);
+            cleanRoleDictAfterUpdate(dict.getDictId(), oldDict, bo, oldAppIds, oldRoleIds);
             evictDictCache(oldDict.getDictType());
             evictDictCache(dict.getDictType());
             return dictDataMapper.selectDictDataByType(dict.getDictType());
@@ -337,8 +405,9 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
      * @param oldDict      修改前的字典
      * @param bo           本次提交的数据
      * @param oldAppIds    修改前关联的应用
+     * @param oldRoleIds   修改前关联的角色
      */
-    private void cleanRoleDictAfterUpdate(Long dictId, SysDictType oldDict, SysDictTypeBo bo, List<String> oldAppIds) {
+    private void cleanRoleDictAfterUpdate(Long dictId, SysDictType oldDict, SysDictTypeBo bo, List<String> oldAppIds, List<Long> oldRoleIds) {
         // 字典分类改为系统字典（或组件字段变更）时，原有配置值失效
         if (!DictConstants.CATEGORY_ROLE.equals(bo.getCategoryType())) {
             roleDictService.deleteByDictIds(Collections.singletonList(dictId));
@@ -356,6 +425,13 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
             .collect(Collectors.toList());
         if (CollUtil.isNotEmpty(removedAppIds)) {
             roleDictService.deleteByDictIdAndTenantIds(dictId, removedAppIds);
+        }
+        // 字典解除部分角色关联时，清理这些角色下的配置值
+        List<Long> removedRoleIds = oldRoleIds.stream()
+            .filter(id -> !CollUtil.contains(bo.getRoleIds(), id))
+            .collect(Collectors.toList());
+        if (CollUtil.isNotEmpty(removedRoleIds)) {
+            roleDictService.deleteByDictIdAndRoleIds(dictId, removedRoleIds);
         }
     }
 
@@ -442,6 +518,33 @@ public class SysDictTypeServiceImpl implements ISysDictTypeService, DictService 
             .collect(Collectors.toList());
         if (CollUtil.isNotEmpty(list)) {
             dictTypeAppMapper.insertBatch(list);
+        }
+    }
+
+    /**
+     * 保存字典类型与角色关联关系
+     *
+     * @param dictId  字典主键
+     * @param roleIds 角色编号列表
+     */
+    private void saveDictTypeRoles(Long dictId, List<Long> roleIds) {
+        dictTypeRoleMapper.delete(new LambdaQueryWrapper<SysDictTypeRole>()
+            .eq(SysDictTypeRole::getDictId, dictId));
+        if (CollUtil.isEmpty(roleIds)) {
+            return;
+        }
+        List<SysDictTypeRole> list = roleIds.stream()
+            .filter(Objects::nonNull)
+            .distinct()
+            .map(roleId -> {
+                SysDictTypeRole relation = new SysDictTypeRole();
+                relation.setDictId(dictId);
+                relation.setRoleId(roleId);
+                return relation;
+            })
+            .collect(Collectors.toList());
+        if (CollUtil.isNotEmpty(list)) {
+            dictTypeRoleMapper.insertBatch(list);
         }
     }
 

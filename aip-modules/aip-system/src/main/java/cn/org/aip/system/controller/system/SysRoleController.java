@@ -1,6 +1,7 @@
 package cn.org.aip.system.controller.system;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import cn.dev33.satoken.annotation.SaMode;
 import cn.hutool.core.lang.tree.Tree;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -199,7 +200,7 @@ public class SysRoleController extends BaseController {
      *
      * @param roleIds 角色ID串
      */
-    @SaCheckPermission("system:role:query")
+    @SaCheckPermission(value = {"system:role:query", "system:dict:edit", "system:dict:add"}, mode = SaMode.OR)
     @GetMapping("/optionselect")
     public R<List<SysRoleVo>> optionselect(@RequestParam(required = false) Long[] roleIds) {
         return R.ok(roleService.selectRoleByIds(roleIds == null ? null : List.of(roleIds)));
