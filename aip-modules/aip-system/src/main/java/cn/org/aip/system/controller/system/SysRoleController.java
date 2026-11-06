@@ -120,19 +120,6 @@ public class SysRoleController extends BaseController {
     }
 
     /**
-     * 修改保存数据权限
-     */
-    @SaCheckPermission("system:role:edit")
-    @Log(title = "角色管理", businessType = BusinessType.UPDATE)
-    @RepeatSubmit()
-    @PutMapping("/dataScope")
-    public R<Void> dataScope(@RequestBody SysRoleBo role) {
-        roleService.checkRoleAllowed(role);
-        roleService.checkRoleDataScope(role.getRoleId());
-        return toAjax(roleService.authDataScope(role));
-    }
-
-    /**
      * 查询角色关联的角色类字典配置（按应用分组）
      *
      * @param roleId 角色ID
@@ -157,17 +144,15 @@ public class SysRoleController extends BaseController {
     }
 
     /**
-     * 保存角色在各应用下的配置（菜单权限、数据权限、自定义权限等）
+     * 查询新增角色时可用的各应用权限模板（菜单树、部门树、字典配置）
      */
-    @SaCheckPermission("system:role:edit")
-    @Log(title = "角色管理", businessType = BusinessType.UPDATE)
-    @RepeatSubmit()
-    @PutMapping("/{roleId}/appConfigs")
-    public R<Void> saveAppConfigs(@PathVariable Long roleId, @RequestBody SysRoleBo bo) {
-        roleService.checkRoleAllowed(new SysRoleBo(roleId));
-        roleService.checkRoleDataScope(roleId);
-        roleService.saveRoleAppConfigs(roleId, bo.getAppConfigs(), bo.getRoleDictIds(), bo.getDictValues());
-        return R.ok();
+    @SaCheckPermission("system:role:add")
+    @GetMapping("/appConfigTemplate")
+    public R<RoleEditTemplateVo> appConfigTemplate() {
+        return R.ok(new RoleEditTemplateVo(
+            roleService.selectRoleAppConfigTemplate(),
+            deptService.selectDeptTreeList(new SysDeptBo()),
+            roleDictService.selectRoleDictTemplate()));
     }
 
     /**
@@ -288,5 +273,16 @@ public class SysRoleController extends BaseController {
      * @param depts       下拉树结构列表
      */
     public record DeptTreeSelectVo(List<Long> checkedKeys, List<Tree<Long>> depts) {}
+
+    /**
+     * 新增角色权限模板
+     *
+     * @param appConfigs  各应用权限模板
+     * @param deptTree    部门树
+     * @param dictConfigs 角色字典配置模板
+     */
+    public record RoleEditTemplateVo(List<RoleAppConfigVo> appConfigs,
+                                     List<Tree<Long>> deptTree,
+                                     List<RoleDictConfigVo> dictConfigs) {}
 
 }

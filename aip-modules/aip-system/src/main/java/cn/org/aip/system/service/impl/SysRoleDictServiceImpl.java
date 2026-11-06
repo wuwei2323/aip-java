@@ -59,7 +59,26 @@ public class SysRoleDictServiceImpl implements ISysRoleDictService, RoleDictServ
         if (ObjectUtil.isNull(roleId)) {
             return new ArrayList<>();
         }
+        return buildRoleDictConfig(roleId);
+    }
 
+    /**
+     * 查询新增角色时可用的角色类字典模板（无已选值）
+     *
+     * @return 按应用分组的字典配置模板
+     */
+    @Override
+    public List<RoleDictConfigVo> selectRoleDictTemplate() {
+        return buildRoleDictConfig(null);
+    }
+
+    /**
+     * 构建角色字典配置（roleId 为空时返回新增角色的空白模板）
+     *
+     * @param roleId 角色ID，可为空
+     * @return 按应用分组的字典配置列表
+     */
+    private List<RoleDictConfigVo> buildRoleDictConfig(Long roleId) {
         // 1. 先查询所有正常状态的应用，初始化分组（确保所有应用都在顶部Tab中可选）
         List<SysApplication> allApps = TenantHelper.ignore(() -> applicationMapper.selectList(new LambdaQueryWrapper<SysApplication>()
             .select(SysApplication::getAppId, SysApplication::getAppName)
@@ -84,16 +103,20 @@ public class SysRoleDictServiceImpl implements ISysRoleDictService, RoleDictServ
             return new ArrayList<>(grouped.values());
         }
 
-        // 3. 查询当前角色已关联的字典ID列表
-        List<SysDictTypeRole> roleRelations = dictTypeRoleMapper.selectList(
-            new LambdaQueryWrapper<SysDictTypeRole>().eq(SysDictTypeRole::getRoleId, roleId));
-        Set<Long> checkedDictIds = StreamUtils.toSet(roleRelations, SysDictTypeRole::getDictId);
+        Set<Long> checkedDictIds = new HashSet<>();
+        Map<String, SysRoleDictValue> valueMap = new HashMap<>();
+        if (ObjectUtil.isNotNull(roleId)) {
+            // 3. 查询当前角色已关联的字典ID列表
+            List<SysDictTypeRole> roleRelations = dictTypeRoleMapper.selectList(
+                new LambdaQueryWrapper<SysDictTypeRole>().eq(SysDictTypeRole::getRoleId, roleId));
+            checkedDictIds = StreamUtils.toSet(roleRelations, SysDictTypeRole::getDictId);
 
-        // 4. 查询当前角色已配置的值
-        List<SysRoleDictValue> existingValues = baseMapper.selectList(
-            new LambdaQueryWrapper<SysRoleDictValue>().eq(SysRoleDictValue::getRoleId, roleId));
-        Map<String, SysRoleDictValue> valueMap = StreamUtils.toMap(existingValues,
-            v -> (StringUtils.isNotBlank(v.getAppId()) ? v.getAppId() : v.getTenantId()) + ":" + v.getDictId(), v -> v);
+            // 4. 查询当前角色已配置的值
+            List<SysRoleDictValue> existingValues = baseMapper.selectList(
+                new LambdaQueryWrapper<SysRoleDictValue>().eq(SysRoleDictValue::getRoleId, roleId));
+            valueMap = StreamUtils.toMap(existingValues,
+                v -> (StringUtils.isNotBlank(v.getAppId()) ? v.getAppId() : v.getTenantId()) + ":" + v.getDictId(), v -> v);
+        }
 
         // 5. 从 sys_dict_data 加载各字典类型的选项数据
         Set<String> dictTypes = StreamUtils.toSet(items, RoleDictConfigItemVo::getDictType);

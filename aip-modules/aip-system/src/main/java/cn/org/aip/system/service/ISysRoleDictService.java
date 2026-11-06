@@ -21,6 +21,13 @@ public interface ISysRoleDictService {
     List<RoleDictConfigVo> selectRoleDictConfig(Long roleId);
 
     /**
+     * 查询新增角色时可用的角色类字典模板（无已选值）
+     *
+     * @return 按应用分组的字典配置模板
+     */
+    List<RoleDictConfigVo> selectRoleDictTemplate();
+
+    /**
      * 保存角色关联字典与字典配置值（按角色全量替换）
      *
      * @param roleId      角色ID

@@ -18,6 +18,7 @@ import cn.org.aip.common.core.domain.model.LoginUser;
 import cn.org.aip.common.core.exception.ServiceException;
 import cn.org.aip.common.core.service.RoleService;
 import cn.org.aip.common.core.utils.MapstructUtils;
+import cn.org.aip.common.core.utils.MessageUtils;
 import cn.org.aip.common.core.utils.StreamUtils;
 import cn.org.aip.common.core.utils.StringUtils;
 import cn.org.aip.common.mybatis.core.page.PageQuery;
@@ -768,6 +769,26 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
         if (ObjectUtil.isNull(roleId)) {
             return new ArrayList<>();
         }
+        return buildRoleAppConfigs(roleId);
+    }
+
+    /**
+     * 查询新增角色时可用的各应用权限模板
+     *
+     * @return 各应用配置模板
+     */
+    @Override
+    public List<RoleAppConfigVo> selectRoleAppConfigTemplate() {
+        return buildRoleAppConfigs(null);
+    }
+
+    /**
+     * 构建各应用的权限配置（roleId 为空时返回新增角色的空白模板）
+     *
+     * @param roleId 角色ID，可为空
+     * @return 各应用配置列表
+     */
+    private List<RoleAppConfigVo> buildRoleAppConfigs(Long roleId) {
         List<SysApplication> allApps = TenantHelper.ignore(() -> applicationMapper.selectList(
             new LambdaQueryWrapper<SysApplication>()
                 .select(SysApplication::getAppId, SysApplication::getAppName)
@@ -782,7 +803,7 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
         Map<String, SysRoleDataScope> dataScopeMap = StreamUtils.toMap(existingDataScopes,
             s -> StringUtils.isNotBlank(s.getAppId()) ? s.getAppId() : s.getTenantId(),
             java.util.function.Function.identity());
-        SysRole role = baseMapper.selectById(roleId);
+        SysRole role = ObjectUtil.isNull(roleId) ? null : baseMapper.selectById(roleId);
 
         // 获取全量菜单
         List<SysMenuVo> allMenus = menuService.selectMenuList(LoginHelper.getUserId());
@@ -812,9 +833,13 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
             vo.setMenuCheckStrictly(menuStrictly);
             vo.setDeptCheckStrictly(deptStrictly);
 
-            // 当前应用下的已关联菜单ID与部门ID
-            vo.setMenuIds(menuService.selectMenuListByRoleId(roleId, appId));
-            vo.setDeptIds(deptService.selectDeptListByRoleId(roleId, appId));
+            // 当前应用下的已关联菜单ID与部门ID（新增模板返回空列表）
+            vo.setMenuIds(ObjectUtil.isNull(roleId)
+                ? new ArrayList<>()
+                : menuService.selectMenuListByRoleId(roleId, appId));
+            vo.setDeptIds(ObjectUtil.isNull(roleId)
+                ? new ArrayList<>()
+                : deptService.selectDeptListByRoleId(roleId, appId));
 
             // 当前应用下的可用菜单树 (统一使用完整菜单树，不再受旧套餐限制)
             vo.setMenuTree(fullMenuTree);
@@ -837,7 +862,7 @@ public class SysRoleServiceImpl implements ISysRoleService, RoleService {
     public int saveRoleAppConfigs(Long roleId, List<RoleAppConfigBo> appConfigs, List<Long> roleDictIds, List<RoleDictValueBo> dictValues) {
         SysRole role = baseMapper.selectById(roleId);
         if (role == null) {
-            throw new ServiceException("角色不存在");
+            throw new ServiceException(MessageUtils.message("role.not.exists"));
         }
         if (CollUtil.isNotEmpty(appConfigs)) {
             for (RoleAppConfigBo cfg : appConfigs) {

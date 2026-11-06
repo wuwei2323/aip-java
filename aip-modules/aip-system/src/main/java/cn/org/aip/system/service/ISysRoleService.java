@@ -245,6 +245,13 @@ public interface ISysRoleService {
     List<RoleAppConfigVo> selectRoleAppConfigs(Long roleId);
 
     /**
+     * 查询新增角色时可用的各应用权限模板（空菜单、全量菜单树）
+     *
+     * @return 各应用配置模板
+     */
+    List<RoleAppConfigVo> selectRoleAppConfigTemplate();
+
+    /**
      * 保存角色在各应用下的配置
      *
      * @param roleId      角色ID
