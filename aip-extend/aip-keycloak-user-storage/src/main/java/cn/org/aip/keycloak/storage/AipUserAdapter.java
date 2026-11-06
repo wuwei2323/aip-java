@@ -116,6 +116,17 @@ public class AipUserAdapter extends AbstractUserAdapter {
         if (userDto.getUserName() != null) {
             attrs.put("user_name", List.of(userDto.getUserName()));
         }
+        // Keycloak 内置 profile/email scope 的 Mapper 按用户属性读取以下字段，
+        // 联邦用户必须显式暴露，否则 ID Token / UserInfo 将缺失 preferred_username、email 等标准声明。
+        if (userDto.getUsername() != null) {
+            attrs.put("username", List.of(userDto.getUsername()));
+        }
+        if (userDto.getEmail() != null) {
+            attrs.put("email", List.of(userDto.getEmail()));
+        }
+        if (userDto.getNickName() != null) {
+            attrs.put("firstName", List.of(userDto.getNickName()));
+        }
         if (userDto.getDeptId() != null) {
             attrs.put("dept_id", List.of(String.valueOf(userDto.getDeptId())));
         }

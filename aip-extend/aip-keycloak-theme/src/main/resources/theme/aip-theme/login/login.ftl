@@ -8,7 +8,7 @@
     <title>${msg('loginTitle')}</title>
     <link rel="icon" href="${url.resourcesPath}/icons/login-lock.svg">
     <link rel="stylesheet" href="${url.resourcesPath}/css/login.css">
-    <link rel="stylesheet" href="${url.resourcesPath}/css/captcha.css">
+    <link rel="stylesheet" href="${url.resourcesPath}/css/captcha.css?v=20261106b">
 </head>
 <body>
     <div class="login-page">
@@ -85,6 +85,7 @@
                         <input id="password" name="password" type="password" placeholder="${msg('loginPasswordPlaceholder')}" autocomplete="current-password" required>
                     </label>
 
+                    <!-- 该字段必须固定为空：票据在服务端校验时已被原子消费，禁止从 formData 回填 -->
                     <input type="hidden" id="captchaVerification" name="captchaVerification" value="">
 
                     <button id="kc-login" class="login-submit" type="submit">
@@ -118,7 +119,7 @@
         </footer>
     </div>
 
-    <!-- AJ-Captcha 行为验证码弹窗容器 -->
+    <!-- AJ-Captcha 拼图滑块验证码弹窗容器 -->
     <div id="captcha-mask" class="captcha-mask" style="display: none;">
         <div class="captcha-popup">
             <div class="captcha-header">
@@ -129,34 +130,48 @@
                 <span id="captcha-tip-text">${msg('captchaTipDefault')}</span>
             </div>
             <div class="captcha-img-wrapper">
-                <img id="captcha-bg-img" class="captcha-bg-img" alt="验证码底图">
-                <div id="captcha-dots-container" class="captcha-dots-container"></div>
+                <img id="captcha-bg-img" class="captcha-bg-img" alt="">
+                <img id="captcha-jigsaw-img" class="captcha-jigsaw-img" alt="">
                 <div id="captcha-loading" class="captcha-loading">
                     <div class="captcha-spinner"></div>
                     <span>${msg('captchaLoading')}</span>
                 </div>
             </div>
+            <div class="captcha-slide-wrapper">
+                <div id="captcha-slide-track" class="captcha-slide-track">
+                    <span id="captcha-slide-text" class="captcha-slide-text">${msg('captchaSlideTip')}</span>
+                    <div id="captcha-slide-handle" class="captcha-slide-handle" role="slider"
+                         aria-valuemin="0" aria-valuemax="263" aria-valuenow="0" tabindex="0">
+                        <span class="captcha-slide-arrow">&rarr;</span>
+                    </div>
+                </div>
+            </div>
             <div class="captcha-footer">
                 <div class="captcha-actions-left">
-                    <button type="button" class="captcha-btn-icon" title="刷新验证码" onclick="refreshCaptcha()">&#8635;</button>
-                    <button type="button" class="captcha-btn-icon" title="帮助">&#9432;</button>
+                    <button type="button" class="captcha-btn-icon" title="${msg('captchaRefresh')}" onclick="refreshCaptcha()">&#8635;</button>
                 </div>
-                <button type="button" id="captcha-btn-confirm" class="captcha-btn-confirm" onclick="submitCaptchaPoints()">${msg('captchaConfirm')}</button>
             </div>
         </div>
     </div>
 
     <script>
+        // 登录 action 包含 realm、tab_id、client_id；captcha.js 据此推导同源验证码端点
+        window.AIP_LOGIN_ACTION = "${(url.loginAction!'')?js_string?no_esc}";
         window.AIP_I18N = {
             captchaTitle: "${msg('captchaTitle')}",
             captchaTipDefault: "${msg('captchaTipDefault')}",
-            captchaConfirm: "${msg('captchaConfirm')}",
+            captchaSlideTip: "${msg('captchaSlideTip')}",
             captchaLoading: "${msg('captchaLoading')}",
             captchaChecking: "${msg('captchaChecking')}",
             captchaSuccess: "${msg('captchaSuccess')}",
             captchaFail: "${msg('captchaFail')}",
             captchaIncomplete: "${msg('captchaIncomplete')}",
             captchaNetError: "${msg('captchaNetError')}",
+            captchaRateLimited: "${msg('captchaRateLimited')}",
+            captchaBusy: "${msg('captchaBusy')}",
+            captchaUnavailable: "${msg('captchaUnavailable')}",
+            captchaExpired: "${msg('captchaExpired')}",
+            captchaRequestInvalid: "${msg('captchaRequestInvalid')}",
             otherWecomTip: "${msg('otherWecomTip')}",
             otherLoginTip: "${msg('otherLoginTip')}"
         };
@@ -177,6 +192,6 @@
         });
     </script>
     <script src="${url.resourcesPath}/js/crypto-js.min.js"></script>
-    <script src="${url.resourcesPath}/js/captcha.js"></script>
+    <script src="${url.resourcesPath}/js/captcha.js?v=20261107a"></script>
 </body>
 </html>

@@ -198,7 +198,10 @@ public class SsoLoginService {
         } catch (Exception ignored) {
         }
 
-        // 1. 先清理本地该 sid 绑定的所有关联 Token 并清理映射
+        // 1. 先注销本地平台当前 Sa-Token 会话（此时当前 Token 仍有效，否则 LoginHelper 取会话会抛异常）
+        sysLoginService.logout();
+
+        // 2. 清理该 sid 绑定的其余关联 Token 并清理映射
         if (StringUtils.isNotBlank(sid)) {
             Collection<String> tokens = ssoStateStore.getTokensBySid(sid);
             for (String token : tokens) {
@@ -209,16 +212,13 @@ public class SsoLoginService {
             }
             ssoStateStore.removeSid(sid);
 
-            // 2. 调用 Keycloak Admin API 销毁服务端会话 (容错隔离，绝不阻断本地登出主流程)
+            // 3. 调用 Keycloak Admin API 销毁服务端会话 (容错隔离，绝不阻断本地登出主流程)
             try {
                 keycloakTokenClient.deleteSession(sid);
             } catch (Exception e) {
                 log.warn("Failed to delete Keycloak session {}: {}", sid, e.getMessage());
             }
         }
-
-        // 3. 注销本地平台当前 Sa-Token 会话
-        sysLoginService.logout();
 
         // 4. 安全过滤并校验 post_logout_redirect_uri (防范开放重定向攻击)
         String targetRedirect = sanitizeLogoutRedirect(redirectUri);

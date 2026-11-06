@@ -1,8 +1,8 @@
 # Keycloak 统一身份认证与单点登录（SSO）服务部署与运维手册
 
-> **文档版本**：v1.3  
+> **文档版本**：v1.8  
 > **编写团队**：集成平台架构与运维团队  
-> **最后修订日期**：2026年11月03日  
+> **最后修订日期**：2026年11月07日  
 > **适用范围**：面向医院现场实施工程师、系统管理员、DevOps 运维团队
 
 ---
@@ -15,6 +15,23 @@
 | **v1.1** | 2026-10-30 | 实施运维组 | 增补定制化登录主题插件（`aip-keycloak-theme`）部署规范。包含单 JAR 介质发布规范、安全行为验证码服务联调、标题动态配置与中英双语国际化配置。 |
 | **v1.2** | 2026-11-02 | 实施运维组 | **架构统一为方案 B 极简模式**：全面剔除开发源码细节与代码片段；前后端统一为方案 B（前端直接重定向 Keycloak + 前端落地页直接接收 Code 并换票），免去二次重定向与 Ticket 临时表；明确单点登录与验证码服务基于回调地址（`redirect_uri`）自动动态定位后端端口的免配置机制；升级登录主题为标准中英双语与下拉多语言菜单。 |
 | **v1.3** | 2026-11-03 | 实施运维组 | **规范应用客户端接入与认证策略**：明确接入应用通过管理后台自动化同步 Keycloak Client，固化机密客户端模式（PKCE S256、授权码+刷新令牌），规范 Token 生命周期在 Realm 控制台全局管理。 |
+| **v1.4** | 2026-11-06 | 实施运维组 | **验证码服务接入方式调整**：登录主题支持由平台统一配置验证码服务地址，子应用无需代理验证码接口。 |
+| **v1.5** | 2026-11-06 | 实施运维组 | **发布局域网统一访问入口**：新增宿主机/虚拟机两级端口转发发布规范（对外 `http://<宿主机IP>:8082`），支撑局域网终端正常跳转与登录。 |
+| **v1.6** | 2026-11-06 | 实施运维组 | **修复联邦用户标准声明缺失**：用户联合存储适配器补充暴露 `username`、`email`、`firstName` 用户属性，使 ID Token / UserInfo 正常返回 `preferred_username` 等标准 claim，解决子应用报 `Missing attribute 'preferred_username' in attributes` 的登录失败问题。 |
+| **v1.7** | 2026-11-06 | 实施运维组 | **验证码内聚与滑块改造**：登录验证码由汉字点选改为拼图滑块，接口内聚到 Keycloak Provider JAR；新增服务端一次性票据校验，浏览器认证流需绑定 `aip-username-password-form` 执行项。 |
+| **v1.8** | 2026-11-07 | 实施运维组 | **发布验证码安全修复版**：替换主题 Provider 并完成重启；更新有效登录会话要求、请求限流、升级后刷新登录页与现场验收说明。 |
+
+### 最近一次部署记录（2026-11-07）
+
+- 目标：`192.168.43.100`，容器 `keycloak-server`，镜像 `quay.io/keycloak/keycloak:26.1.3`，启动命令 `start-dev`。
+- 发布介质：`/opt/keycloak/providers/aip-keycloak-theme-1.0.0.jar`，大小 `2,796,178` 字节。
+- SHA-256：`8ce9f8012ac20d01671d2e4051b382de08ff2c34e2da3e1a092ab81e19ca2850`，上传前后核对一致。
+- 本次按操作方明确要求**未新建旧 JAR 备份**；常规发布仍建议按插件部署手册保留回滚介质。
+- 执行结果：替换 JAR 后重启容器，自动重新增强成功；日志确认 Provider 注册、验证码素材加载和初始化成功，Realm 恢复 HTTP 200。
+- 配置检查：Login theme 为 `aip-theme`，Browser Flow 为 `aip-browser`，自定义表单为 `REQUIRED`，标准表单未启用，SSO Cookie 分支保留；本次未修改 Realm/客户端配置。
+- 实机冒烟：新脚本版本 `20261107a` 可访问；内网直连与局域网入口 `http://192.168.3.82:8082` 均可通过真实登录会话出图（HTTP 200）；无 Cookie、伪造 tabId、无效校验和重复提交被拒绝；不携带验证码票据直接提交登录返回安全验证失败。
+- 验收边界：本次未使用真实业务账号执行成功登录，也未进行多节点测试；发布后应从门户重新进入登录页，完成人工滑块登录与 SSO 静默登录验收。
+
 
 ---
 
@@ -80,6 +97,25 @@
    mkdir -p /opt/keycloak/data/postgres
    mkdir -p /opt/keycloak/providers
    ```
+
+### 2.1.1 局域网统一访问入口（Host-Only / NAT 虚拟机部署场景）
+
+当 Keycloak 运行于 Host-Only / NAT 虚拟网络（如 `192.168.43.100`），局域网终端无法直接路由该地址时，必须由平台宿主机统一发布 Keycloak 服务：
+
+1. **宿主机端口转发**（Windows 管理员命令提示符执行，对外端口示例为 `8082`）：
+   ```bat
+   netsh interface portproxy add v4tov4 listenaddress=0.0.0.0 listenport=8082 connectaddress=192.168.43.100 connectport=8082
+   netsh advfirewall firewall add rule name="Keycloak-8082" dir=in action=allow protocol=TCP localport=8082
+   ```
+2. **虚拟机 firewalld 转发**（将外部 `8082` 转发至 Keycloak 容器 `8080`）：
+   ```bash
+   firewall-cmd --zone=public --add-port=8082/tcp --permanent
+   firewall-cmd --zone=public --add-forward-port=port=8082:proto=tcp:toport=8080 --permanent
+   firewall-cmd --reload
+   ```
+3. **对外统一地址**：`http://<宿主机局域网IP>:8082`。Keycloak 采用动态 Hostname（`KC_HOSTNAME_STRICT=false`），会自动以请求的 Host 生成 issuer、授权端点与 Token 端点。
+4. **配套配置一致性**：前端 `VITE_APP_KEYCLOAK_URL` 与平台后端 `KEYCLOAK_SERVER_URL` 必须统一指向上述对外地址。
+5. **验证方式**：访问 `http://<宿主机局域网IP>:8082/realms/aip/.well-known/openid-configuration`，返回的 `issuer` 应为该对外地址。
 
 ### 2.2 编排部署配置（`docker-compose.yml`）
 
@@ -158,6 +194,8 @@ docker compose ps
 ### 3.1 插件功能说明
 平台所有用户数据与密码存放在集成平台主数据库中，Keycloak 本地不保存密码哈希。通过在 Keycloak 安装用户联合存储插件（User Storage Provider），当用户登录时，由 Keycloak 实时回连平台后端完成账号状态与密码校验。
 
+> **标准声明映射说明**：Keycloak 内置 `profile` / `email` Client Scope 的 Mapper 按**用户属性**读取 `username`、`email`、`firstName` 等字段。联邦存储适配器必须显式暴露这些属性，否则 ID Token / UserInfo 将缺失 `preferred_username`、`email` 等标准 claim，导致子应用（如 Spring Security 配置 `user-name-attribute=preferred_username`）在回调阶段报 `Missing attribute 'preferred_username' in attributes`。当前交付制品已内置该映射。
+
 ### 3.2 插件部署步骤
 1. **获取交付制品**：获取发版包中的 `aip-keycloak-user-storage-1.0.0.jar`；
 2. **复制到插件目录**：将文件放置到宿主机 `/opt/keycloak/providers/`；
@@ -180,20 +218,56 @@ docker compose ps
 ## 第四部分：定制化登录主题插件部署
 
 ### 4.1 主题功能与交付形式
-登录界面采用高可用单 JAR 插件形式交付（`aip-keycloak-theme-1.0.0.jar`），内部已预先封装设计规范模板、背景图、插画、SVG 图标、国际化字典及安全行为验证码组件。无需在服务器散装解压，拷贝即用。
+登录界面采用高可用单 JAR 插件形式交付（`aip-keycloak-theme-1.0.0.jar`），内部已封装设计规范模板、背景图、插画、SVG 图标、国际化字典、拼图滑块素材，以及 Keycloak Java Provider。无需在服务器散装解压，拷贝即用。
 
 ### 4.2 主题部署步骤
-1. **获取交付制品**：获取发版包中的 `aip-keycloak-theme-1.0.0.jar`；
+1. **获取交付制品**：获取发版包中的 `aip-keycloak-theme-1.0.0.jar`（含主题资源与 Java Provider，无需构建参数）；
 2. **复制到插件目录**：将文件放置到宿主机 `/opt/keycloak/providers/`；
-3. **重启容器热加载**：
+3. **重新增强并重启容器**：Java Provider 变更需要 Keycloak 重新构建增强，建议执行：
    ```bash
+   docker exec keycloak-server /opt/keycloak/bin/kc.sh build
    docker restart keycloak-server
    ```
+   若容器以 `start-dev` 启动，重启时也会重新增强；生产环境使用 `--optimized` 启动时必须先执行 `kc.sh build`。
 4. **管理控制台启用主题**：
    * 登录 Keycloak 管理后台，切换到 Realm **`aip`**；
    * 左侧菜单点击 **`Realm settings`** -> 标签页切换到 **`Themes`**；
    * 将 **`Login theme`** 下拉框选择为 **`aip-theme`**；
    * 点击页面底部 **`Save`** 保存。
+
+### 4.3 验证码接口部署说明
+
+验证码接口随 Keycloak Provider JAR 交付，部署时无需配置外部验证码服务参数。接口信息如下：
+
+| 项目 | 说明 |
+| --- | --- |
+| 获取接口 | `/realms/aip/aip-captcha/get`（`captchaType=blockPuzzle`） |
+| 校验接口 | `/realms/aip/aip-captcha/check` |
+| 素材与字体 | 滑块底图随 JAR 交付；Provider 跳过文字水印绘制，不依赖容器 fontconfig 或系统字体，也无需安装字体包 |
+| 绘制依赖 | 不依赖 GPL 字体；Keycloak 精简容器无需额外安装 fontconfig |
+
+实施要点：
+
+1. 更换 JAR 后需重新增强并重启 Keycloak（见 4.2）；
+2. 浏览器网络面板中验证码请求应指向 `/realms/aip/aip-captcha/...`；若请求失败，按第七部分排查；
+3. 子应用只需配置自身 OIDC 回调地址。
+
+### 4.4 浏览器认证流绑定（服务端强制校验）
+
+仅部署 Provider JAR 还不会自动拦截登录表单，必须在 Realm 中绑定自定义认证执行项：
+
+1. 登录 Keycloak 管理后台，进入 Realm `aip` 的 **Authentication** -> **Flows**；
+2. 复制内置 **`browser`** 流为 **`aip-browser`**（保持顶层 `Cookie` 为 ALTERNATIVE 且位于第一位，`Kerberos`/`Identity Provider Redirector` 不变）；
+3. 在 `aip-browser` 的 **forms** 子流中，将 **`Username Password Form`**（`auth-username-password-form`）替换为 **`AIP Username Password Form with CAPTCHA`**（`aip-username-password-form`），Requirements 设为 **REQUIRED**；`Conditional OTP` 保持 CONDITIONAL；
+4. 在 **Authentication** -> **Required Actions / Bindings**（或 Realm 设置中的 Browser Flow）将 **Browser Flow** 绑定为 **`aip-browser`**；
+5. 验证：
+   - 使用错误/空验证码票据直接 POST 登录请求应被拒绝；
+   - 正常拖动滑块通过后可完成登录；
+   - SSO Cookie 命中时走 `Cookie` 分支，不弹出滑块。
+
+> 注意：Realm 重新导入或重建后，需重新执行上述绑定；否则验证码仅显示、不参与服务端校验。
+>
+> 也可在部署 Provider JAR 后执行 `python configure_keycloak.py`，脚本会幂等地创建/绑定 `aip-browser` 流；若自定义执行项添加失败（例如 Provider 尚未加载），脚本会在绑定 Realm 之前中止，不会影响现有登录流。
 
 ---
 
@@ -219,13 +293,9 @@ docker compose ps
 4. **`Default locale`** 选择：`zh-CN`；
 5. 点击 **Save** 保存。登录页右上角会自动渲染支持即时切换的中英文下拉菜单。
 
-### 5.3 行为验证码服务与后端端口定位机制（免配置规则）
-系统在用户点击登录时调用平台后端的汉字点选人机验证码服务：
-* **免配置原则**：主题内部完全解耦了后端服务地址，**严禁且无需在主题中硬编码任何主机 IP 或端口**；
-* **定位规则**：
-  前端应用（门户）在发起 SSO 单点登录跳转时，已在跳转链接中规范携带了认证回调地址（`redirect_uri` / `client_data`）；登录主题在弹出验证码时，**自动从该回调地址中提取实际的协议、主机 IP 与端口**，直接向提供该回调的后端服务请求验证码；
-* **实施注意**：
-  无论现场部署在标准端口、多端口映射、容器集群还是经由 Nginx 统一反向代理，实施人员仅需确保在平台系统配置中正确配置了门户回调地址，无需对 Keycloak 登录主题进行任何网络端口的二次改动。
+### 5.3 拼图滑块验证码部署验证
+
+部署完成后，打开登录页确认滑块底图可正常加载；直接提交登录请求且不携带 `captchaVerification` 时，应提示“安全验证未通过，请重新完成拼图”。详细部署与排障步骤见《aip-keycloak-theme 部署手册》。
 
 ---
 
@@ -265,11 +335,15 @@ docker compose ps
 
 ## 第七部分：现场实施常见故障排查手册
 
-### 排查 1：验证码弹出提示“网络连接失败”或请求返回 404
+### 排查 1：滑块加载失败、请求 404/429 或登录提示“安全验证未通过”
 * **排查方向**：
-  1. 检查浏览器网络面板中验证码请求的 Target URL，确认请求的 Host 和 Port 是否与集成平台后端服务一致；
-  2. 确认平台后端服务（`aip-admin`）已正常运行且网络连通；
-  3. 检查平台后端防火墙是否放行了后端服务端口，并且后端网关/过滤器已对 `/captcha/**` 接口开启免鉴权访问。
+  1. 检查浏览器网络面板中验证码请求是否指向 `/realms/aip/aip-captcha/get` 与 `/check`；
+  2. 确认 Keycloak Provider JAR 已放入 `/opt/keycloak/providers/`，且已执行 `kc.sh build` 并重启；
+  3. 查看 Keycloak 启动日志中是否出现 `AJ-Captcha blockPuzzle engine initialized`；若初始化失败，会失败关闭并拒绝登录；
+  4. 返回 429 表示触发会话或 IP 总量限流/锁定，等待窗口结束后重试，并检查代理是否正确转发真实客户端 IP；
+  5. 返回 400 时确认请求来自有效登录页且带有当前会话 Cookie；自造 tabId 的裸请求会被拒绝，会话过期应从门户重新登录；
+  6. 确认浏览器认证流已绑定 `aip-username-password-form`（见 4.4），并复测无验证码直接登录应被拒绝；
+  7. 检查 Keycloak 代理/网关是否放行 `/realms/aip/aip-captcha/**` 路径。
 
 ### 排查 2：用户输入正确账号密码提示“Invalid username or password”
 * **排查方向**：
@@ -288,6 +362,14 @@ docker compose ps
 * **排查方向**：
   1. 确认在管理控制台修改后已点击页面下方的 **Save** 按钮；
   2. 按 `Ctrl + F5` 强制刷新浏览器清除前端静态页面缓存。
+
+### 排查 5：子应用登录回调报 `Missing attribute 'preferred_username' in attributes`
+* **现象**：Keycloak 登录成功并携带 `code` 回调子应用后，后端抛出 `java.lang.IllegalArgumentException: Missing attribute 'preferred_username' in attributes`，随后跳回 `ssoError` 页面。
+* **原因**：Keycloak `profile` Client Scope 的 `username` Mapper 读取的是用户**属性** `username`；联邦存储用户若未暴露该属性，ID Token / UserInfo 中就不会出现 `preferred_username`，而 Spring Security 配置了 `user-name-attribute: preferred_username`。
+* **排查方向**：
+  1. 解码 ID Token 或调用 `/protocol/openid-connect/userinfo`，确认是否缺少 `preferred_username`、`email` 等标准声明；
+  2. 确认 `/opt/keycloak/providers/aip-keycloak-user-storage-*.jar` 为包含标准属性映射的版本（适配器需暴露 `username`、`email`、`firstName`）；
+  3. 替换插件后执行 `docker restart keycloak-server` 使新适配器生效。
 
 ---
 

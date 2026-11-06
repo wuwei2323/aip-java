@@ -11,6 +11,172 @@
 
     <artifactId>aip-keycloak-theme</artifactId>
     <packaging>jar</packaging>
-    <description>Keycloak 26.x AIP 定制化登录主题（包含 Portal 视觉还原与行为验证码组件）</description>
+    <description>Keycloak 26.x AIP 定制化登录主题（滑块验证码、Keycloak 内聚接口与服务端强校验）</description>
+
+    <properties>
+        <!-- 与现场 Keycloak 运行时版本保持一致 -->
+        <keycloak.version>26.1.3</keycloak.version>
+        <anji.captcha.version>1.3.0</anji.captcha.version>
+        <jakarta.ws.rs.version>3.1.0</jakarta.ws.rs.version>
+        <maven.shade.plugin.version>3.6.0</maven.shade.plugin.version>
+        <maven.resources.plugin.version>3.3.1</maven.resources.plugin.version>
+    </properties>
+
+    <dependencies>
+        <!-- Keycloak SPI / 服务端类：运行时由 Keycloak 提供，禁止打进插件 JAR -->
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-server-spi</artifactId>
+            <version>${keycloak.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-server-spi-private</artifactId>
+            <version>${keycloak.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-services</artifactId>
+            <version>${keycloak.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>jakarta.ws.rs</groupId>
+            <artifactId>jakarta.ws.rs-api</artifactId>
+            <version>${jakarta.ws.rs.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jboss.logging</groupId>
+            <artifactId>jboss-logging</artifactId>
+            <version>3.6.0.Final</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.36</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- AJ-Captcha 核心包：仅核心算法/图片生成，不引入 Spring Starter -->
+        <dependency>
+            <groupId>com.anji-plus</groupId>
+            <artifactId>captcha</artifactId>
+            <version>${anji.captcha.version}</version>
+            <exclusions>
+                <!-- 复用 Keycloak 运行时的 SLF4J；核心 captcha 制品实际为 provided，排除属防御性配置 -->
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+                <!-- fastjson 只存在于 spring-boot-starter-captcha，本项目不引入 starter；防御性排除 -->
+                <exclusion>
+                    <groupId>com.alibaba</groupId>
+                    <artifactId>fastjson</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- Resource 单元测试需要 JAX-RS Response 的实现，不随 Provider JAR 分发 -->
+        <dependency>
+            <groupId>org.jboss.resteasy</groupId>
+            <artifactId>resteasy-core</artifactId>
+            <version>6.2.9.Final</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jboss.resteasy</groupId>
+            <artifactId>resteasy-core-spi</artifactId>
+            <version>6.2.9.Final</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>5.14.2</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 从 AJ-Captcha 公共模块复制滑块底图与拼图块素材到插件 JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>${maven.resources.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>copy-captcha-assets</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/captcha</outputDirectory>
+                            <overwrite>true</overwrite>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/../../aip-common/aip-common-ajcaptcha/src/main/resources/captcha</directory>
+                                    <includes>
+                                        <include>original/*</include>
+                                        <include>slidingBlock/*</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- 将 AJ-Captcha 核心包打入插件 JAR；排除 GPL 字体与无关素材 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>${maven.shade.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <artifactSet>
+                                <includes>
+                                    <include>com.anji-plus:captcha</include>
+                                </includes>
+                            </artifactSet>
+                            <filters>
+                                <filter>
+                                    <artifact>com.anji-plus:captcha</artifact>
+                                    <excludes>
+                                        <!-- 使用平台自有素材，避免 GPL 字体随插件分发 -->
+                                        <exclude>fonts/**</exclude>
+                                        <exclude>defaultImages/**</exclude>
+                                        <exclude>images/**</exclude>
+                                        <exclude>META-INF/services/**</exclude>
+                                        <exclude>META-INF/maven/**</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

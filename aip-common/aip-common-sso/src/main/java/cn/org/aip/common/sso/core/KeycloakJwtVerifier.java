@@ -1,9 +1,11 @@
 package cn.org.aip.common.sso.core;
 
+import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.jwk.source.JWKSourceBuilder;
+import com.nimbusds.jose.proc.DefaultJOSEObjectTypeVerifier;
 import com.nimbusds.jose.proc.JWSKeySelector;
 import com.nimbusds.jose.proc.JWSVerificationKeySelector;
 import com.nimbusds.jose.proc.SecurityContext;
@@ -156,6 +158,10 @@ public class KeycloakJwtVerifier {
 
             ConfigurableJWTProcessor<SecurityContext> jwtProcessor = new DefaultJWTProcessor<>();
             jwtProcessor.setJWSKeySelector(keySelector);
+            // Keycloak 的 Back-Channel Logout Token 固定使用 typ=logout+jwt (OIDC Back-Channel Logout 规范)，
+            // Nimbus 默认只放行 JWT，必须显式加入允许类型，否则验签直接失败
+            jwtProcessor.setJWSTypeVerifier(new DefaultJOSEObjectTypeVerifier<>(
+                JOSEObjectType.JWT, new JOSEObjectType("at+jwt"), new JOSEObjectType("logout+jwt")));
 
             JWTClaimsSet claims = jwtProcessor.process(signedJWT, null);
 

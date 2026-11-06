@@ -18,6 +18,7 @@ import cn.org.aip.common.core.exception.user.UserException;
 import cn.org.aip.common.core.utils.StringUtils;
 import cn.org.aip.common.mybatis.helper.DataPermissionHelper;
 import cn.org.aip.common.sso.config.KeycloakProperties;
+import cn.org.aip.common.tenant.helper.TenantHelper;
 import cn.org.aip.system.domain.SysUser;
 import cn.org.aip.system.domain.vo.SysDeptVo;
 import cn.org.aip.system.mapper.SysUserMapper;
@@ -203,6 +204,12 @@ public class KeycloakInternalController {
     }
 
     private KeycloakUserVo toKeycloakUserVo(SysUser user) {
+        // Keycloak 内部调用不携带租户上下文，显式以门户默认应用执行属性转换，
+        // 避免部门缓存管理器因取不到应用 id 而写错误日志并落入错误的缓存命名空间
+        return TenantHelper.dynamic(TenantConstants.DEFAULT_TENANT_ID, () -> buildKeycloakUserVo(user));
+    }
+
+    private KeycloakUserVo buildKeycloakUserVo(SysUser user) {
         String deptName = "";
         if (ObjectUtil.isNotNull(user.getDeptId())) {
             Opt<SysDeptVo> deptOpt = Opt.of(user.getDeptId()).map(deptService::selectDeptById);

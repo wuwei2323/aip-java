@@ -332,9 +332,141 @@ def main():
     api_request("POST", f"/admin/realms/{REALM_NAME}/users/{svc_user_id}/role-mappings/clients/{realm_mgmt_uuid}", roles_to_assign)
     print("Service Account roles successfully assigned.")
 
+    # 6. Configure CAPTCHA browser flow
+    configure_browser_flow()
+
     print("\n=======================================================")
     print("Keycloak Realm 'aip' and Clients configured successfully!")
     print("=======================================================")
+
+
+def resolve_forms_subflow_alias():
+    """Resolve the copied 'aip-browser ... forms' subflow alias.
+
+    The top-level flows list does not include subflows, so walk the top-level
+    executions, find the forms subflow by display name, then resolve its alias
+    through GET /flows/{flowId}.
+    """
+    executions = api_request(
+        "GET", f"/admin/realms/{REALM_NAME}/authentication/flows/aip-browser/executions"
+    ) or []
+    for execution in executions:
+        if not execution.get("authenticationFlow"):
+            continue
+        if "forms" not in (execution.get("displayName") or "").lower():
+            continue
+        flow_id = execution.get("flowId")
+        if not flow_id:
+            continue
+        flow = api_request(
+            "GET", f"/admin/realms/{REALM_NAME}/authentication/flows/{urllib.parse.quote(flow_id, safe='')}"
+        )
+        if isinstance(flow, dict) and flow.get("alias"):
+            return flow["alias"]
+    # Fallback: Keycloak uses the display name as the copied subflow alias
+    for execution in executions:
+        if execution.get("authenticationFlow") and "forms" in (execution.get("displayName") or "").lower():
+            return execution.get("displayName")
+    return None
+
+
+def configure_browser_flow():
+    """Create aip-browser flow and require aip-username-password-form.
+
+    Idempotent: safe to run on every deployment after the Provider JAR is loaded.
+    The realm binding is changed last so a failure leaves the current login flow intact.
+    """
+    print("6. Configuring CAPTCHA browser flow...")
+    flows = api_request("GET", f"/admin/realms/{REALM_NAME}/authentication/flows") or []
+    aliases = {flow.get("alias"): flow for flow in flows}
+
+    if "aip-browser" not in aliases:
+        print("Copying built-in 'browser' flow to 'aip-browser'...")
+        api_request(
+            "POST",
+            f"/admin/realms/{REALM_NAME}/authentication/flows/browser/copy",
+            {"newName": "aip-browser"},
+        )
+        flows = api_request("GET", f"/admin/realms/{REALM_NAME}/authentication/flows") or []
+        aliases = {flow.get("alias"): flow for flow in flows}
+
+    forms_alias = resolve_forms_subflow_alias()
+    if not forms_alias:
+        raise RuntimeError("Cannot find the 'aip-browser ... forms' subflow after copy")
+
+    flow_path = urllib.parse.quote(forms_alias, safe="")
+    executions = api_request(
+        "GET", f"/admin/realms/{REALM_NAME}/authentication/flows/{flow_path}/executions"
+    ) or []
+    standard = next(
+        (e for e in executions
+         if e.get("providerId") == "auth-username-password-form"
+         and not e.get("authenticationFlow")),
+        None,
+    )
+    custom = next(
+        (e for e in executions
+         if e.get("providerId") == "aip-username-password-form"
+         and not e.get("authenticationFlow")),
+        None,
+    )
+
+    if custom is None:
+        print("Adding 'aip-username-password-form' execution...")
+        body = {"provider": "aip-username-password-form"}
+        if standard and standard.get("priority") is not None:
+            body["priority"] = standard["priority"]
+        api_request(
+            "POST",
+            f"/admin/realms/{REALM_NAME}/authentication/flows/{flow_path}/executions/execution",
+            body,
+        )
+        executions = api_request(
+            "GET", f"/admin/realms/{REALM_NAME}/authentication/flows/{flow_path}/executions"
+        ) or []
+        custom = next(
+            (e for e in executions
+             if e.get("providerId") == "aip-username-password-form"
+             and not e.get("authenticationFlow")),
+            None,
+        )
+        if custom is None:
+            raise RuntimeError("Provider aip-username-password-form not found; deploy the theme JAR first")
+
+    if custom.get("requirement") != "REQUIRED":
+        print("Setting 'aip-username-password-form' to REQUIRED...")
+        custom["requirement"] = "REQUIRED"
+        api_request(
+            "PUT",
+            f"/admin/realms/{REALM_NAME}/authentication/flows/{flow_path}/executions",
+            custom,
+        )
+
+    # Remove the standard username/password execution only after the custom one is active
+    executions = api_request(
+        "GET", f"/admin/realms/{REALM_NAME}/authentication/flows/{flow_path}/executions"
+    ) or []
+    standard = next(
+        (e for e in executions
+         if e.get("providerId") == "auth-username-password-form"
+         and not e.get("authenticationFlow")),
+        None,
+    )
+    if standard:
+        print("Removing standard 'auth-username-password-form' execution...")
+        api_request(
+            "DELETE",
+            f"/admin/realms/{REALM_NAME}/authentication/executions/{standard['id']}",
+        )
+
+    realm = api_request("GET", f"/admin/realms/{REALM_NAME}")
+    if realm.get("browserFlow") != "aip-browser":
+        print("Binding Browser Flow to 'aip-browser'...")
+        realm["browserFlow"] = "aip-browser"
+        api_request("PUT", f"/admin/realms/{REALM_NAME}", realm)
+    else:
+        print("Browser Flow already bound to 'aip-browser'.")
+
 
 if __name__ == "__main__":
     main()

@@ -39,7 +39,7 @@
 
 | 角色 | 运行实体 | 职责与功能 |
 | :--- | :--- | :--- |
-| **终端浏览器** | Chrome / Edge 等 | 用户操作界面，负责页面渲染、表单填写、汉字点选人机交互与 URL 重定向跳转。 |
+| **终端浏览器** | Chrome / Edge 等 | 用户操作界面，负责页面渲染、表单填写、拼图滑块人机交互与 URL 重定向跳转。 |
 | **前端应用 (`plus-ui` / 子应用)** | Vue 3 / React | 前端系统。未登录时本地生成 `state`、`nonce` 与 PKCE 凭据，直跳 Keycloak；回调时校验 `state` 并将参数提交后端。 |
 | **Keycloak 认证中心** | Keycloak 26.x 容器 | 统一身份认证中心。托管定制登录主题 `aip-theme`，装配 `aip-keycloak-user-storage` 用户联合存储 SPI 插件。 |
 | **后端服务 (`aip-admin` / 子应用后端)** | Spring Boot | 暴露单一换票接口 `POST /auth/sso/callback`，持 `client_secret` 直连 Keycloak 换票，验签 Nonce，签发 Sa-Token。 |
@@ -78,16 +78,19 @@ sequenceDiagram
     else 场景 B：首次登录 (无 Cookie)
         Keycloak-->>Browser: 渲染自定义定制主题页面 (aip-theme: login.ftl)
         User->>Browser: 3. 输入平台用户名密码，点击「立即登录」
-        Note over Browser: captcha.js 拦截表单提交<br/>自动从 client_data / redirect_uri 动态提取后端协议与端口
-        Browser->>Backend: 4. 请求人机验证码 (GET /captcha/get?captchaType=clickWord)
-        Backend-->>Browser: 返回汉字点选底图及题目 (如: "请依次点击 硕 柏 典 仟")
-        User->>Browser: 5. 用户在底图上按顺序点选汉字，点确定
-        Browser->>Backend: 6. 提交坐标校验 (POST /captcha/check，AES 密文传输)
-        Backend-->>Browser: 人机校验通过，返回 captchaVerification 凭证
-        Note over Browser: 7. 回填验证凭证到隐藏表单域，正式调用 form.submit()
+        Note over Browser: captcha.js 拦截表单提交<br/>从 url.loginAction 解析同源端点、client_id 与 tab_id
+        Browser->>Keycloak: 4. 获取拼图滑块 (GET /realms/aip/aip-captcha/get?captchaType=blockPuzzle，携带当前登录会话 Cookie)
+        Keycloak->>Keycloak: 校验真实认证会话与期限，登记 120 秒有效的单次挑战绑定
+        Keycloak-->>Browser: 返回底图、拼图块、token 与 secretKey
+        User->>Browser: 5. 用户向右拖动滑块
+        Browser->>Keycloak: 6. 提交坐标校验 (POST /realms/aip/aip-captcha/check，AES 密文传输)
+        Keycloak->>Keycloak: 原子消费挑战绑定，仅一个请求可进入 AJ 坐标校验
+        Keycloak-->>Browser: 坐标校验通过，返回一次性 captchaVerification 票据
+        Note over Browser: 7. 回填票据到隐藏表单域，正式调用 form.submit()
         
-        %% 阶段 3：User Storage SPI 联合鉴权
-        Browser->>Keycloak: 8. POST /login-actions/authenticate (提交 username/password)
+        %% 阶段 3：服务端票据校验与 User Storage SPI 联合鉴权
+        Browser->>Keycloak: 8. POST /login-actions/authenticate (提交 username/password + captchaVerification)
+        Keycloak->>Keycloak: 9. aip-username-password-form 原子消费票据并校验绑定上下文
         Keycloak->>SPI: 调用 AipUserStorageProvider.isValid()
         SPI->>Backend: POST /internal/keycloak/verify-password (Header 带 X-Internal-Secret)
         Backend->>DB: 查询 sys_user 比对密码密文，核验防暴力破解锁定
@@ -153,18 +156,22 @@ sequenceDiagram
 
 ---
 
-### 阶段 3：Keycloak 登录页如何动态反向定位后端验证码服务？
-* **痛点**：Keycloak 运行在独立节点或端口，如何知道该向哪台后端服务器请求验证码底图，同时避免把 IP 和端口硬编码在静态 JS 文件中？
+### 阶段 3：验证码如何内聚进 Keycloak 并完成服务端校验？
 * **解法**：
-  1. 前端在发起授权跳转时，在 URL 中将回调地址带上，并把回调地址序列化在 `client_data` 中（如 `{"ru":"http://localhost:81/sso/callback","rt":"code","st":"xxx"}`）；
-  2. Keycloak 渲染登录页时，表单的 `action` 会保留该参数；
-  3. 主题脚本 `captcha.js` 自动提取 `client_data.ru`（或 `redirect_uri`），通过 `new URL(callbackUrl).origin` **纯动态获取发起端的主机与端口**，精准调用人机验证码接口，任何网络拓扑下均可自动自适应。
+  1. 验证码接口由主题 JAR 内的 `RealmResourceProvider` 暴露在 `/realms/{realm}/aip-captcha/get`、`/check`，登录页同源调用，无需 `captchaBaseUrl`、CORS 或外部服务；
+  2. 登录页从 `${url.loginAction}` 解析 realm、`client_id` 与 `tab_id`，作为参数传入，并携带同源登录会话 Cookie；接口复用 Keycloak 的会话解析和登录期限判断，不接受任意自造 tabId，也不消费登录表单的 active_code；
+  3. `/get` 在出图后登记挑战绑定，绑定 realmId、根认证会话 ID、公开 clientId、tabId，TTL 120s。`/check` 先以 `SingleUseObjectProvider.remove()` 原子消费该绑定，再调用 AJ-Captcha 坐标校验，保证同一个挑战并发提交也最多进入引擎一次；
+  4. 坐标校验通过后签发绑定同一上下文的一次性登录票据，TTL 180s。登录表单提交时，`aip-username-password-form` 在 `super.action()` 前原子消费票据；无票据、伪造、重放、跨根会话/客户端/tab 或过期票据均直接拒绝；
+  5. 每节点固定窗口分别约束 IP 总量（get 120/分钟、check 60/分钟）和认证会话（get 20/分钟、check 10/分钟）；同一节点的会话在窗口内失败 5 次后写入共享 300s 锁，所有节点的 get/check 都查询该锁。容量满时仅清理过期计数，不清空有效状态；
+  6. 前端关闭/刷新会取消旧请求和定时器，按挑战轮次忽略晚到的响应，防止取消后自动登录或旧图覆盖新图；SSO Cookie 命中仍走浏览器流的 `Cookie` 分支，不触发验证码。
+* **部署前提**：Realm 浏览器流必须绑定 `aip-username-password-form`，否则验证码只展示、不参与服务端校验。
 
 ---
 
 ### 阶段 4：Keycloak 怎么核验账号密码？（User Storage SPI 联合认证）
 * **主数据在平台**：Keycloak 自身数据库不保存任何用户的密码密文；
 * **内网调用**：
+  0. 浏览器提交的 `captchaVerification` 先由 `aip-username-password-form` 原子消费并校验绑定上下文，失败直接拒绝；
   1. 用户在登录页输入用户名和密码点击登录；
   2. Keycloak 内部的 `aip-keycloak-user-storage` 插件拦截认证动作；
   3. 插件在服务器内网向平台后端发起 HTTP POST：`/internal/keycloak/verify-password`，Header 携带双方约定的 `X-Internal-Secret` 共享防伪密钥；

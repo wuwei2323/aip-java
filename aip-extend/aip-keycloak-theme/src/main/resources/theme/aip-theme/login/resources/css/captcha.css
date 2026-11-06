@@ -1,4 +1,4 @@
-/* AJ-Captcha 行为验证码弹窗样式（完美还原设计稿与安全验证弹窗） */
+/* AJ-Captcha 拼图滑块验证码弹窗样式 */
 
 .captcha-mask {
   position: fixed;
@@ -28,6 +28,7 @@
 .captcha-popup {
   box-sizing: border-box;
   width: 350px;
+  max-width: calc(100vw - 24px);
   background: #ffffff;
   border-radius: 12px;
   padding: 16px 20px 20px;
@@ -81,17 +82,12 @@
   align-items: center;
 }
 
-.captcha-tip-bar .highlight-words {
-  font-weight: 600;
-  color: #007cbf;
-  letter-spacing: 2px;
-  margin-left: 4px;
-}
-
 .captcha-img-wrapper {
   position: relative;
   width: 310px;
-  height: 155px;
+  max-width: 100%;
+  aspect-ratio: 310 / 155;
+  height: auto;
   margin: 0 auto;
   border-radius: 8px;
   overflow: hidden;
@@ -103,45 +99,21 @@
   width: 100%;
   height: 100%;
   display: block;
-  object-fit: cover;
+  object-fit: fill;
   cursor: default;
 }
 
-.captcha-dots-container {
+/* 拼图块宽度为底图的 47/310，与原生坐标系保持一致 */
+.captcha-jigsaw-img {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
+  width: calc(100% * 47 / 310);
   height: 100%;
+  display: block;
   pointer-events: none;
-}
-
-.captcha-dot {
-  position: absolute;
-  width: 22px;
-  height: 22px;
-  margin-left: -11px;
-  margin-top: -11px;
-  background-color: #007cbf;
-  color: #ffffff;
-  border: 2px solid #ffffff;
-  border-radius: 50%;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 18px;
-  text-align: center;
-  box-sizing: border-box;
-  animation: dotPop 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-@keyframes dotPop {
-  0% {
-    transform: scale(0);
-  }
-  100% {
-    transform: scale(1);
-  }
+  transform: translateX(0);
+  will-change: transform;
 }
 
 .captcha-loading {
@@ -175,11 +147,90 @@
   }
 }
 
+.captcha-slide-wrapper {
+  margin-top: 14px;
+}
+
+.captcha-slide-track {
+  position: relative;
+  height: 40px;
+  border: 1px solid #e4e7ed;
+  border-radius: 20px;
+  background-color: #f5f7fa;
+  overflow: hidden;
+  touch-action: none;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.captcha-slide-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #909399;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.captcha-slide-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40px;
+  height: 40px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border: 1px solid #dcdfe6;
+  border-radius: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  cursor: grab;
+  touch-action: none;
+  transform: translateX(0);
+  transition: transform 0.18s ease-out, box-shadow 0.2s;
+}
+
+.captcha-slide-handle:hover {
+  box-shadow: 0 2px 10px rgba(0, 124, 191, 0.25);
+}
+
+.captcha-slide-handle.is-dragging {
+  cursor: grabbing;
+  transition: none;
+}
+
+.captcha-slide-handle:focus-visible {
+  outline: 2px solid #007cbf;
+  outline-offset: 2px;
+}
+
+.captcha-slide-arrow {
+  color: #007cbf;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.captcha-slide-track.is-success {
+  border-color: #67c23a;
+  background-color: #f0f9eb;
+}
+
+.captcha-slide-track.is-fail {
+  border-color: #f56c6c;
+  background-color: #fef0f0;
+  animation: shake 0.3s;
+}
+
 .captcha-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-top: 14px;
+  justify-content: flex-end;
+  margin-top: 10px;
 }
 
 .captcha-actions-left {
@@ -203,32 +254,6 @@
 .captcha-btn-icon:hover {
   color: #007cbf;
   background-color: #f0f7ff;
-}
-
-.captcha-btn-confirm {
-  height: 36px;
-  padding: 0 22px;
-  background-color: #007cbf;
-  color: #ffffff;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.captcha-btn-confirm:hover {
-  background-color: #0072af;
-}
-
-.captcha-btn-confirm:active {
-  background-color: #00679e;
-}
-
-.captcha-btn-confirm:disabled {
-  background-color: #a0cfff;
-  cursor: not-allowed;
 }
 
 .captcha-error-tip {
