@@ -55,6 +55,11 @@ public class RouterVo {
     private MetaVo meta;
 
     /**
+     * 菜单分组（1=管理后台 2=集成平台）
+     */
+    private Long groupId;
+
+    /**
      * 子路由
      */
     private List<RouterVo> children;

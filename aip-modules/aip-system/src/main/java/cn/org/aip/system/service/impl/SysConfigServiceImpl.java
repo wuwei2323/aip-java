@@ -149,6 +149,9 @@ public class SysConfigServiceImpl implements ISysConfigService, ConfigService {
     @Override
     public String insertConfig(SysConfigBo bo) {
         SysConfig config = MapstructUtils.convert(bo, SysConfig.class);
+        if (StringUtils.isBlank(config.getConfigType())) {
+            config.setConfigType(SystemConstants.NO);
+        }
         int row = baseMapper.insert(config);
         if (row > 0) {
             return config.getConfigValue();
@@ -171,6 +174,12 @@ public class SysConfigServiceImpl implements ISysConfigService, ConfigService {
             SysConfig temp = baseMapper.selectById(config.getConfigId());
             if (!StringUtils.equals(temp.getConfigKey(), config.getConfigKey())) {
                 CacheUtils.evict(CacheNames.SYS_CONFIG, temp.getConfigKey());
+            }
+            if (StringUtils.isBlank(config.getConfigType()) && temp != null) {
+                config.setConfigType(temp.getConfigType());
+            }
+            if (StringUtils.isBlank(config.getAppId()) && temp != null) {
+                config.setAppId(temp.getAppId());
             }
             row = baseMapper.updateById(config);
         } else {

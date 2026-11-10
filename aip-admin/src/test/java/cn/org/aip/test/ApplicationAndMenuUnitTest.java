@@ -243,4 +243,90 @@ public class ApplicationAndMenuUnitTest {
         Assertions.assertTrue(userService.checkEmployeeNoUnique(userEmpty));
     }
 
+    @Tag("dev")
+    @DisplayName("测试菜单分组groupId增删改查与分组过滤")
+    @Test
+    @Transactional
+    public void testMenuGroupIdCrudAndFilter() {
+        // 1. 新增菜单不设置 groupId，默认应该为 1 (管理后台)
+        SysMenuBo defaultMenu = new SysMenuBo();
+        defaultMenu.setMenuName("默认分组菜单" + System.currentTimeMillis());
+        defaultMenu.setParentId(0L);
+        defaultMenu.setOrderNum(991);
+        defaultMenu.setPath("testDefaultGroup");
+        defaultMenu.setComponent("system/menu/index");
+        defaultMenu.setMenuType(SystemConstants.TYPE_MENU);
+        defaultMenu.setVisible("0");
+        defaultMenu.setStatus("0");
+        defaultMenu.setIsFrame("1");
+        menuService.insertMenu(defaultMenu);
+        Assertions.assertNotNull(defaultMenu.getMenuId());
+
+        SysMenuVo savedDefault = menuService.selectMenuById(defaultMenu.getMenuId());
+        Assertions.assertNotNull(savedDefault);
+        Assertions.assertEquals(1L, savedDefault.getGroupId());
+
+        // 2. 新增菜单指定 groupId = 2 (集成平台)
+        SysMenuBo group2Menu = new SysMenuBo();
+        group2Menu.setMenuName("集成平台菜单" + System.currentTimeMillis());
+        group2Menu.setParentId(0L);
+        group2Menu.setOrderNum(992);
+        group2Menu.setPath("testGroup2");
+        group2Menu.setComponent("system/menu/index");
+        group2Menu.setMenuType(SystemConstants.TYPE_MENU);
+        group2Menu.setVisible("0");
+        group2Menu.setStatus("0");
+        group2Menu.setIsFrame("1");
+        group2Menu.setGroupId(2L);
+        menuService.insertMenu(group2Menu);
+        Assertions.assertNotNull(group2Menu.getMenuId());
+
+        SysMenuVo savedGroup2 = menuService.selectMenuById(group2Menu.getMenuId());
+        Assertions.assertNotNull(savedGroup2);
+        Assertions.assertEquals(2L, savedGroup2.getGroupId());
+
+        // 3. 修改菜单 groupId：从 2 改为 1
+        group2Menu.setGroupId(1L);
+        menuService.updateMenu(group2Menu);
+        SysMenuVo updated = menuService.selectMenuById(group2Menu.getMenuId());
+        Assertions.assertNotNull(updated);
+        Assertions.assertEquals(1L, updated.getGroupId());
+
+        // 4. 按 groupId 过滤查询验证
+        SysMenuBo queryBo1 = new SysMenuBo();
+        queryBo1.setGroupId(1L);
+        List<SysMenuVo> list1 = menuService.selectMenuList(queryBo1, 1L);
+        Assertions.assertTrue(list1.stream().anyMatch(m -> m.getMenuId().equals(defaultMenu.getMenuId())));
+
+        SysMenuBo queryBo2 = new SysMenuBo();
+        queryBo2.setGroupId(2L);
+        List<SysMenuVo> list2 = menuService.selectMenuList(queryBo2, 1L);
+        Assertions.assertFalse(list2.stream().anyMatch(m -> m.getMenuId().equals(defaultMenu.getMenuId())));
+
+        // 5. 验证 getRouters 对应的 selectMenuTreeByUserId(userId, groupId) 与 buildMenus 适配
+        List<cn.org.aip.system.domain.SysMenu> routerMenusGroup1 = menuService.selectMenuTreeByUserId(1L, 1L);
+        Assertions.assertTrue(routerMenusGroup1.stream().anyMatch(m -> m.getMenuId().equals(defaultMenu.getMenuId())));
+        Assertions.assertFalse(routerMenusGroup1.stream().anyMatch(m -> m.getMenuId().equals(group2Menu.getMenuId())));
+
+        List<cn.org.aip.system.domain.SysMenu> routerMenusGroup2 = menuService.selectMenuTreeByUserId(1L, 2L);
+        Assertions.assertTrue(routerMenusGroup2.stream().anyMatch(m -> m.getMenuId().equals(group2Menu.getMenuId())));
+        Assertions.assertFalse(routerMenusGroup2.stream().anyMatch(m -> m.getMenuId().equals(defaultMenu.getMenuId())));
+
+        // 验证 buildMenus 生成的 RouterVo 与 MetaVo 包含 groupId
+        List<cn.org.aip.system.domain.vo.RouterVo> routerVos = menuService.buildMenus(routerMenusGroup2);
+        cn.org.aip.system.domain.vo.RouterVo targetRouter = routerVos.stream()
+            .filter(r -> r.getName().contains(String.valueOf(group2Menu.getMenuId())))
+            .findFirst()
+            .orElse(null);
+        Assertions.assertNotNull(targetRouter);
+        Assertions.assertEquals(2L, targetRouter.getGroupId());
+        Assertions.assertEquals(2L, targetRouter.getMeta().getGroupId());
+
+        // 6. 删除菜单
+        menuService.deleteMenuById(defaultMenu.getMenuId());
+        Assertions.assertNull(menuService.selectMenuById(defaultMenu.getMenuId()));
+        menuService.deleteMenuById(group2Menu.getMenuId());
+        Assertions.assertNull(menuService.selectMenuById(group2Menu.getMenuId()));
+    }
+
 }

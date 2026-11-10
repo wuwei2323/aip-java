@@ -77,6 +77,7 @@ public class SysMenuServiceImpl implements ISysMenuService {
                 .eq(StringUtils.isNotBlank(menu.getStatus()), SysMenu::getStatus, menu.getStatus())
                 .eq(StringUtils.isNotBlank(menu.getMenuType()), SysMenu::getMenuType, menu.getMenuType())
                 .eq(ObjectUtil.isNotNull(menu.getParentId()), SysMenu::getParentId, menu.getParentId())
+                .eq(ObjectUtil.isNotNull(menu.getGroupId()), SysMenu::getGroupId, menu.getGroupId())
                 .orderByAsc(SysMenu::getParentId)
                 .orderByAsc(SysMenu::getOrderNum));
         return menuList;
@@ -105,6 +106,31 @@ public class SysMenuServiceImpl implements ISysMenuService {
     }
 
     /**
+     * 根据用户ID及分组查询菜单
+     *
+     * @param userId  用户ID
+     * @param groupId 菜单分组（可选）
+     * @return 菜单列表
+     */
+    @Override
+    public List<SysMenu> selectMenuTreeByUserId(Long userId, Long groupId) {
+        List<SysMenu> menus;
+        if (LoginHelper.isSuperAdmin(userId)) {
+            menus = baseMapper.selectMenuTreeAll(groupId);
+        } else {
+            LambdaQueryWrapper<SysMenu> wrapper = new LambdaQueryWrapper<>();
+            menus = baseMapper.selectList(
+                wrapper.in(SysMenu::getMenuType, SystemConstants.TYPE_DIR, SystemConstants.TYPE_MENU)
+                    .eq(SysMenu::getStatus, SystemConstants.NORMAL)
+                    .eq(ObjectUtil.isNotNull(groupId), SysMenu::getGroupId, groupId)
+                    .inSql(SysMenu::getMenuId, baseMapper.buildMenuByUserSql(userId))
+                    .orderByAsc(SysMenu::getParentId)
+                    .orderByAsc(SysMenu::getOrderNum));
+        }
+        return getChildPerms(menus, Constants.TOP_PARENT_ID);
+    }
+
+    /**
      * 根据用户ID查询菜单
      *
      * @param userId 用户名称
@@ -112,19 +138,7 @@ public class SysMenuServiceImpl implements ISysMenuService {
      */
     @Override
     public List<SysMenu> selectMenuTreeByUserId(Long userId) {
-        List<SysMenu> menus;
-        if (LoginHelper.isSuperAdmin(userId)) {
-            menus = baseMapper.selectMenuTreeAll();
-        } else {
-            LambdaQueryWrapper<SysMenu> wrapper = new LambdaQueryWrapper<>();
-            menus = baseMapper.selectList(
-                wrapper.in(SysMenu::getMenuType, SystemConstants.TYPE_DIR, SystemConstants.TYPE_MENU)
-                    .eq(SysMenu::getStatus, SystemConstants.NORMAL)
-                    .inSql(SysMenu::getMenuId, baseMapper.buildMenuByUserSql(userId))
-                    .orderByAsc(SysMenu::getParentId)
-                    .orderByAsc(SysMenu::getOrderNum));
-        }
-        return getChildPerms(menus, Constants.TOP_PARENT_ID);
+        return selectMenuTreeByUserId(userId, null);
     }
 
     /**
@@ -178,8 +192,10 @@ public class SysMenuServiceImpl implements ISysMenuService {
             router.setPath(menu.getRouterPath());
             router.setComponent(menu.getComponentInfo());
             router.setQuery(menu.getQueryParam());
+            router.setGroupId(menu.getGroupId());
             MetaVo meta = new MetaVo(menu.getMenuName(), menu.getIcon(), StringUtils.equals("1", menu.getIsCache()), menu.getPath(), menu.getRemark());
             meta.setAppId(menu.getAppId());
+            meta.setGroupId(menu.getGroupId());
             router.setMeta(meta);
             List<SysMenu> cMenus = menu.getChildren();
             if (CollUtil.isNotEmpty(cMenus) && SystemConstants.TYPE_DIR.equals(menu.getMenuType())) {
@@ -194,14 +210,18 @@ public class SysMenuServiceImpl implements ISysMenuService {
                 children.setPath(menu.getPath());
                 children.setComponent(menu.getComponent());
                 children.setName(frameName);
+                children.setGroupId(menu.getGroupId());
                 MetaVo frameMeta = new MetaVo(menu.getMenuName(), menu.getIcon(), StringUtils.equals("1", menu.getIsCache()), menu.getPath(), menu.getRemark());
                 frameMeta.setAppId(menu.getAppId());
+                frameMeta.setGroupId(menu.getGroupId());
                 children.setMeta(frameMeta);
                 children.setQuery(menu.getQueryParam());
                 childrenList.add(children);
                 router.setChildren(childrenList);
             } else if (menu.getParentId().equals(Constants.TOP_PARENT_ID) && menu.isInnerLink()) {
-                router.setMeta(new MetaVo(menu.getMenuName(), menu.getIcon()));
+                MetaVo metaVo = new MetaVo(menu.getMenuName(), menu.getIcon());
+                metaVo.setGroupId(menu.getGroupId());
+                router.setMeta(metaVo);
                 router.setPath("/");
                 List<RouterVo> childrenList = new ArrayList<>();
                 RouterVo children = new RouterVo();
@@ -210,8 +230,10 @@ public class SysMenuServiceImpl implements ISysMenuService {
                 children.setPath(routerPath);
                 children.setComponent(SystemConstants.INNER_LINK);
                 children.setName(innerLinkName);
+                children.setGroupId(menu.getGroupId());
                 MetaVo innerMeta = new MetaVo(menu.getMenuName(), menu.getIcon(), menu.getPath());
                 innerMeta.setAppId(menu.getAppId());
+                innerMeta.setGroupId(menu.getGroupId());
                 children.setMeta(innerMeta);
                 childrenList.add(children);
                 router.setChildren(childrenList);
@@ -241,6 +263,7 @@ public class SysMenuServiceImpl implements ISysMenuService {
             menuTree.put("icon", menu.getIcon());
             menuTree.put("visible", menu.getVisible());
             menuTree.put("status", menu.getStatus());
+            menuTree.put("groupId", menu.getGroupId());
         });
     }
 
@@ -299,6 +322,9 @@ public class SysMenuServiceImpl implements ISysMenuService {
         if (!SystemConstants.TYPE_MENU.equals(bo.getMenuType())) {
             bo.setAppId(null);
         }
+        if (bo.getGroupId() == null) {
+            bo.setGroupId(1L);
+        }
         SysMenu menu = MapstructUtils.convert(bo, SysMenu.class);
         int rows = baseMapper.insert(menu);
         bo.setMenuId(menu.getMenuId());
@@ -355,6 +381,7 @@ public class SysMenuServiceImpl implements ISysMenuService {
         boolean exist = baseMapper.exists(new LambdaQueryWrapper<SysMenu>()
             .eq(SysMenu::getMenuName, menu.getMenuName())
             .eq(SysMenu::getParentId, menu.getParentId())
+            .eq(ObjectUtil.isNotNull(menu.getGroupId()), SysMenu::getGroupId, menu.getGroupId())
             .ne(ObjectUtil.isNotNull(menu.getMenuId()), SysMenu::getMenuId, menu.getMenuId()));
         return !exist;
     }

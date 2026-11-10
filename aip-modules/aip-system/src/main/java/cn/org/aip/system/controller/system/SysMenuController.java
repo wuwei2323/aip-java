@@ -41,11 +41,12 @@ public class SysMenuController extends BaseController {
     /**
      * 获取路由信息
      *
+     * @param groupId 菜单分组（1=管理后台 2=集成平台，可选）
      * @return 路由信息
      */
     @GetMapping("/getRouters")
-    public R<List<RouterVo>> getRouters() {
-        List<SysMenu> menus = menuService.selectMenuTreeByUserId(LoginHelper.getUserId());
+    public R<List<RouterVo>> getRouters(@RequestParam(value = "groupId", required = false) Long groupId) {
+        List<SysMenu> menus = menuService.selectMenuTreeByUserId(LoginHelper.getUserId(), groupId);
         return R.ok(menuService.buildMenus(menus));
     }
 

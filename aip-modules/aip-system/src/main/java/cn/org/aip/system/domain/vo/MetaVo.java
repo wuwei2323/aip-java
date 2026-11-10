@@ -42,6 +42,11 @@ public class MetaVo {
      */
     private String appId;
 
+    /**
+     * 菜单分组（1=管理后台 2=集成平台）
+     */
+    private Long groupId;
+
     public MetaVo(String title, String icon) {
         this.title = title;
         this.icon = icon;

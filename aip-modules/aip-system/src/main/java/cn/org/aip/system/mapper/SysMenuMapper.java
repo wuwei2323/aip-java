@@ -1,5 +1,6 @@
 package cn.org.aip.system.mapper;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import cn.org.aip.common.tenant.helper.TenantHelper;
 import cn.org.aip.common.core.constant.SystemConstants;
@@ -112,17 +113,28 @@ public interface SysMenuMapper extends BaseMapperPlus<SysMenu, SysMenuVo> {
     }
 
     /**
+     * 根据分组查询菜单（超管全部菜单）
+     *
+     * @param groupId 菜单分组（可选）
+     * @return 菜单列表
+     */
+    default List<SysMenu> selectMenuTreeAll(Long groupId) {
+        LambdaQueryWrapper<SysMenu> lqw = new LambdaQueryWrapper<SysMenu>()
+            .in(SysMenu::getMenuType, SystemConstants.TYPE_DIR, SystemConstants.TYPE_MENU)
+            .eq(SysMenu::getStatus, SystemConstants.NORMAL)
+            .eq(ObjectUtil.isNotNull(groupId), SysMenu::getGroupId, groupId)
+            .orderByAsc(SysMenu::getParentId)
+            .orderByAsc(SysMenu::getOrderNum);
+        return this.selectList(lqw);
+    }
+
+    /**
      * 根据用户ID查询菜单
      *
      * @return 菜单列表
      */
     default List<SysMenu> selectMenuTreeAll() {
-        LambdaQueryWrapper<SysMenu> lqw = new LambdaQueryWrapper<SysMenu>()
-            .in(SysMenu::getMenuType, SystemConstants.TYPE_DIR, SystemConstants.TYPE_MENU)
-            .eq(SysMenu::getStatus, SystemConstants.NORMAL)
-            .orderByAsc(SysMenu::getParentId)
-            .orderByAsc(SysMenu::getOrderNum);
-        return this.selectList(lqw);
+        return selectMenuTreeAll(null);
     }
 
     /**

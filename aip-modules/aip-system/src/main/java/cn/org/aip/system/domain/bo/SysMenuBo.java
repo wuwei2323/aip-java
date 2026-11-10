@@ -121,4 +121,9 @@ public class SysMenuBo extends BaseEntity {
     @Size(max = 64, message = "关联应用ID长度不能超过{max}个字符")
     private String appId;
 
+    /**
+     * 菜单分组（1=管理后台 2=集成平台）
+     */
+    private Long groupId;
+
 }

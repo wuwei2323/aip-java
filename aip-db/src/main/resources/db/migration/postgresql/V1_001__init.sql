@@ -461,6 +461,7 @@ create table if not exists sys_menu
     update_time timestamp,
     remark varchar (500) default '':: varchar,
     app_id varchar (64),
+    group_id int8 default 1,
     constraint "sys_menu_pk" primary key (menu_id)
 );
 
@@ -489,6 +490,7 @@ comment on column sys_menu.update_by is '更新者';
 comment on column sys_menu.update_time is '更新时间';
 comment on column sys_menu.remark is '备注';
 comment on column sys_menu.app_id is '关联应用ID(仅menu_type=C可配置，未关联为普通菜单)';
+comment on column sys_menu.group_id is '菜单分组（1=管理后台 2=集成平台）';
 
 -- 初始化-菜单信息表数据（已剔除废弃菜单 6, 121, 122 及其按钮，保留收敛后的 124 应用管理）
 -- 一级菜单
