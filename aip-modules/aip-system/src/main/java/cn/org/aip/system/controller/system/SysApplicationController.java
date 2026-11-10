@@ -66,7 +66,7 @@ public class SysApplicationController extends BaseController {
      * 新增应用
      */
     @SaCheckPermission("system:application:add")
-    @Log(title = "应用管理", businessType = BusinessType.INSERT)
+    @Log(title = "应用管理", businessType = BusinessType.INSERT, isSaveResponseData = false)
     @RepeatSubmit()
     @PostMapping
     public R<SysApplicationVo> add(@Validated(AddGroup.class) @RequestBody SysApplicationBo bo) {
@@ -83,11 +83,8 @@ public class SysApplicationController extends BaseController {
     @Log(title = "应用管理", businessType = BusinessType.UPDATE)
     @RepeatSubmit()
     @PutMapping
-    public R<Void> edit(@Validated(EditGroup.class) @RequestBody SysApplicationBo bo) {
-        if (!applicationService.checkAppIdUnique(bo)) {
-            return R.fail(MessageUtils.message("application.appId.edit.exists", bo.getAppName()));
-        }
-        return toAjax(applicationService.updateByBo(bo));
+    public R<SysApplicationVo> edit(@Validated(EditGroup.class) @RequestBody SysApplicationBo bo) {
+        return R.ok(applicationService.updateByBo(bo));
     }
 
     /**
@@ -96,8 +93,22 @@ public class SysApplicationController extends BaseController {
     @SaCheckPermission("system:application:edit")
     @Log(title = "应用管理", businessType = BusinessType.UPDATE)
     @PutMapping("/changeStatus")
-    public R<Void> changeStatus(@RequestBody SysApplicationBo bo) {
-        return toAjax(applicationService.updateApplicationStatus(bo.getId(), bo.getStatus()));
+    public R<SysApplicationVo> changeStatus(@RequestBody SysApplicationBo bo) {
+        return R.ok(applicationService.updateApplicationStatus(bo.getId(), bo.getStatus()));
+    }
+
+    /**
+     * 显式重试已保存的 SSO 配置同步，不修改客户端密钥。
+     *
+     * @param id 应用主键
+     * @return 配置及本次同步结果
+     */
+    @SaCheckPermission("system:application:edit")
+    @Log(title = "应用管理", businessType = BusinessType.UPDATE)
+    @RepeatSubmit()
+    @PostMapping("/{id}/sync")
+    public R<SysApplicationVo> sync(@NotNull(message = "{application.id.required}") @PathVariable Long id) {
+        return R.ok(applicationService.syncApplication(id));
     }
 
     /**
@@ -106,7 +117,7 @@ public class SysApplicationController extends BaseController {
      * @param id 主键
      */
     @SaCheckPermission("system:application:resetSecret")
-    @Log(title = "应用管理", businessType = BusinessType.UPDATE)
+    @Log(title = "应用管理", businessType = BusinessType.UPDATE, isSaveResponseData = false)
     @PutMapping("/{id}/resetSecret")
     public R<String> resetSecret(@NotNull(message = "主键不能为空") @PathVariable Long id) {
         return R.ok(applicationService.resetSecret(id));

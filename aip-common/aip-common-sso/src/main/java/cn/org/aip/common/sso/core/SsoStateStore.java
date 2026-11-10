@@ -30,7 +30,9 @@ public class SsoStateStore {
     private static final String SID_PREFIX = GlobalConstants.GLOBAL_REDIS_KEY + "sso:sid:";
     private static final String SUB_PREFIX = GlobalConstants.GLOBAL_REDIS_KEY + "sso:sub:";
     private static final String TOKEN_PREFIX = GlobalConstants.GLOBAL_REDIS_KEY + "sso:token:";
+    private static final String TOKEN_SUB_PREFIX = GlobalConstants.GLOBAL_REDIS_KEY + "sso:token_sub:";
     private static final String PWD_RESET_PREFIX = GlobalConstants.GLOBAL_REDIS_KEY + "sso:pwd_reset:";
+    private static final String LOGOUT_PREFIX = GlobalConstants.GLOBAL_REDIS_KEY + "sso:logout_done:";
 
     private static final Duration SESSION_TTL = Duration.ofDays(7);
     private static final Duration PWD_RESET_TTL = Duration.ofMinutes(10);
@@ -85,6 +87,7 @@ public class SsoStateStore {
         }
 
         if (StringUtils.isNotBlank(sub)) {
+            RedisUtils.setCacheObject(TOKEN_SUB_PREFIX + tokenValue, sub, SESSION_TTL);
             String subKey = SUB_PREFIX + sub;
             Set<String> tokens = RedisUtils.getCacheObject(subKey);
             if (tokens == null) {
@@ -122,6 +125,9 @@ public class SsoStateStore {
      */
     public void removeSid(String sid) {
         if (StringUtils.isNotBlank(sid)) {
+            for (String token : Set.copyOf(getTokensBySid(sid))) {
+                unbindSession(token);
+            }
             RedisUtils.deleteObject(SID_PREFIX + sid);
         }
     }
@@ -131,7 +137,39 @@ public class SsoStateStore {
      */
     public void removeSub(String sub) {
         if (StringUtils.isNotBlank(sub)) {
+            for (String token : Set.copyOf(getTokensBySub(sub))) {
+                unbindSession(token);
+            }
             RedisUtils.deleteObject(SUB_PREFIX + sub);
+        }
+    }
+
+    /** 删除单个本地会话的正向和反向索引，不影响该用户的其他 SSO 会话。 */
+    public void unbindSession(String tokenValue) {
+        if (StringUtils.isBlank(tokenValue)) {
+            return;
+        }
+        String sid = RedisUtils.getCacheObject(TOKEN_PREFIX + tokenValue);
+        String sub = RedisUtils.getCacheObject(TOKEN_SUB_PREFIX + tokenValue);
+        removeFromIndex(SID_PREFIX, sid, tokenValue);
+        removeFromIndex(SUB_PREFIX, sub, tokenValue);
+        RedisUtils.deleteObject(TOKEN_PREFIX + tokenValue);
+        RedisUtils.deleteObject(TOKEN_SUB_PREFIX + tokenValue);
+    }
+
+    private void removeFromIndex(String prefix, String identity, String tokenValue) {
+        if (StringUtils.isBlank(identity)) {
+            return;
+        }
+        Set<String> tokens = RedisUtils.getCacheObject(prefix + identity);
+        if (tokens != null) {
+            Set<String> remaining = new HashSet<>(tokens);
+            remaining.remove(tokenValue);
+            if (remaining.isEmpty()) {
+                RedisUtils.deleteObject(prefix + identity);
+            } else {
+                RedisUtils.setCacheObject(prefix + identity, remaining, SESSION_TTL);
+            }
         }
     }
 
@@ -144,10 +182,19 @@ public class SsoStateStore {
         }
         String sid = RedisUtils.getCacheObject(TOKEN_PREFIX + tokenValue);
         if (StringUtils.isBlank(sid)) {
-            return true; // 未启用或没有sid关联则不做强校验
+            return false;
         }
         Set<String> tokens = RedisUtils.getCacheObject(SID_PREFIX + sid);
         return tokens != null && tokens.contains(tokenValue);
+    }
+
+    /** 重复的已完成通知不能再次影响后来建立的本地会话。 */
+    public boolean isLogoutProcessed(String audience, String jwtId) {
+        return Boolean.TRUE.equals(RedisUtils.getCacheObject(LOGOUT_PREFIX + audience + ":" + jwtId));
+    }
+
+    public void markLogoutProcessed(String audience, String jwtId) {
+        RedisUtils.setCacheObject(LOGOUT_PREFIX + audience + ":" + jwtId, true, Duration.ofMinutes(10));
     }
 
     /**

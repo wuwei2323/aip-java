@@ -4,6 +4,8 @@ import cn.org.aip.common.core.validate.AddGroup;
 import cn.org.aip.common.core.validate.EditGroup;
 import cn.org.aip.common.mybatis.core.domain.BaseEntity;
 import cn.org.aip.system.domain.SysApplication;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.github.linpeilie.annotations.AutoMapping;
 import io.github.linpeilie.annotations.AutoMapper;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -79,6 +81,32 @@ public class SysApplicationBo extends BaseEntity {
      */
     @NotBlank(message = "登录回调地址不能为空", groups = { AddGroup.class, EditGroup.class })
     private String redirectUris;
+
+    /**
+     * 退出回跳地址；null 保留原值，空串明确禁用。
+     */
+    @Size(max = 500, message = "{application.post.logout.uri.invalid}", groups = { AddGroup.class, EditGroup.class })
+    private String postLogoutRedirectUri;
+
+    /**
+     * 后通道退出地址；null 保留原值，空串明确禁用。
+     */
+    @Size(max = 500, message = "{application.backchannel.uri.invalid}", groups = { AddGroup.class, EditGroup.class })
+    private String backchannelLogoutUri;
+
+    /**
+     * 只读同步状态，不接收客户端写入。
+     */
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @AutoMapping(target = "ssoSyncStatus", ignore = true)
+    private String ssoSyncStatus;
+
+    /**
+     * 只读同步错误，不接收客户端写入。
+     */
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @AutoMapping(target = "ssoSyncError", ignore = true)
+    private String ssoSyncError;
 
     /**
      * 状态 (0正常 1停用)

@@ -50,12 +50,20 @@ public interface ISysApplicationService {
     /**
      * 修改应用
      */
-    Boolean updateByBo(SysApplicationBo bo);
+    SysApplicationVo updateByBo(SysApplicationBo bo);
 
     /**
-     * 修改应用状态
+     * 修改应用状态，返回保存后的配置与本次同步结果。
      */
-    int updateApplicationStatus(Long id, String status);
+    SysApplicationVo updateApplicationStatus(Long id, String status);
+
+    /**
+     * 显式重试配置同步；不重置已有客户端密钥。
+     *
+     * @param id 应用主键
+     * @return 同步结果，不包含明文密钥
+     */
+    SysApplicationVo syncApplication(Long id);
 
     /**
      * 重置客户端密钥

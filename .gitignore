@@ -53,3 +53,5 @@ logs/
 .flattened-pom.xml
 
 rebuild_project.py
+
+/.claude/worktrees/

@@ -2,14 +2,12 @@ package cn.org.aip.common.sso.core;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import cn.org.aip.common.core.exception.ServiceException;
-import cn.org.aip.common.core.utils.MessageUtils;
 import cn.org.aip.common.core.utils.StringUtils;
 import cn.org.aip.common.json.utils.JsonUtils;
 import cn.org.aip.common.sso.config.KeycloakProperties;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -24,11 +22,23 @@ import java.io.Serializable;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class KeycloakTokenClient {
 
     private final KeycloakProperties properties;
-    private final RestClient restClient = RestClient.create();
+    private final RestClient restClient;
+
+    /**
+     * Creates a token transport with bounded connect and read timeouts.
+     *
+     * @param properties Keycloak connection settings
+     */
+    public KeycloakTokenClient(KeycloakProperties properties) {
+        this.properties = properties;
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(properties.getConnectTimeoutMillis());
+        factory.setReadTimeout(properties.getReadTimeoutMillis());
+        this.restClient = RestClient.builder().requestFactory(factory).build();
+    }
 
     /**
      * 授权码换取 Token (支持 PKCE)
@@ -63,12 +73,13 @@ public class KeycloakTokenClient {
                 .retrieve()
                 .body(String.class);
 
-            return JsonUtils.parseObject(responseBody, OidcTokenResponse.class);
-        } catch (ServiceException se) {
-            throw se;
-        } catch (Exception e) {
-            log.error("Failed to exchange code at {}: {}", tokenUrl, e.getMessage(), e);
-            throw new ServiceException(MessageUtils.message("sso.token.client.exchange.error", e.getMessage()));
+            OidcTokenResponse response = JsonUtils.parseObject(responseBody, OidcTokenResponse.class);
+            if (response == null || StringUtils.isBlank(response.getAccessToken())) {
+                throw new KeycloakRequestException(KeycloakRequestException.Reason.INVALID_RESPONSE);
+            }
+            return response;
+        } catch (RuntimeException exception) {
+            throw KeycloakRequestException.from(exception);
         }
     }
 
@@ -96,14 +107,11 @@ public class KeycloakTokenClient {
 
             OidcTokenResponse response = JsonUtils.parseObject(responseBody, OidcTokenResponse.class);
             if (response == null || StringUtils.isBlank(response.getAccessToken())) {
-                throw new ServiceException(MessageUtils.message("sso.token.client.admin.token.empty"));
+                throw new KeycloakRequestException(KeycloakRequestException.Reason.INVALID_RESPONSE);
             }
             return response.getAccessToken();
-        } catch (ServiceException se) {
-            throw se;
-        } catch (Exception e) {
-            log.error("Failed to get client_credentials token at {}: {}", tokenUrl, e.getMessage(), e);
-            throw new ServiceException(MessageUtils.message("sso.token.client.admin.token.error", e.getMessage()));
+        } catch (RuntimeException exception) {
+            throw KeycloakRequestException.from(exception);
         }
     }
 
@@ -126,7 +134,7 @@ public class KeycloakTokenClient {
                 .toBodilessEntity();
             log.info("Successfully terminated Keycloak session {} via Admin API", sessionId);
         } catch (Exception e) {
-            log.warn("Failed to terminate Keycloak session {} via Admin API: {}", sessionId, e.getMessage());
+            log.warn("Failed to terminate Keycloak session via Admin API ({})", e.getClass().getSimpleName());
         }
     }
 

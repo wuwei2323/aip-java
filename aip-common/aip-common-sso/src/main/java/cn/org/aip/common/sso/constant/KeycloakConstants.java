@@ -32,6 +32,24 @@ public interface KeycloakConstants {
      */
     String ATTR_PKCE_METHOD = "pkce.code.challenge.method";
 
+    /** Post-logout redirect URI allow-list attribute. */
+    String ATTR_POST_LOGOUT_REDIRECT_URIS = "post.logout.redirect.uris";
+
+    /** Explicit denial, rather than Keycloak's fallback to login redirect URIs. */
+    String POST_LOGOUT_REDIRECT_DENY = "-";
+
+    /** Back-channel logout endpoint attribute. */
+    String ATTR_BACKCHANNEL_LOGOUT_URL = "backchannel.logout.url";
+
+    /** Configuration has been saved and is waiting for its synchronous attempt. */
+    String SYNC_PENDING = "PENDING";
+
+    /** The latest configuration sync completed. */
+    String SYNC_SUCCESS = "SUCCESS";
+
+    /** The latest configuration sync failed or is paused. */
+    String SYNC_FAILED = "FAILED";
+
     /**
      * Keycloak Back-Channel Logout 属性
      */

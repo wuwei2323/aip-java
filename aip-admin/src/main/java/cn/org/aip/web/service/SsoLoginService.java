@@ -172,9 +172,13 @@ public class SsoLoginService {
             return false;
         }
         String tokenValue = StpUtil.getTokenValue();
-        boolean valid = ssoStateStore.hasSidMapping(tokenValue);
+        LoginUser user = LoginHelper.getLoginUser();
+        if (user != null && StringUtils.isBlank(user.getSsoSid()) && StringUtils.isBlank(user.getSsoSub())) {
+            return true;
+        }
+        boolean valid = user != null && ssoStateStore.hasSidMapping(tokenValue);
         if (!valid) {
-            log.info("Token {} sid mapping lost, logging out", tokenValue);
+            log.info("SSO session mapping lost, logging out");
             try {
                 StpUtil.logout();
             } catch (Exception ignored) {
@@ -258,6 +262,9 @@ public class SsoLoginService {
 
         PortalAppProvider.PortalAppConfig portalConfig = portalAppProvider.getPortalAppConfig();
         JWTClaimsSet claims = keycloakJwtVerifier.verifyLogoutToken(logoutToken, portalConfig.getAppId());
+        if (ssoStateStore.isLogoutProcessed(portalConfig.getAppId(), claims.getJWTID())) {
+            return;
+        }
 
         String sid = (String) claims.getClaim("sid");
         String sub = claims.getSubject();
@@ -270,23 +277,24 @@ public class SsoLoginService {
                 try {
                     StpUtil.logoutByTokenValue(token);
                 } catch (Exception e) {
-                    log.warn("Failed to logout token {}: {}", token, e.getMessage());
+                    log.warn("Failed to invalidate a local SSO session: {}", e.getClass().getSimpleName());
+                    throw e;
                 }
             }
             ssoStateStore.removeSid(sid);
-        }
-
-        if (StringUtils.isNotBlank(sub)) {
+        } else if (StringUtils.isNotBlank(sub)) {
             Collection<String> tokens = ssoStateStore.getTokensBySub(sub);
             for (String token : tokens) {
                 try {
                     StpUtil.logoutByTokenValue(token);
                 } catch (Exception e) {
-                    log.warn("Failed to logout token {}: {}", token, e.getMessage());
+                    log.warn("Failed to invalidate a local SSO session: {}", e.getClass().getSimpleName());
+                    throw e;
                 }
             }
             ssoStateStore.removeSub(sub);
         }
+        ssoStateStore.markLogoutProcessed(portalConfig.getAppId(), claims.getJWTID());
     }
 
     /**

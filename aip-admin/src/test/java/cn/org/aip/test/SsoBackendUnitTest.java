@@ -141,6 +141,7 @@ public class SsoBackendUnitTest {
             .subject("kc-user-001")
             .audience(clientId)
             .claim("sid", "session-sid-001")
+            .jwtID("logout-test-001")
             .claim("events", events)
             .issueTime(new Date(now))
             .build();

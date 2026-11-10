@@ -21,6 +21,7 @@ import cn.org.aip.common.sso.config.KeycloakProperties;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.time.Duration;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -180,7 +181,7 @@ public class KeycloakJwtVerifier {
             }
 
             // 3. 规范要求：logout_token 严禁包含 nonce
-            if (claims.getClaim("nonce") != null) {
+            if (claims.getClaims().containsKey("nonce")) {
                 throw new ServiceException(MessageUtils.message("sso.jwt.logout.contains.nonce"));
             }
 
@@ -191,7 +192,7 @@ public class KeycloakJwtVerifier {
             }
             @SuppressWarnings("unchecked")
             Map<String, Object> events = (Map<String, Object>) eventsObj;
-            if (!events.containsKey(BACKCHANNEL_LOGOUT_EVENT)) {
+            if (!(events.get(BACKCHANNEL_LOGOUT_EVENT) instanceof Map<?, ?>)) {
                 throw new ServiceException(MessageUtils.message("sso.jwt.logout.missing.backchannel.event"));
             }
 
@@ -206,8 +207,12 @@ public class KeycloakJwtVerifier {
             Date issueTime = claims.getIssueTime();
             long clockSkew = properties.getClockSkewSeconds() * 1000;
             long now = System.currentTimeMillis();
-            if (issueTime != null && (issueTime.getTime() - clockSkew) > now) {
+            if (issueTime == null || issueTime.getTime() > now + clockSkew
+                || issueTime.getTime() < now - Duration.ofMinutes(5).toMillis() - clockSkew) {
                 throw new ServiceException(MessageUtils.message("sso.jwt.logout.iat.invalid"));
+            }
+            if (StringUtils.isBlank(claims.getJWTID())) {
+                throw new ServiceException(MessageUtils.message("sso.jwt.logout.jti.invalid"));
             }
 
             return claims;

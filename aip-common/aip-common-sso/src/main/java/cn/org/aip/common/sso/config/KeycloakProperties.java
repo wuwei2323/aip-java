@@ -87,6 +87,22 @@ public class KeycloakProperties {
      */
     private String internalSecret = "aip-sso-internal-secret-token";
 
+    /** Connect timeout for token and admin requests, in milliseconds (1..30000). */
+    private int connectTimeoutMillis = 3000;
+
+    /** Read timeout for token and admin requests, in milliseconds (1..30000). */
+    private int readTimeoutMillis = 5000;
+
+    /** @return bounded timeout; zero and negative values must not disable the limit */
+    public int getConnectTimeoutMillis() {
+        return Math.max(1, Math.min(connectTimeoutMillis, 30000));
+    }
+
+    /** @return bounded timeout; zero and negative values must not disable the limit */
+    public int getReadTimeoutMillis() {
+        return Math.max(1, Math.min(readTimeoutMillis, 30000));
+    }
+
     /**
      * 获取 OIDC 发行者地址 (iss)
      */

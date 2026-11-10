@@ -88,6 +88,26 @@ public class SysApplicationVo implements Serializable {
     private String redirectUris;
 
     /**
+     * 退出后的回跳地址；null 表示尚未由平台接管，空串表示明确禁用。
+     */
+    private String postLogoutRedirectUri;
+
+    /**
+     * 子应用后通道退出通知地址；空串表示禁用。
+     */
+    private String backchannelLogoutUri;
+
+    /**
+     * 最近一次配置同步结果：PENDING / SUCCESS / FAILED。
+     */
+    private String ssoSyncStatus;
+
+    /**
+     * 安全的、国际化后的同步失败原因，不包含远端响应或密钥。
+     */
+    private String ssoSyncError;
+
+    /**
      * 客户端密钥 (明文，仅在新增或重置密钥时返回一次)
      */
     private String clientSecret;

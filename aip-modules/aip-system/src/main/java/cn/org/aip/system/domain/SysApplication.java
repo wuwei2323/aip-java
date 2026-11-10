@@ -1,5 +1,7 @@
 package cn.org.aip.system.domain;
 
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -67,6 +69,29 @@ public class SysApplication extends BaseEntity {
      * 登录重定向URI列表 (JSON数组)
      */
     private String redirectUris;
+
+    /**
+     * 退出回跳地址。null 表示历史未接管，空串表示明确禁止退出回跳。
+     */
+    @TableField(insertStrategy = FieldStrategy.NOT_NULL, updateStrategy = FieldStrategy.NOT_NULL)
+    private String postLogoutRedirectUri;
+
+    /**
+     * 后通道退出地址。null 表示历史未接管，空串表示明确禁用。
+     */
+    @TableField(insertStrategy = FieldStrategy.NOT_NULL, updateStrategy = FieldStrategy.NOT_NULL)
+    private String backchannelLogoutUri;
+
+    /**
+     * 平台管理的同步状态：PENDING / SUCCESS / FAILED。
+     */
+    private String ssoSyncStatus;
+
+    /**
+     * 安全、国际化后的同步错误；成功时使用空串清除。
+     */
+    @TableField(insertStrategy = FieldStrategy.NOT_NULL, updateStrategy = FieldStrategy.NOT_NULL)
+    private String ssoSyncError;
 
     /**
      * 客户端密钥 (AES加密存储)

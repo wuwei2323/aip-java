@@ -1,15 +1,7 @@
 package cn.org.aip.system.service.impl;
 
-import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.convert.Convert;
 import cn.hutool.core.util.IdUtil;
-import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.crypto.SecureUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import cn.org.aip.common.core.constant.TenantConstants;
 import cn.org.aip.common.core.exception.ServiceException;
 import cn.org.aip.common.core.utils.MapstructUtils;
@@ -21,15 +13,27 @@ import cn.org.aip.common.mybatis.core.page.TableDataInfo;
 import cn.org.aip.common.sso.config.KeycloakProperties;
 import cn.org.aip.common.sso.constant.KeycloakConstants;
 import cn.org.aip.common.sso.core.KeycloakAdminClient;
+import cn.org.aip.common.sso.core.KeycloakRequestException;
 import cn.org.aip.system.domain.SysApplication;
 import cn.org.aip.system.domain.bo.SysApplicationBo;
 import cn.org.aip.system.domain.vo.SysApplicationVo;
 import cn.org.aip.system.mapper.SysApplicationMapper;
 import cn.org.aip.system.service.ISysApplicationService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -41,9 +45,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 应用管理 Service 业务层处理
- *
- * @author Michelle.Chung
+ * Application configuration with a low-frequency, same-request Keycloak sync.
+ * Configuration and PENDING commit before HTTP; a failed sync never rolls back saved configuration.
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -56,6 +59,8 @@ public class SysApplicationServiceImpl implements ISysApplicationService {
     private final SysApplicationMapper baseMapper;
     private final KeycloakProperties keycloakProperties;
     private final KeycloakAdminClient keycloakAdminClient;
+    // Uses the application's existing transaction manager / dynamic datasource.
+    private final TransactionTemplate transactionTemplate;
 
     @Value("${keycloak.client-secret-key:aip-client-secret-aes-32byte-key}")
     private String aesKey;
@@ -72,15 +77,13 @@ public class SysApplicationServiceImpl implements ISysApplicationService {
 
     @Override
     public TableDataInfo<SysApplicationVo> queryPageList(SysApplicationBo bo, PageQuery pageQuery) {
-        LambdaQueryWrapper<SysApplication> lqw = buildQueryWrapper(bo);
-        Page<SysApplicationVo> result = baseMapper.selectVoPage(pageQuery.build(), lqw);
+        Page<SysApplicationVo> result = baseMapper.selectVoPage(pageQuery.build(), buildQueryWrapper(bo));
         return TableDataInfo.build(result);
     }
 
     @Override
     public List<SysApplicationVo> queryList(SysApplicationBo bo) {
-        LambdaQueryWrapper<SysApplication> lqw = buildQueryWrapper(bo);
-        return baseMapper.selectVoList(lqw);
+        return baseMapper.selectVoList(buildQueryWrapper(bo));
     }
 
     private LambdaQueryWrapper<SysApplication> buildQueryWrapper(SysApplicationBo bo) {
@@ -96,97 +99,114 @@ public class SysApplicationServiceImpl implements ISysApplicationService {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public SysApplicationVo insertByBo(SysApplicationBo bo) {
-        if (StringUtils.isBlank(bo.getAppId())) {
-            bo.setAppId(generateAppId());
-        }
-        if (StringUtils.isBlank(bo.getTenantId())) {
-            bo.setTenantId(TenantConstants.DEFAULT_TENANT_ID);
-        }
-        if (!checkAppIdUnique(bo)) {
-            throw new ServiceException(MessageUtils.message("application.appId.exists", bo.getAppName()));
-        }
-        bo.setRedirectUris(normalizeRedirectUris(bo.getRedirectUris()));
-
-        // 统一自动生成高强度客户端密钥
+        validateUris(bo);
         String plainSecret = IdUtil.fastSimpleUUID();
-        SysApplication add = MapstructUtils.convert(bo, SysApplication.class);
-        if (StringUtils.isBlank(add.getTenantId())) {
-            add.setTenantId(TenantConstants.DEFAULT_TENANT_ID);
-        }
-        add.setClientSecretEnc(encryptSecret(plainSecret));
-
-        boolean flag = baseMapper.insert(add) > 0;
-        if (!flag) {
-            throw new ServiceException(MessageUtils.message("application.insert.error"));
-        }
-        bo.setId(add.getId());
-        syncCreateKeycloakClient(add, plainSecret);
-
-        SysApplicationVo vo = MapstructUtils.convert(add, SysApplicationVo.class);
-        if (vo != null) {
-            vo.setClientSecret(plainSecret);
-        }
-        return vo;
+        SysApplication app = transactionTemplate.execute(transaction -> {
+            if (StringUtils.isBlank(bo.getAppId())) {
+                bo.setAppId(generateAppId());
+            }
+            if (!checkAppIdUnique(bo)) {
+                throw error("application.appId.exists", bo.getAppName());
+            }
+            SysApplication add = MapstructUtils.convert(bo, SysApplication.class);
+            if (StringUtils.isBlank(add.getTenantId())) {
+                add.setTenantId(TenantConstants.DEFAULT_TENANT_ID);
+            }
+            add.setStatus(bo.getStatus() == null ? "0" : bo.getStatus());
+            validateStatus(add, add.getStatus());
+            add.setClientSecretEnc(encryptSecret(plainSecret));
+            markPending(add);
+            if (baseMapper.insert(add) != 1) {
+                throw error("application.insert.error");
+            }
+            bo.setId(add.getId());
+            return add;
+        });
+        SysApplicationVo result = attemptSync(app);
+        result.setClientSecret(plainSecret);
+        return result;
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    public Boolean updateByBo(SysApplicationBo bo) {
-        SysApplication existing = baseMapper.selectById(bo.getId());
-        if (existing == null) {
-            throw new ServiceException(MessageUtils.message("application.not.exists"));
-        }
-        // 应用编码与租户编号创建后不可修改
-        bo.setAppId(existing.getAppId());
-        bo.setTenantId(existing.getTenantId() != null ? existing.getTenantId() : TenantConstants.DEFAULT_TENANT_ID);
-        bo.setRedirectUris(normalizeRedirectUris(bo.getRedirectUris()));
-
-        SysApplication update = MapstructUtils.convert(bo, SysApplication.class);
-        update.setTenantId(existing.getTenantId() != null ? existing.getTenantId() : TenantConstants.DEFAULT_TENANT_ID);
-        update.setClientSecretEnc(existing.getClientSecretEnc());
-
-        boolean success = baseMapper.updateById(update) > 0;
-        if (success) {
-            syncUpdateKeycloakClient(update);
-        }
-        return success;
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public SysApplicationVo updateByBo(SysApplicationBo bo) {
+        validateUris(bo);
+        SysApplication app = transactionTemplate.execute(transaction -> {
+            SysApplication existing = requireApplication(bo.getId());
+            String status = bo.getStatus() == null ? existing.getStatus() : bo.getStatus();
+            validateStatus(existing, status);
+            // The application/client identifier and tenant cannot change after creation.
+            bo.setAppId(existing.getAppId());
+            bo.setTenantId(existing.getTenantId());
+            SysApplication update = MapstructUtils.convert(bo, SysApplication.class);
+            update.setStatus(status);
+            if (bo.getPostLogoutRedirectUri() == null) {
+                update.setPostLogoutRedirectUri(existing.getPostLogoutRedirectUri());
+            }
+            if (bo.getBackchannelLogoutUri() == null) {
+                update.setBackchannelLogoutUri(existing.getBackchannelLogoutUri());
+            }
+            markPending(update);
+            saveUpdate(update);
+            return requireApplication(existing.getId());
+        });
+        return attemptSync(app);
     }
 
     @Override
-    public int updateApplicationStatus(Long id, String status) {
-        SysApplication app = baseMapper.selectById(id);
-        if (app == null) {
-            throw new ServiceException(MessageUtils.message("application.not.exists"));
-        }
-        if (TenantConstants.DEFAULT_TENANT_ID.equals(app.getAppId()) && "1".equals(status)) {
-            throw new ServiceException(MessageUtils.message("application.portal.cannot.disable"));
-        }
-        SysApplication update = new SysApplication();
-        update.setId(id);
-        update.setStatus(status);
-        int rows = baseMapper.updateById(update);
-        if (rows > 0) {
-            syncUpdateKeycloakStatus(app.getAppId(), !"1".equals(status));
-        }
-        return rows;
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public SysApplicationVo updateApplicationStatus(Long id, String status) {
+        SysApplication app = transactionTemplate.execute(transaction -> {
+            SysApplication existing = requireApplication(id);
+            validateStatus(existing, status);
+            SysApplication update = new SysApplication();
+            update.setId(id);
+            update.setStatus(status);
+            markPending(update);
+            saveUpdate(update);
+            return requireApplication(id);
+        });
+        return attemptSync(app);
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public SysApplicationVo syncApplication(Long id) {
+        SysApplication app = transactionTemplate.execute(transaction -> {
+            SysApplication existing = requireApplication(id);
+            validateStatus(existing, existing.getStatus());
+            SysApplication update = new SysApplication();
+            update.setId(id);
+            markPending(update);
+            saveUpdate(update);
+            return requireApplication(id);
+        });
+        return attemptSync(app);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public String resetSecret(Long id) {
-        SysApplication app = baseMapper.selectById(id);
-        if (app == null) {
-            throw new ServiceException(MessageUtils.message("application.not.exists"));
+        SysApplication app = requireApplication(id);
+        requireSyncAvailable();
+        KeycloakAdminClient.ClientRepresentation remote = keycloakAdminClient.findClientByClientId(app.getAppId());
+        if (remote == null) {
+            throw error("application.sync.client.missing");
         }
-        String newSecret = IdUtil.fastSimpleUUID();
-        SysApplication update = new SysApplication();
-        update.setId(id);
-        update.setClientSecretEnc(encryptSecret(newSecret));
-        baseMapper.updateById(update);
-        syncResetKeycloakSecret(app.getAppId(), newSecret);
-        return newSecret;
+        String secret = IdUtil.fastSimpleUUID();
+        String encrypted = encryptSecret(secret);
+        // Explicit operation only: do not rotate or enqueue a rotation during configuration retries.
+        remote.setSecret(secret);
+        keycloakAdminClient.updateClient(remote.getId(), remote);
+        transactionTemplate.executeWithoutResult(transaction -> {
+            SysApplication update = new SysApplication();
+            update.setId(id);
+            update.setClientSecretEnc(encrypted);
+            saveUpdate(update);
+        });
+        return secret;
     }
 
     @Override
@@ -194,33 +214,34 @@ public class SysApplicationServiceImpl implements ISysApplicationService {
         if (StringUtils.isBlank(appId)) {
             return null;
         }
-        SysApplication app = baseMapper.selectOne(
-            new LambdaQueryWrapper<SysApplication>().eq(SysApplication::getAppId, appId)
-        );
+        SysApplication app = baseMapper.selectOne(new LambdaQueryWrapper<SysApplication>().eq(SysApplication::getAppId, appId));
         if (app == null || StringUtils.isBlank(app.getClientSecretEnc())) {
             return null;
         }
         try {
             return decryptSecret(app.getClientSecretEnc());
-        } catch (Exception e) {
-            log.warn("Failed to decrypt secret for app {}: {}", appId, e.getMessage());
+        } catch (RuntimeException exception) {
+            log.warn("Could not decrypt application secret for record {}", app.getId());
             return null;
         }
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Boolean deleteWithValidByIds(Collection<Long> ids, Boolean isValid) {
-        for (Long id : ids) {
-            SysApplication app = baseMapper.selectById(id);
-            if (app != null && TenantConstants.DEFAULT_TENANT_ID.equals(app.getAppId())) {
-                throw new ServiceException(MessageUtils.message("application.portal.cannot.delete"));
-            }
-            if (app != null) {
-                syncDeleteKeycloakClient(app.getAppId());
+        List<SysApplication> apps = ids.stream().map(this::requireApplication).toList();
+        // Validate the entire batch before any destructive remote call.
+        if (apps.stream().anyMatch(this::isPortal)) {
+            throw error("application.portal.cannot.delete");
+        }
+        requireSyncAvailable();
+        for (SysApplication app : apps) {
+            KeycloakAdminClient.ClientRepresentation remote = keycloakAdminClient.findClientByClientId(app.getAppId());
+            if (remote != null) {
+                keycloakAdminClient.deleteClient(remote.getId());
             }
         }
-        return baseMapper.deleteByIds(ids) > 0;
+        return transactionTemplate.execute(transaction -> baseMapper.deleteByIds(ids) > 0);
     }
 
     @Override
@@ -229,9 +250,210 @@ public class SysApplicationServiceImpl implements ISysApplicationService {
         return count == null || count == 0;
     }
 
-    /**
-     * 自动生成规律递增的应用编码 (格式: APP-001, APP-002, ...)
-     */
+    /** Saves only a sync outcome after the configuration transaction has committed. */
+    private SysApplicationVo attemptSync(SysApplication app) {
+        String status = KeycloakConstants.SYNC_SUCCESS;
+        String failure = "";
+        try {
+            syncClient(app);
+        } catch (KeycloakRequestException exception) {
+            status = KeycloakConstants.SYNC_FAILED;
+            failure = exception.getMessage();
+            log.warn("Application {} sync failed ({})", app.getId(), exception.getReason());
+        } catch (RuntimeException exception) {
+            status = KeycloakConstants.SYNC_FAILED;
+            failure = MessageUtils.message("application.sync.failed");
+            log.warn("Application {} sync failed ({})", app.getId(), exception.getClass().getSimpleName());
+        }
+        SysApplication outcome = new SysApplication();
+        outcome.setId(app.getId());
+        outcome.setSsoSyncStatus(status);
+        outcome.setSsoSyncError(failure);
+        try {
+            transactionTemplate.executeWithoutResult(transaction -> saveUpdate(outcome));
+        } catch (RuntimeException exception) {
+            // The committed PENDING row remains retryable; never report a persisted SUCCESS here.
+            outcome.setSsoSyncStatus(KeycloakConstants.SYNC_PENDING);
+            outcome.setSsoSyncError(MessageUtils.message("application.sync.result.save.failed"));
+            log.warn("Application {} sync outcome could not be saved", app.getId());
+        }
+        SysApplicationVo result = MapstructUtils.convert(app, SysApplicationVo.class);
+        result.setSsoSyncStatus(outcome.getSsoSyncStatus());
+        result.setSsoSyncError(outcome.getSsoSyncError());
+        return result;
+    }
+
+    private void syncClient(SysApplication app) {
+        requireSyncAvailable();
+        List<String> redirects = JsonUtils.parseArray(normalizeRedirectUris(app.getRedirectUris()), String.class);
+        String postLogout = normalizeOptionalUri(app.getPostLogoutRedirectUri(), "application.post.logout.uri.invalid");
+        String backchannel = normalizeOptionalUri(app.getBackchannelLogoutUri(), "application.backchannel.uri.invalid");
+        KeycloakAdminClient.ClientRepresentation remote = keycloakAdminClient.findClientByClientId(app.getAppId());
+        boolean create = remote == null;
+        if (create) {
+            remote = new KeycloakAdminClient.ClientRepresentation();
+            if (StringUtils.isBlank(app.getClientSecretEnc())) {
+                throw new KeycloakRequestException(KeycloakRequestException.Reason.STORED_SECRET_UNAVAILABLE);
+            }
+            String secret;
+            try {
+                secret = decryptSecret(app.getClientSecretEnc());
+            } catch (RuntimeException exception) {
+                throw new KeycloakRequestException(KeycloakRequestException.Reason.STORED_SECRET_UNAVAILABLE);
+            }
+            if (StringUtils.isBlank(secret)) {
+                throw new KeycloakRequestException(KeycloakRequestException.Reason.STORED_SECRET_UNAVAILABLE);
+            }
+            remote.setSecret(secret);
+        } else {
+            // A GET can contain the remote secret. Never send it during ordinary configuration sync.
+            remote.setSecret(null);
+        }
+        remote.setClientId(app.getAppId());
+        remote.setName(app.getAppName());
+        remote.setDescription(app.getDescription());
+        remote.setEnabled(!"1".equals(app.getStatus()));
+        remote.setPublicClient(false);
+        remote.setClientAuthenticatorType("client-secret");
+        remote.setStandardFlowEnabled(true);
+        remote.setImplicitFlowEnabled(false);
+        remote.setDirectAccessGrantsEnabled(false);
+        remote.setServiceAccountsEnabled(false);
+        remote.setRedirectUris(redirects);
+        remote.mutableAttributes().put(KeycloakConstants.ATTR_PKCE_METHOD, KeycloakConstants.PKCE_METHOD_S256);
+        remote.mutableAttributes().put(KeycloakConstants.ATTR_BACKCHANNEL_LOGOUT_SESSION_REQUIRED, "true");
+        remote.mutableAttributes().put(KeycloakConstants.ATTR_BACKCHANNEL_LOGOUT_REVOKE_OFFLINE, "true");
+        // NULL is legacy/unowned. Empty is an intentional clear and must not activate fallback.
+        if (postLogout != null) {
+            remote.mutableAttributes().put(KeycloakConstants.ATTR_POST_LOGOUT_REDIRECT_URIS,
+                postLogout.isEmpty() ? KeycloakConstants.POST_LOGOUT_REDIRECT_DENY : postLogout);
+        }
+        if (backchannel != null) {
+            remote.mutableAttributes().put(KeycloakConstants.ATTR_BACKCHANNEL_LOGOUT_URL, backchannel);
+        }
+        if (create) {
+            keycloakAdminClient.createClient(remote);
+        } else {
+            keycloakAdminClient.updateClient(remote.getId(), remote);
+        }
+    }
+
+    private void requireSyncAvailable() {
+        if (!keycloakProperties.isEnabled()) {
+            throw new KeycloakRequestException(KeycloakRequestException.Reason.DISABLED);
+        }
+        if (StringUtils.isBlank(keycloakProperties.getAdminClientSecret())) {
+            throw new KeycloakRequestException(KeycloakRequestException.Reason.ADMIN_UNCONFIGURED);
+        }
+    }
+
+    private void markPending(SysApplication app) {
+        app.setSsoSyncStatus(KeycloakConstants.SYNC_PENDING);
+        app.setSsoSyncError("");
+    }
+
+    private SysApplication requireApplication(Long id) {
+        if (id == null) {
+            throw error("application.id.required");
+        }
+        SysApplication app = baseMapper.selectById(id);
+        if (app == null) {
+            throw error("application.not.exists");
+        }
+        return app;
+    }
+
+    private void saveUpdate(SysApplication update) {
+        if (baseMapper.updateById(update) != 1) {
+            throw error("application.update.error");
+        }
+    }
+
+    private boolean isPortal(SysApplication app) {
+        return TenantConstants.DEFAULT_TENANT_ID.equals(app.getAppId())
+            || keycloakProperties.getClientId().equals(app.getAppId());
+    }
+
+    private void validateStatus(SysApplication app, String status) {
+        if (!"0".equals(status) && !"1".equals(status)) {
+            throw error("application.status.invalid");
+        }
+        if (isPortal(app) && "1".equals(status)) {
+            throw error("application.portal.cannot.disable");
+        }
+    }
+
+    private void validateUris(SysApplicationBo bo) {
+        bo.setRedirectUris(normalizeRedirectUris(bo.getRedirectUris()));
+        bo.setPostLogoutRedirectUri(normalizeOptionalUri(bo.getPostLogoutRedirectUri(), "application.post.logout.uri.invalid"));
+        bo.setBackchannelLogoutUri(normalizeOptionalUri(bo.getBackchannelLogoutUri(), "application.backchannel.uri.invalid"));
+    }
+
+    private String normalizeOptionalUri(String value, String messageKey) {
+        if (value == null) {
+            return null;
+        }
+        if (value.length() > 500) {
+            throw error(messageKey);
+        }
+        String trimmed = value.trim();
+        if (!trimmed.isEmpty()) {
+            validateHttpUri(trimmed, messageKey);
+        }
+        return trimmed;
+    }
+
+    /** Accepts JSON arrays or legacy newline/comma lists; malformed JSON never falls back. */
+    private String normalizeRedirectUris(String raw) {
+        String messageKey = "application.redirect.uris.invalid";
+        if (StringUtils.isBlank(raw)) {
+            throw error(messageKey);
+        }
+        String trimmed = raw.trim();
+        List<String> values = new ArrayList<>();
+        if (trimmed.startsWith("[")) {
+            try {
+                JsonNode array = JsonUtils.getObjectMapper().reader()
+                    .with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readTree(trimmed);
+                if (!array.isArray()) {
+                    throw error(messageKey);
+                }
+                for (JsonNode value : array) {
+                    if (!value.isTextual()) {
+                        throw error(messageKey);
+                    }
+                    values.add(value.textValue().trim());
+                }
+            } catch (Exception exception) {
+                throw error(messageKey);
+            }
+        } else {
+            for (String value : trimmed.split("[\\r\\n,]+")) {
+                values.add(value.trim());
+            }
+        }
+        if (values.isEmpty()) {
+            throw error(messageKey);
+        }
+        values.forEach(value -> validateHttpUri(value, messageKey));
+        return JsonUtils.toJsonString(values.stream().distinct().toList());
+    }
+
+    private void validateHttpUri(String value, String messageKey) {
+        try {
+            URI uri = new URI(value);
+            if (value.length() > 500 || value.contains("*") || value.toLowerCase(java.util.Locale.ROOT).contains("%2a")
+                || !("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
+                || uri.getHost() == null || uri.getRawUserInfo() != null || uri.getRawFragment() != null
+                || uri.getPort() > 65535 || uri.getPort() == 0) {
+                throw error(messageKey);
+            }
+        } catch (URISyntaxException exception) {
+            throw error(messageKey);
+        }
+    }
+
+    /** Generates the existing human-readable application code convention. */
     private synchronized String generateAppId() {
         List<String> appIds = baseMapper.selectAllAppIds();
         if (appIds == null) {
@@ -246,178 +468,29 @@ public class SysApplicationServiceImpl implements ISysApplicationService {
             Matcher matcher = APP_ID_PATTERN.matcher(id.trim());
             if (matcher.matches()) {
                 try {
-                    long num = Long.parseLong(matcher.group(1));
-                    if (num > maxNum) {
-                        maxNum = num;
-                    }
+                    maxNum = Math.max(maxNum, Long.parseLong(matcher.group(1)));
                 } catch (NumberFormatException ignored) {
+                    // Nonconforming historical identifiers do not participate in numbering.
                 }
             }
         }
-
         long nextNum = maxNum + 1;
         String candidate = String.format("%s%03d", APP_ID_PREFIX, nextNum);
         while (appIdSet.contains(candidate)) {
-            nextNum++;
-            candidate = String.format("%s%03d", APP_ID_PREFIX, nextNum);
+            candidate = String.format("%s%03d", APP_ID_PREFIX, ++nextNum);
         }
         return candidate;
     }
 
-    /**
-     * 规范化重定向回调 URI 列表为 JSON 字符串
-     */
-    private String normalizeRedirectUris(String rawRedirectUris) {
-        if (StringUtils.isBlank(rawRedirectUris)) {
-            throw new ServiceException(MessageUtils.message("application.redirect.uris.invalid"));
-        }
-        List<String> list = new ArrayList<>();
-        String trimmed = rawRedirectUris.trim();
-        if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-            try {
-                list = JsonUtils.parseArray(trimmed, String.class);
-            } catch (Exception ignored) {
-            }
-        }
-        if (CollUtil.isEmpty(list)) {
-            String[] split = trimmed.split("[\r\n,]+");
-            for (String s : split) {
-                if (StringUtils.isNotBlank(s)) {
-                    list.add(s.trim());
-                }
-            }
-        }
-        list = list.stream().filter(StringUtils::isNotBlank).distinct().toList();
-        if (CollUtil.isEmpty(list)) {
-            throw new ServiceException(MessageUtils.message("application.redirect.uris.invalid"));
-        }
-        return JsonUtils.toJsonString(list);
-    }
-
-    private void syncCreateKeycloakClient(SysApplication app, String plainSecret) {
-        if (!keycloakProperties.isEnabled() || StringUtils.isBlank(keycloakProperties.getAdminClientSecret())) {
-            return;
-        }
-        try {
-            KeycloakAdminClient.ClientRepresentation representation = new KeycloakAdminClient.ClientRepresentation();
-            representation.setClientId(app.getAppId());
-            representation.setName(app.getAppName());
-            representation.setDescription(app.getDescription());
-            representation.setEnabled(!"1".equals(app.getStatus()));
-            representation.setPublicClient(false);
-            representation.setClientAuthenticatorType("client-secret");
-            representation.setSecret(plainSecret);
-            representation.setStandardFlowEnabled(true);
-            representation.setImplicitFlowEnabled(false);
-            representation.setDirectAccessGrantsEnabled(false);
-            representation.setServiceAccountsEnabled(false);
-
-            representation.getAttributes().put(KeycloakConstants.ATTR_PKCE_METHOD, KeycloakConstants.PKCE_METHOD_S256);
-            representation.getAttributes().put(KeycloakConstants.ATTR_BACKCHANNEL_LOGOUT_SESSION_REQUIRED, "true");
-            representation.getAttributes().put(KeycloakConstants.ATTR_BACKCHANNEL_LOGOUT_REVOKE_OFFLINE, "true");
-
-            if (StringUtils.isNotBlank(app.getRedirectUris())) {
-                representation.setRedirectUris(JsonUtils.parseArray(app.getRedirectUris(), String.class));
-            }
-
-            KeycloakAdminClient.ClientRepresentation existing = keycloakAdminClient.findClientByClientId(app.getAppId());
-            if (existing != null) {
-                representation.setId(existing.getId());
-                keycloakAdminClient.updateClient(existing.getId(), representation);
-            } else {
-                keycloakAdminClient.createClient(representation);
-            }
-        } catch (Exception e) {
-            log.error("Failed to sync client creation to Keycloak: {}", e.getMessage(), e);
-            throw new ServiceException(MessageUtils.message("application.sync.keycloak.create.error", e.getMessage()));
-        }
-    }
-
-    private void syncUpdateKeycloakClient(SysApplication app) {
-        if (!keycloakProperties.isEnabled() || StringUtils.isBlank(keycloakProperties.getAdminClientSecret())) {
-            return;
-        }
-        try {
-            KeycloakAdminClient.ClientRepresentation kcClient = keycloakAdminClient.findClientByClientId(app.getAppId());
-            if (kcClient != null) {
-                kcClient.setName(app.getAppName());
-                kcClient.setDescription(app.getDescription());
-                kcClient.setEnabled(!"1".equals(app.getStatus()));
-                kcClient.setPublicClient(false);
-                if (StringUtils.isNotBlank(app.getRedirectUris())) {
-                    kcClient.setRedirectUris(JsonUtils.parseArray(app.getRedirectUris(), String.class));
-                }
-                kcClient.getAttributes().put(KeycloakConstants.ATTR_PKCE_METHOD, KeycloakConstants.PKCE_METHOD_S256);
-                keycloakAdminClient.updateClient(kcClient.getId(), kcClient);
-            } else {
-                // Keycloak 侧若缺失客户端则按同一全局规则补建
-                String secret = getDecryptedSecret(app.getAppId());
-                if (StringUtils.isBlank(secret)) {
-                    secret = IdUtil.fastSimpleUUID();
-                }
-                syncCreateKeycloakClient(app, secret);
-            }
-        } catch (Exception e) {
-            log.error("Failed to sync client update to Keycloak: {}", e.getMessage(), e);
-            throw new ServiceException(MessageUtils.message("application.sync.keycloak.update.error", e.getMessage()));
-        }
-    }
-
-    private void syncUpdateKeycloakStatus(String appId, boolean enabled) {
-        if (!keycloakProperties.isEnabled() || StringUtils.isBlank(keycloakProperties.getAdminClientSecret())) {
-            return;
-        }
-        try {
-            KeycloakAdminClient.ClientRepresentation kcClient = keycloakAdminClient.findClientByClientId(appId);
-            if (kcClient != null) {
-                kcClient.setEnabled(enabled);
-                keycloakAdminClient.updateClient(kcClient.getId(), kcClient);
-            }
-        } catch (Exception e) {
-            log.error("Failed to sync status update to Keycloak: {}", e.getMessage(), e);
-            throw new ServiceException(MessageUtils.message("application.sync.keycloak.update.error", e.getMessage()));
-        }
-    }
-
-    private void syncResetKeycloakSecret(String appId, String newSecret) {
-        if (!keycloakProperties.isEnabled() || StringUtils.isBlank(keycloakProperties.getAdminClientSecret())) {
-            return;
-        }
-        try {
-            KeycloakAdminClient.ClientRepresentation kcClient = keycloakAdminClient.findClientByClientId(appId);
-            if (kcClient != null) {
-                kcClient.setSecret(newSecret);
-                keycloakAdminClient.updateClient(kcClient.getId(), kcClient);
-            }
-        } catch (Exception e) {
-            log.error("Failed to sync secret reset to Keycloak: {}", e.getMessage(), e);
-            throw new ServiceException(MessageUtils.message("application.sync.keycloak.reset.error", e.getMessage()));
-        }
-    }
-
-    private void syncDeleteKeycloakClient(String appId) {
-        if (!keycloakProperties.isEnabled() || StringUtils.isBlank(keycloakProperties.getAdminClientSecret())) {
-            return;
-        }
-        try {
-            KeycloakAdminClient.ClientRepresentation kcClient = keycloakAdminClient.findClientByClientId(appId);
-            if (kcClient != null) {
-                keycloakAdminClient.deleteClient(kcClient.getId());
-            }
-        } catch (Exception e) {
-            log.error("Failed to delete Keycloak client: {}", e.getMessage(), e);
-            throw new ServiceException(MessageUtils.message("application.sync.keycloak.delete.error", e.getMessage()));
-        }
+    private ServiceException error(String key, Object... arguments) {
+        return new ServiceException(MessageUtils.message(key, arguments));
     }
 
     private String encryptSecret(String plainSecret) {
-        byte[] keyBytes = aesKey.getBytes(StandardCharsets.UTF_8);
-        return SecureUtil.aes(keyBytes).encryptBase64(plainSecret, StandardCharsets.UTF_8);
+        return SecureUtil.aes(aesKey.getBytes(StandardCharsets.UTF_8)).encryptBase64(plainSecret, StandardCharsets.UTF_8);
     }
 
     private String decryptSecret(String encSecret) {
-        byte[] keyBytes = aesKey.getBytes(StandardCharsets.UTF_8);
-        return SecureUtil.aes(keyBytes).decryptStr(encSecret, StandardCharsets.UTF_8);
+        return SecureUtil.aes(aesKey.getBytes(StandardCharsets.UTF_8)).decryptStr(encSecret, StandardCharsets.UTF_8);
     }
-
 }
